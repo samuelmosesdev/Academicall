@@ -78,33 +78,20 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let clearTimer = null;
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      // Debounce brief null events: if firebase reports null momentarily, wait 2s before clearing user
       setLoading(false);
       if (firebaseUser) {
-        if (clearTimer) {
-          clearTimeout(clearTimer);
-          clearTimer = null;
-        }
         setUser(firebaseUser);
         setProfileReady(false);
       } else {
-        // schedule clearing user after short grace period
-        if (clearTimer) clearTimeout(clearTimer);
-        clearTimer = setTimeout(() => {
-          setUser(null);
-          setProfile(null);
-          setProfileReady(true);
-          clearTimer = null;
-        }, 2000);
+        // Clear immediately on sign-out so landing / protected routes never keep showing "Open dashboard"
+        setUser(null);
+        setProfile(null);
+        setProfileReady(true);
       }
     });
 
-    return () => {
-      if (clearTimer) clearTimeout(clearTimer);
-      unsub();
-    };
+    return () => unsub();
   }, []);
 
   useEffect(() => {
@@ -192,7 +179,10 @@ export function AuthProvider({ children }) {
   }
 
   async function signInWithGoogle() {
-    const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+    // Always use popup so auth stays inside the WebView / in-app browser (no full external redirect)
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    const cred = await signInWithPopup(auth, provider);
     const ref = doc(db, "users", cred.user.uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
@@ -325,7 +315,15 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    await signOut(auth);
+    // Clear local state first so UI (landing CTA, sidebars) updates instantly
+    setUser(null);
+    setProfile(null);
+    setProfileReady(true);
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn("logout: signOut failed", err);
+    }
   }
 
   async function resendVerificationEmail() {

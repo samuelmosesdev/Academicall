@@ -19,6 +19,7 @@ export default function StudentUpgrade() {
   const pro = isPro(profile);
   const [claiming, setClaiming] = useState(null);
   const [claimMsg, setClaimMsg] = useState("");
+  const [claimOk, setClaimOk] = useState(false);
 
   async function openCheckout(plan) {
     setClaimMsg("");
@@ -51,6 +52,7 @@ export default function StudentUpgrade() {
     if (!user) return;
     setClaiming(plan.id);
     setClaimMsg("");
+    setClaimOk(false);
     try {
       await addDoc(collection(db, "paymentClaims"), {
         userId: user.uid,
@@ -64,10 +66,11 @@ export default function StudentUpgrade() {
         planId: plan.id,
         planName: plan.name,
         amountLabel: plan.amountLabel,
+        // Must stay in the allowed set in firestore.rules
         status: "awaiting_review",
         createdAt: serverTimestamp(),
       });
-      // Surface in admin notification bell
+      // Surface in admin notification bell (best-effort)
       try {
         await addDoc(collection(db, "notifications"), {
           type: "payment_claim",
@@ -84,11 +87,19 @@ export default function StudentUpgrade() {
       } catch {
         /* claim already saved — notification is best-effort */
       }
+      setClaimOk(true);
       setClaimMsg(
-        "Thanks — we notified admin. They will activate Pro after verifying your Paystack payment."
+        "Submitted — we received your report. Admin will activate Pro after verifying your Paystack payment."
       );
     } catch (err) {
-      setClaimMsg(err.message || "Could not submit. Try again or message admin.");
+      console.error("markPaid failed", err);
+      setClaimOk(false);
+      const code = err?.code || "";
+      const msg =
+        code === "permission-denied"
+          ? "Could not submit (permission denied). Ask admin to update Firestore rules for paymentClaims, then try again."
+          : err?.message || "Could not submit. Try again or message admin.";
+      setClaimMsg(msg);
     } finally {
       setClaiming(null);
     }
@@ -197,7 +208,15 @@ export default function StudentUpgrade() {
           </div>
 
           {claimMsg && (
-            <p className="rounded-xl border border-teal/30 bg-teal-soft px-4 py-3 text-sm text-ink">
+            <p
+              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+                claimOk
+                  ? "border-teal/40 bg-teal-soft text-ink"
+                  : "border-red-200 bg-red-50 text-red-800"
+              }`}
+              role="status"
+            >
+              {claimOk ? "✓ " : ""}
               {claimMsg}
             </p>
           )}

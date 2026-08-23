@@ -16,8 +16,7 @@ import {
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 import { useLocation, useNavigate } from "react-router-dom";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/admin" },
@@ -39,6 +38,7 @@ const NAV_ITEMS = [
 export default function Sidebar({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   function go(to) {
     navigate(to);
@@ -46,8 +46,8 @@ export default function Sidebar({ onNavigate }) {
   }
 
   async function handleLogout() {
-    await signOut(auth);
-    navigate("/login", { replace: true });
+    await logout();
+    navigate("/", { replace: true });
     onNavigate?.();
   }
 

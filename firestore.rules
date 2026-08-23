@@ -165,9 +165,14 @@ service cloud.firestore {
     match /paymentClaims/{claimId} {
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.userId == request.auth.uid);
+      // Client uses: pending | clicked_checkout | awaiting_review
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status in [
+          'pending',
+          'clicked_checkout',
+          'awaiting_review'
+        ];
       allow update, delete: if isAdmin();
     }
 
@@ -199,9 +204,12 @@ service cloud.firestore {
       allow read: if isAdminOrAgent()
         || (isSignedIn() && resource.data.userId == request.auth.uid);
 
-      // Staff + Course Rep can create (lecture updates, request results)
+      // Staff + Course Rep can create; students may only report payment claims
       allow create: if isAdminOrAgent()
-        || isCourseRep();
+        || isCourseRep()
+        || (isSignedIn()
+            && request.resource.data.type == 'payment_claim'
+            && request.resource.data.fromUserId == request.auth.uid);
 
       allow update: if isAdminOrAgent()
         || (isSignedIn()

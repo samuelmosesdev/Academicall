@@ -11,8 +11,6 @@ import {
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 import { useLocation, useNavigate } from "react-router-dom";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
@@ -29,7 +27,7 @@ const NAV_ITEMS = [
 export default function AgentSidebar({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, logout } = useAuth();
   const roleLabel =
     profile?.role === "alphaAgent"
       ? "Alpha Agent"
@@ -39,6 +37,12 @@ export default function AgentSidebar({ onNavigate }) {
 
   function go(to) {
     navigate(to);
+    onNavigate?.();
+  }
+
+  async function handleLogout() {
+    await logout();
+    navigate("/", { replace: true });
     onNavigate?.();
   }
 
@@ -89,7 +93,7 @@ export default function AgentSidebar({ onNavigate }) {
       </button>
       <button
         type="button"
-        onClick={() => signOut(auth)}
+        onClick={handleLogout}
         className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text-secondary hover:bg-bg-panel-alt hover:text-status-danger"
       >
         <LogOut size={17} />

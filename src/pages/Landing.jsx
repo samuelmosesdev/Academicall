@@ -41,12 +41,14 @@ const TESTIMONIALS = [
 ];
 
 export default function Landing() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading, profileReady } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const appHome = user ? homePathFor(profile) : "/login";
-  const ctaPrimary = user ? appHome : "/signup";
-  const ctaPrimaryLabel = user ? "Open dashboard" : "Get started free";
+  // Only treat as signed-in once auth is settled — prevents "Open dashboard" after logout
+  const signedIn = !loading && !!user && profileReady;
+  const appHome = signedIn ? homePathFor(profile) : "/login";
+  const ctaPrimary = signedIn ? appHome : "/signup";
+  const ctaPrimaryLabel = signedIn ? "Open dashboard" : "Get started free";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -96,7 +98,7 @@ export default function Landing() {
           </div>
 
           <div className="hidden items-center gap-3 md:flex">
-            {!user && (
+            {!signedIn && (
               <Link
                 to="/login"
                 className="text-sm font-semibold text-[#005239] hover:underline"
@@ -177,7 +179,7 @@ export default function Landing() {
                 to={ctaPrimary}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-[#fb923c] px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 transition hover:-translate-y-0.5 hover:opacity-95"
               >
-                {user ? "Open dashboard" : "Join students on Academicall"}
+                {signedIn ? "Open dashboard" : "Join students on Academicall"}
                 <ArrowRight size={16} />
               </Link>
               <a
@@ -308,10 +310,10 @@ export default function Landing() {
               </div>
             </div>
             <Link
-              to={user ? appHome : "/signup"}
+              to={signedIn ? appHome : "/signup"}
               className="mt-8 inline-flex rounded-full bg-[#f7faf6] px-6 py-3 text-sm font-bold text-[#00668a] transition hover:bg-white"
             >
-              {user ? "Go to app" : "Create your account"}
+              {signedIn ? "Go to app" : "Create your account"}
             </Link>
           </div>
           <div className="flex h-56 items-end justify-between gap-2 rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-sm sm:h-72">
@@ -419,7 +421,7 @@ export default function Landing() {
                 </li>
               </ul>
               <Link
-                to={user ? "/dashboard/upgrade" : "/signup"}
+                to={signedIn ? "/dashboard/upgrade" : "/signup"}
                 className="mt-8 block rounded-full bg-[#fb923c] py-2.5 text-center text-sm font-bold text-white shadow-md hover:opacity-90"
               >
                 Go Pro

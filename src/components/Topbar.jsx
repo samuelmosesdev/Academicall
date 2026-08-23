@@ -7,7 +7,6 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import {
   collection,
@@ -21,12 +20,12 @@ import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../hooks/useNotifications";
 import { useStaffChatUnread } from "../hooks/useStaffChatUnread";
 import { useTheme } from "../context/ThemeContext";
-import { auth, db } from "../firebase/config";
+import { db } from "../firebase/config";
 import BackButton from "./BackButton";
 import { isAdmin, isAlpha, isStaff } from "../lib/roles";
 
 export default function Topbar({ search, onSearchChange }) {
-  const { profile, user } = useAuth();
+  const { profile, user, logout } = useAuth();
   const { unreadCount } = useNotifications();
   const { unread: staffUnread } = useStaffChatUnread();
   const { theme, toggleTheme, isDark } = useTheme();
@@ -131,8 +130,8 @@ export default function Topbar({ search, onSearchChange }) {
   }, [q, agents, students, logs, canSearchPeople, onSearchChange]);
 
   async function handleLogout() {
-    await signOut(auth);
-    navigate("/login", { replace: true });
+    await logout();
+    navigate("/", { replace: true });
   }
 
   const profilePath =

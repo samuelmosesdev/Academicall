@@ -21,6 +21,13 @@ import { recordMaterialOpen, recordDailyActivity } from "../lib/activity";
 import { isPro } from "../lib/subscription";
 import { withDownloadFlag } from "../lib/cloudinaryUpload";
 import { generateQuestionsFromDocument } from "../lib/geminiGenerate";
+import { isNativeApp } from "../lib/platform";
+import {
+  isOfflineAvailable,
+  saveMaterialOffline,
+  removeMaterialOffline,
+  getOfflineObjectUrl,
+} from "../lib/offlineMaterials";
 
 function getExtension(name = "", url = "") {
   const source = name || url;
@@ -62,6 +69,35 @@ export default function DocumentReader() {
     }
   }, [user?.uid, docId]);
 
+  // App only: detect offline copy & prefer local blob when online file blocked
+  useEffect(() => {
+    let revoked = null;
+    let cancelled = false;
+    async function check() {
+      if (!native || !docId || docId === "external") {
+        setOfflineReady(false);
+        return;
+      }
+      const ok = await isOfflineAvailable(docId);
+      if (cancelled) return;
+      setOfflineReady(ok);
+      if (ok) {
+        const url = await getOfflineObjectUrl(docId);
+        if (!cancelled && url) {
+          revoked = url;
+          setOfflineUrl(url);
+        }
+      } else {
+        setOfflineUrl(null);
+      }
+    }
+    check();
+    return () => {
+      cancelled = true;
+      if (revoked) URL.revokeObjectURL(revoked);
+    };
+  }, [native, docId]);
+
   const [panelOpen, setPanelOpen] = useState(false);
   const [pageFrom, setPageFrom] = useState("1");
   const [pageTo, setPageTo] = useState("");
@@ -71,6 +107,10 @@ export default function DocumentReader() {
   const [error, setError] = useState("");
   const [quiz, setQuiz] = useState(null); // { questions, index, answers, submitted }
   const viewerRef = useRef(null);
+  const [offlineReady, setOfflineReady] = useState(false);
+  const [offlineBusy, setOfflineBusy] = useState(false);
+  const [offlineUrl, setOfflineUrl] = useState(null);
+  const native = isNativeApp();
 
   // Optional direct URL when opened from Materials (not in documents collection)
   const fallbackUrl = search.get("url") || "";
@@ -192,9 +232,40 @@ export default function DocumentReader() {
     record.fileName || record.title
   );
   // In-app PDF viewer — prefer native embed; Google viewer as fallback for office docs
+  async function toggleOffline() {
+    if (!native || !record?.fileUrl || !docId || docId === "external") return;
+    setOfflineBusy(true);
+    try {
+      if (offlineReady) {
+        await removeMaterialOffline(docId);
+        if (offlineUrl) URL.revokeObjectURL(offlineUrl);
+        setOfflineUrl(null);
+        setOfflineReady(false);
+      } else {
+        await saveMaterialOffline({
+          id: docId,
+          title: record.title,
+          fileUrl: record.fileUrl,
+          courseCode: record.courseCode,
+          fileName: record.fileName,
+        });
+        const url = await getOfflineObjectUrl(docId);
+        setOfflineUrl(url);
+        setOfflineReady(true);
+      }
+    } catch (e) {
+      alert(e.message || "Offline save failed. Need network once to download.");
+    } finally {
+      setOfflineBusy(false);
+    }
+  }
+
+  const effectiveUrl = offlineUrl || record.fileUrl;
   const viewerSrc = isPdf
-    ? `${record.fileUrl}#toolbar=1&navpanes=0`
-    : `https://docs.google.com/viewer?url=${encodeURIComponent(record.fileUrl)}&embedded=true`;
+    ? `${effectiveUrl}#toolbar=1&navpanes=0`
+    : offlineUrl
+      ? effectiveUrl
+      : `https://docs.google.com/viewer?url=${encodeURIComponent(record.fileUrl)}&embedded=true`;
 
   const currentQ = quiz?.questions?.[quiz.index];
 
@@ -251,6 +322,33 @@ export default function DocumentReader() {
       <div className="relative flex min-h-0 flex-1">
         {/* Reader */}
         <div className="relative min-w-0 flex-1 bg-[#1a1f1c]">
+          {native && docId && docId !== "external" && record?.fileUrl && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={offlineBusy}
+                onClick={toggleOffline}
+                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                  offlineReady
+                    ? "bg-teal-soft text-teal border border-teal/30"
+                    : "bg-card-light border border-border-light text-ink hover:border-teal/40"
+                }`}
+              >
+                {offlineBusy ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Download size={14} />
+                )}
+                {offlineReady ? "Saved offline — tap to remove" : "Make available offline"}
+              </button>
+              {offlineReady && (
+                <span className="text-[11px] text-ink-muted">
+                  Opens without mobile data in the app
+                </span>
+              )}
+            </div>
+          )}
+
           <iframe
             ref={viewerRef}
             title={record.title || "Document viewer"}

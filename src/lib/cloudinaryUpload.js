@@ -1,5 +1,17 @@
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+const UPLOAD_TIMEOUT_MS = 90_000;
+
+function attachTimeout(xhr, reject) {
+  const t = setTimeout(() => {
+    try { xhr.abort(); } catch { /* ignore */ }
+    reject(new Error("Upload timed out. Check your connection and try again."));
+  }, UPLOAD_TIMEOUT_MS);
+  const clear = () => clearTimeout(t);
+  xhr.addEventListener("loadend", clear);
+  xhr.addEventListener("error", clear);
+  xhr.addEventListener("abort", clear);
+}
 
 export async function uploadDocumentToCloudinary(file, onProgress) {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
@@ -23,6 +35,7 @@ export async function uploadDocumentToCloudinary(file, onProgress) {
       else reject(new Error("Upload failed. Please try again."));
     };
     xhr.onerror = () => reject(new Error("Network error during upload."));
+    attachTimeout(xhr, reject);
     xhr.send(formData);
   });
 }
@@ -52,6 +65,7 @@ export async function uploadImageToCloudinary(file, onProgress) {
       else reject(new Error("Image upload failed. Please try again."));
     };
     xhr.onerror = () => reject(new Error("Network error during upload."));
+    attachTimeout(xhr, reject);
     xhr.send(formData);
   });
 }
@@ -85,6 +99,7 @@ export async function uploadVoiceToCloudinary(file, onProgress) {
       else reject(new Error("Voice note upload failed. Please try again."));
     };
     xhr.onerror = () => reject(new Error("Network error during voice upload."));
+    attachTimeout(xhr, reject);
     xhr.send(formData);
   });
 }

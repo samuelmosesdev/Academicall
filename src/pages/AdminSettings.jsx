@@ -5,7 +5,6 @@ import {
   setDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { signOut } from "firebase/auth";
 import {
   Settings,
   Save,
@@ -17,8 +16,10 @@ import {
   Link2,
   Building2,
 } from "lucide-react";
-import { db, auth } from "../firebase/config";
+import { db } from "../firebase/config";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
@@ -37,6 +38,8 @@ const DEFAULTS = {
 
 export default function AdminSettings() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { fontScale, setFontScale, fontScales } = useTheme();
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -87,8 +90,8 @@ export default function AdminSettings() {
   }
 
   async function handleLogout() {
-    await signOut(auth);
-    navigate("/login", { replace: true });
+    await logout();
+    navigate("/", { replace: true });
   }
 
   if (!form) {
@@ -231,6 +234,33 @@ export default function AdminSettings() {
               rows={2}
               className={fieldClass}
             />
+          </div>
+        </section>
+
+        {/* Display / text size */}
+        <section className="space-y-3 rounded-xl border border-border-subtle bg-bg-panel p-5">
+          <div className="flex items-center gap-2">
+            <Settings size={18} className="text-accent" />
+            <h2 className="text-sm font-semibold text-text-primary">Display size</h2>
+          </div>
+          <p className="text-sm text-text-secondary">
+            Adjust text size for easier reading on this device. Applies across the admin app.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {fontScales.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setFontScale(s.id)}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                  fontScale === s.id
+                    ? "border-accent bg-accent-soft text-accent"
+                    : "border-border-subtle text-text-secondary"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
         </section>
 

@@ -3,7 +3,8 @@ import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Save, Loader2, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { db, auth } from "../firebase/config";
+import { useTheme } from "../context/ThemeContext";
+import { db } from "../firebase/config";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 
 const fieldClass =
@@ -11,7 +12,8 @@ const fieldClass =
 
 export default function AgentSettings() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, logout } = useAuth();
+  const { fontScale, setFontScale, fontScales } = useTheme();
 
   const [name, setName] = useState("");
   const [faculty, setFaculty] = useState("");
@@ -60,8 +62,8 @@ export default function AgentSettings() {
   }
 
   async function handleLogout() {
-    await auth.signOut();
-    navigate("/login", { replace: true });
+    await logout();
+    navigate("/", { replace: true });
   }
 
   return (
@@ -119,6 +121,27 @@ export default function AgentSettings() {
             <input type="checkbox" checked={!!prefs.autoPublish} onChange={(e) => setPref("autoPublish", e.target.checked)} />
             <span className="text-sm text-text-primary">Auto-publish uploaded documents</span>
           </label>
+        </div>
+
+        <h3 className="mt-6 mb-2 text-sm font-semibold text-text-primary">Display size</h3>
+        <p className="mb-2 text-xs text-text-muted">
+          Adjust text size for easier reading on this device.
+        </p>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {fontScales.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setFontScale(s.id)}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                fontScale === s.id
+                  ? "border-accent bg-accent-soft text-accent"
+                  : "border-border-subtle text-text-secondary"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
 
         <div className="mt-6 flex items-center gap-2">

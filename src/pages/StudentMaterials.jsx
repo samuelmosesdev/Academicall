@@ -1,4 +1,11 @@
 import { Link } from "react-router-dom";
+import { isNativeApp } from "../lib/platform";
+import {
+  listOfflineMaterials,
+  saveMaterialOffline,
+  removeMaterialOffline,
+  isOfflineAvailable,
+} from "../lib/offlineMaterials";
 import { useEffect, useMemo, useState } from "react";
 import {
   collection,
@@ -24,6 +31,16 @@ export default function StudentMaterials() {
   const [saves, setSaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState(null);
+  const [offlineIds, setOfflineIds] = useState(() => new Set());
+  const [offlineBusyId, setOfflineBusyId] = useState(null);
+  const native = isNativeApp();
+
+  useEffect(() => {
+    if (!native) return;
+    listOfflineMaterials()
+      .then((list) => setOfflineIds(new Set(list.map((x) => x.id))))
+      .catch(() => {});
+  }, [native]);
 
   useEffect(() => {
     if (!user) return;
@@ -65,6 +82,39 @@ export default function StudentMaterials() {
       a.courseCode.localeCompare(b.courseCode)
     );
   }, [saves]);
+
+  async function toggleOfflineFor(item) {
+    const id = item.materialId || item.id;
+    const url = item.fileUrl;
+    if (!id || !url) {
+      alert("No file URL for this material.");
+      return;
+    }
+    setOfflineBusyId(id);
+    try {
+      if (offlineIds.has(id)) {
+        await removeMaterialOffline(id);
+        setOfflineIds((prev) => {
+          const n = new Set(prev);
+          n.delete(id);
+          return n;
+        });
+      } else {
+        await saveMaterialOffline({
+          id,
+          title: item.title,
+          fileUrl: url,
+          courseCode: item.courseCode,
+          fileName: item.fileName || item.title,
+        });
+        setOfflineIds((prev) => new Set(prev).add(id));
+      }
+    } catch (e) {
+      alert(e.message || "Could not save offline. Connect once to download.");
+    } finally {
+      setOfflineBusyId(null);
+    }
+  }
 
   async function removeSave(saveId) {
     if (!window.confirm("Remove this material from your Materials?")) return;
@@ -147,7 +197,26 @@ export default function StudentMaterials() {
                         : "—"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {native && (item.materialId || item.id) && item.fileUrl && (
+                      <button
+                        type="button"
+                        disabled={offlineBusyId === (item.materialId || item.id)}
+                        onClick={() => toggleOfflineFor(item)}
+                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
+                          offlineIds.has(item.materialId || item.id)
+                            ? "border-teal/40 bg-teal-soft text-teal"
+                            : "border-border-light text-ink hover:border-teal/40"
+                        }`}
+                      >
+                        {offlineBusyId === (item.materialId || item.id) ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : null}
+                        {offlineIds.has(item.materialId || item.id)
+                          ? "Offline ✓"
+                          : "Save offline"}
+                      </button>
+                    )}
                     <Link
                       to={
                         item.materialId

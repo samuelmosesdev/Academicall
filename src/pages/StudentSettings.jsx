@@ -41,8 +41,8 @@ const DEFAULT_PREFS = {
 };
 
 export default function StudentSettings() {
-  const { user, profile } = useAuth();
-  const { theme, setTheme, isDark } = useTheme();
+  const { user, profile, logout } = useAuth();
+  const { theme, setTheme, isDark, fontScale, setFontScale, fontScales } = useTheme();
   const navigate = useNavigate();
   const pro = isPro(profile);
 
@@ -135,8 +135,8 @@ export default function StudentSettings() {
   }
 
   async function handleLogout() {
-    await auth.signOut();
-    navigate("/login", { replace: true });
+    await logout();
+    navigate("/", { replace: true });
   }
 
   async function enableBrowserNotifications() {
@@ -306,6 +306,27 @@ export default function StudentSettings() {
           </button>
         </div>
         <p className="text-xs text-ink-muted">Current: {theme === "dark" ? "Dark" : "Light"}</p>
+
+        <p className="mt-4 text-xs font-semibold text-ink">Text size</p>
+        <p className="text-xs text-ink-muted">
+          Make text larger or smaller so it is easy to read on your phone.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {fontScales.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setFontScale(s.id)}
+              className={`rounded-xl border px-3 py-2 text-sm font-medium ${
+                fontScale === s.id
+                  ? "border-teal bg-teal-soft text-teal"
+                  : "border-border-light text-ink-muted"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </section>
 
       {/* 3. Notifications */}

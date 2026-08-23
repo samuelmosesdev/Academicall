@@ -2,12 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BackButton from "./BackButton";
 import { Search, Bell, Moon, Sun, LogOut } from "lucide-react";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase/config";
 import UniqueIdBadge from "./UniqueIdBadge";
 import ConfirmModal from "./ConfirmModal";
 import UserAvatar from "./UserAvatar";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -18,6 +17,7 @@ function getGreeting() {
 
 export default function UserTopbar({ profile, unreadCount, search, onSearchChange }) {
   const { theme, toggleTheme, isDark } = useTheme();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -25,8 +25,8 @@ export default function UserTopbar({ profile, unreadCount, search, onSearchChang
   async function handleLogout() {
     setLoggingOut(true);
     try {
-      await signOut(auth);
-      navigate("/login", { replace: true });
+      await logout();
+      navigate("/", { replace: true });
     } finally {
       setLoggingOut(false);
       setConfirmLogout(false);
