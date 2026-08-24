@@ -34,8 +34,9 @@ const useEmulator = import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true";
 if (import.meta.env.DEV && !useEmulator && firebaseConfig.projectId === PROD_PROJECT_ID) {
   console.warn(
     `[firebase] Local dev is connected to the PRODUCTION project "${PROD_PROJECT_ID}". ` +
-      "Every read/write here bills against the live quota. Point .env.development at a " +
-      "dev project, or set VITE_USE_FIREBASE_EMULATOR=true."
+      "Every read/write here bills against the live quota.\n" +
+      "To use the local emulator instead: cp .env.development.example .env.development.local " +
+      "&& npm run emulators"
   );
 }
 
@@ -59,6 +60,17 @@ if (useEmulator) {
   connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
   connectStorageEmulator(storage, host, 9199);
   console.info(`[firebase] Using local emulators at ${host}`);
+
+  // Without this the app just silently fails to load any data when the
+  // emulator isn't running, which looks like a broken build rather than a
+  // missing terminal.
+  fetch(`http://${host}:8080/`, { mode: "no-cors" }).catch(() => {
+    console.error(
+      `[firebase] VITE_USE_FIREBASE_EMULATOR is on but nothing is listening on ${host}:8080.\n` +
+        "Start it with `npm run emulators`, or delete .env.development.local to " +
+        "go back to the credentials in your .env.local."
+    );
+  });
 }
 
 // Website: session only (logs out when browser session ends).

@@ -301,14 +301,29 @@ separate Firebase project, and keep the credentials in `.env.development`.
 
 ### Locally, for free (preferred)
 
+The emulator is **opt-in**, so pulling this branch changes nothing about how your
+app connects until you ask for it:
+
 ```bash
-npm run emulators     # needs JDK 21+ (brew install openjdk@21)
-npm run seed          # throwaway users + sample data, demo project only
-npm run dev           # .env.development points at the emulator automatically
+cp .env.development.example .env.development.local   # gitignored, personal
+npm run emulators     # terminal 1 — needs JDK 21+ (brew install openjdk@21)
+npm run seed          # once — throwaway users + sample data, demo project only
+npm run dev           # terminal 2
 ```
 
 Sign in with `student@example.test` / `admin@example.test`, password
 `emulator-only-pw`. Emulator UI at http://127.0.0.1:4000.
+
+Delete `.env.development.local` to go straight back to whatever is in your
+`.env.local`.
+
+> **Why opt-in and not the default?** Vite loads env files as
+> `.env` → `.env.local` → `.env.[mode]` → `.env.[mode].local`, later winning.
+> A committed `.env.development` outranks `.env.local`, so it would silently
+> override every developer's personal credentials — and anyone who pulled
+> without reading the changelog would get an app that can't reach Firestore
+> with no visible cause. `.env.local` is the file people expect to win; a
+> committed file must not quietly beat it.
 
 To measure whether a page loops, poll the document the page writes to and count
 distinct values — each distinct value is one write:
