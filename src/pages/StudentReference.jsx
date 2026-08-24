@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   collection,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -26,11 +27,20 @@ export default function StudentReference() {
       q = query(
         collection(db, "classEvents"),
         where("department", "==", profile.department),
-        orderBy("startsAt", "desc")
+        orderBy("startsAt", "desc"),
+        limit(100)
       );
     } else {
-      q = query(collection(db, "classEvents"), orderBy("startsAt", "desc"));
+      q = query(
+        collection(db, "classEvents"),
+        orderBy("startsAt", "desc"),
+        limit(100)
+      );
     }
+
+    // Firestore ignores an error callback's return value — the fallback used to
+    // leak a live, unbounded listener on the whole classEvents collection.
+    let fallbackUnsub = null;
 
     const unsub = onSnapshot(
       q,
@@ -39,21 +49,36 @@ export default function StudentReference() {
         setLoading(false);
       },
       () => {
-        // Fallback without composite index: unfiltered
-        const unsub2 = onSnapshot(collection(db, "classEvents"), (snap) => {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          list.sort((a, b) => {
-            const ta = a.startsAt?.toDate?.() || a.startsAt || 0;
-            const tb = b.startsAt?.toDate?.() || b.startsAt || 0;
-            return new Date(tb) - new Date(ta);
-          });
-          setEvents(list);
-          setLoading(false);
-        });
-        return unsub2;
+        // Fallback without composite index: department filter only, no orderBy
+        const fallbackQ = profile?.department
+          ? query(
+              collection(db, "classEvents"),
+              where("department", "==", profile.department),
+              limit(100)
+            )
+          : query(collection(db, "classEvents"), limit(100));
+
+        fallbackUnsub?.();
+        fallbackUnsub = onSnapshot(
+          fallbackQ,
+          (snap) => {
+            const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+            list.sort((a, b) => {
+              const ta = a.startsAt?.toDate?.() || a.startsAt || 0;
+              const tb = b.startsAt?.toDate?.() || b.startsAt || 0;
+              return new Date(tb) - new Date(ta);
+            });
+            setEvents(list);
+            setLoading(false);
+          },
+          () => setLoading(false)
+        );
       }
     );
-    return () => unsub();
+    return () => {
+      unsub();
+      fallbackUnsub?.();
+    };
   }, [profile?.department]);
 
   const upcoming = useMemo(() => {

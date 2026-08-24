@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, limit, onSnapshot, query } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 export function useAdminDocuments() {
@@ -8,7 +8,7 @@ export function useAdminDocuments() {
 
   useEffect(() => {
     const unsub = onSnapshot(
-      collection(db, "documents"),
+      query(collection(db, "documents"), limit(500)),
       (snap) => {
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         list.sort((a, b) => (b.uploadedAt?.seconds || 0) - (a.uploadedAt?.seconds || 0));

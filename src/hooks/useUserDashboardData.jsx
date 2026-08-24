@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   collection,
   onSnapshot,
@@ -13,8 +13,14 @@ import { useAuth } from "../context/AuthContext";
 /**
  * Live student dashboard data from Firestore.
  * KPIs are derived from real enrollments + profile counters so figures stay accurate.
+ *
+ * IMPORTANT: consume this through `useUserDashboardData()`, which reads the
+ * context published by `<UserDashboardDataProvider>` in UserLayout. Calling the
+ * subscribing hook directly from more than one component mounts a second,
+ * independent set of listeners and bills every read twice — which is exactly
+ * what UserLayout + UserDashboard used to do.
  */
-export function useUserDashboardData() {
+function useUserDashboardDataSource() {
   const { user, profile, loading: authLoading } = useAuth();
   const [enrollments, setEnrollments] = useState([]);
   const [allEnrollments, setAllEnrollments] = useState([]);
@@ -35,6 +41,11 @@ export function useUserDashboardData() {
       orderBy("lastAccessedAt", "desc"),
       limit(5)
     );
+    // Firestore ignores an error callback's return value, so the fallback
+    // listener that used to be `return`ed from here was never unsubscribed —
+    // one permanently-live listener leaked per mount.
+    let fallbackUnsub = null;
+
     const unsubRecent = onSnapshot(
       recentQ,
       (snap) => {
@@ -43,8 +54,13 @@ export function useUserDashboardData() {
       },
       () => {
         // Fallback without orderBy if index missing
-        const simple = query(collection(db, "enrollments"), where("userId", "==", user.uid));
-        return onSnapshot(simple, (snap) => {
+        const simple = query(
+          collection(db, "enrollments"),
+          where("userId", "==", user.uid),
+          limit(50)
+        );
+        fallbackUnsub?.();
+        fallbackUnsub = onSnapshot(simple, (snap) => {
           const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
           list.sort((a, b) => {
             const ta = a.lastAccessedAt?.toMillis?.() || 0;
@@ -59,7 +75,11 @@ export function useUserDashboardData() {
     );
 
     // All enrollments for accurate KPI count
-    const allQ = query(collection(db, "enrollments"), where("userId", "==", user.uid));
+    const allQ = query(
+      collection(db, "enrollments"),
+      where("userId", "==", user.uid),
+      limit(100)
+    );
     const unsubAll = onSnapshot(allQ, (snap) => {
       setAllEnrollments(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
@@ -72,7 +92,8 @@ export function useUserDashboardData() {
     const notifQuery = query(
       collection(db, "notifications"),
       where("userId", "==", user.uid),
-      where("readByUser", "==", false)
+      where("readByUser", "==", false),
+      limit(50)
     );
     const unsubNotif = onSnapshot(notifQuery, (snap) => setUnreadCount(snap.size), () => {});
 
@@ -81,8 +102,9 @@ export function useUserDashboardData() {
       unsubAll();
       unsubRec();
       unsubNotif();
+      fallbackUnsub?.();
     };
-  }, [user]);
+  }, [user?.uid]);
 
   const kpis = useMemo(() => {
     const enrolledCount =
@@ -113,13 +135,50 @@ export function useUserDashboardData() {
     };
   }, [allEnrollments, profile]);
 
-  return {
-    profile,
-    kpis,
-    enrollments,
-    allEnrollments,
-    recommended,
-    unreadCount,
-    loading: authLoading || loading,
-  };
+  return useMemo(
+    () => ({
+      profile,
+      kpis,
+      enrollments,
+      allEnrollments,
+      recommended,
+      unreadCount,
+      loading: authLoading || loading,
+    }),
+    [profile, kpis, enrollments, allEnrollments, recommended, unreadCount, authLoading, loading]
+  );
+}
+
+const EMPTY = {
+  profile: null,
+  kpis: {
+    coursesEnrolled: 0,
+    questionsPracticed: 0,
+    studyStreakDays: 0,
+    materialsOpened: 0,
+    avgProgress: 0,
+    plan: "Free",
+    isPaid: false,
+  },
+  enrollments: [],
+  allEnrollments: [],
+  recommended: [],
+  unreadCount: 0,
+  loading: true,
+};
+
+const UserDashboardDataContext = createContext(EMPTY);
+
+/** Subscribes once and shares the result with every descendant. */
+export function UserDashboardDataProvider({ children }) {
+  const value = useUserDashboardDataSource();
+  return (
+    <UserDashboardDataContext.Provider value={value}>
+      {children}
+    </UserDashboardDataContext.Provider>
+  );
+}
+
+export function useUserDashboardData() {
+  return useContext(UserDashboardDataContext);
 }

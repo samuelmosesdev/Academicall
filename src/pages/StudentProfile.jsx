@@ -121,7 +121,7 @@ export default function StudentProfile() {
       () => setRequests([])
     );
     return unsub;
-  }, [user]);
+  }, [user?.uid]);
 
   const pendingByField = useMemo(() => {
     const map = {};

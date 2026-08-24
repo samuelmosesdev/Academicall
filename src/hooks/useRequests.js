@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 /** Live list of approval requests (newest first). */
@@ -8,7 +8,7 @@ export function useRequests() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "requests"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "requests"), orderBy("createdAt", "desc"), limit(200));
     const unsub = onSnapshot(
       q,
       (snap) => {

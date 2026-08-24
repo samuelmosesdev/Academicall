@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, limit, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 /**
@@ -16,8 +16,14 @@ export function useAdminUsers() {
     // Firestore "in" supports up to 30 values.
     const q = query(
       collection(db, "users"),
-      where("role", "in", ["user", "courseRep", "agent", "alphaAgent"])
+      where("role", "in", ["user", "courseRep", "agent", "alphaAgent"]),
+      limit(500)
     );
+
+    // Firestore discards an error callback's return value, so the fallback
+    // listener below has to be held somewhere the cleanup can reach it.
+    // Previously it leaked a live whole-collection listener on every mount.
+    let fallbackUnsub = null;
 
     const unsub = onSnapshot(
       q,
@@ -33,8 +39,9 @@ export function useAdminUsers() {
       (err) => {
         // Fallback: if "in" query fails (rules/index), load all and filter client-side
         console.warn("useAdminUsers query failed, falling back:", err?.message);
-        const unsubAll = onSnapshot(
-          collection(db, "users"),
+        fallbackUnsub?.();
+        fallbackUnsub = onSnapshot(
+          query(collection(db, "users"), limit(500)),
           (snap) => {
             const list = snap.docs
               .map((d) => ({ id: d.id, ...d.data() }))
@@ -60,11 +67,13 @@ export function useAdminUsers() {
             setLoading(false);
           }
         );
-        return unsubAll;
       }
     );
 
-    return () => unsub();
+    return () => {
+      unsub();
+      fallbackUnsub?.();
+    };
   }, []);
 
   function retry() {

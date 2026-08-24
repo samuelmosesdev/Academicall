@@ -163,9 +163,13 @@ export default function StaffChat() {
   const recTimerRef = useRef(null);
   const stickBottom = useRef(true);
 
+  // Mark read once per visit, not once per render. Keyed on uid rather than on
+  // the callback identity so a re-render can never re-trigger the write.
   useEffect(() => {
+    if (!user?.uid) return;
     markStaffChatRead?.();
-  }, [markStaffChatRead]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   // Live listener — keep all docs; sort client-side so nothing vanishes on timestamp lag
   useEffect(() => {
@@ -174,27 +178,34 @@ export default function StaffChat() {
       orderBy("createdAt", "asc"),
       limit(300)
     );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        list.sort((a, b) => msgTime(a) - msgTime(b));
-        setMessages(list);
-        setLoading(false);
-      },
-      (err) => {
-        console.error("staffChat listener", err);
-        // Fallback without orderBy if index missing — still keep messages
-        const unsub2 = onSnapshot(collection(db, "staffChat"), (snap) => {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          list.sort((a, b) => msgTime(a) - msgTime(b));
-          setMessages(list);
-          setLoading(false);
-        });
-        return unsub2;
-      }
-    );
-    return () => unsub();
+
+    const applySnap = (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => msgTime(a) - msgTime(b));
+      setMessages(list);
+      setLoading(false);
+    };
+
+    // Firestore ignores whatever an error callback returns, so a listener
+    // created in there can never be torn down. Park it on a ref the cleanup
+    // below can actually reach.
+    let fallbackUnsub = null;
+
+    const unsub = onSnapshot(q, applySnap, (err) => {
+      console.error("staffChat listener", err);
+      // Fallback without orderBy if index missing — still keep messages
+      fallbackUnsub?.();
+      fallbackUnsub = onSnapshot(
+        query(collection(db, "staffChat"), limit(300)),
+        applySnap,
+        () => setLoading(false)
+      );
+    });
+
+    return () => {
+      unsub();
+      fallbackUnsub?.();
+    };
   }, []);
 
   useEffect(() => {

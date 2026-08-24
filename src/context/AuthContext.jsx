@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   updateProfile,
   sendEmailVerification,
 } from "firebase/auth";
-import { doc, onSnapshot, setDoc, getDoc, serverTimestamp, addDoc, collection } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebase/config";
 import { isBrevoVerifyConfigured, sendBrevoVerificationCode, verifyBrevoCode } from "../lib/brevoVerify";
 // notifyCourseRep imported dynamically in completeProfile to avoid cycles;
@@ -94,8 +94,11 @@ export function AuthProvider({ children }) {
     return () => unsub();
   }, []);
 
+  // Keyed on uid, not the User object: Firebase hands back a new User instance
+  // on token refresh / reload(), and re-attaching this listener re-bills a read
+  // every time.
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) return;
     const unsub = onSnapshot(
       doc(db, "users", user.uid),
       (snap) => {
@@ -108,18 +111,30 @@ export function AuthProvider({ children }) {
       }
     );
     return unsub;
-  }, [user]);
+  }, [user?.uid]);
 
   // ========== FCM: Register token + listen for foreground messages ==========
+  // These deps MUST stay primitive. `profile` is a fresh object on every
+  // snapshot above, so depending on it here re-ran this effect after every
+  // user-doc change — and registerFcmToken writes to that same doc, which
+  // closed an unbounded write->snapshot->write loop.
+  const fcmRegisteredFor = useRef(null);
+  const emailVerifiedWritten = useRef(false);
+  const role = profile?.role;
+
   useEffect(() => {
     if (!user || !profileReady) return;
 
     // Only register for students (role "user")
-    const role = profile?.role;
-    if (role === "user" || role === "student" || !role) {
+    const isStudent = role === "user" || role === "student" || !role;
+    if (isStudent && fcmRegisteredFor.current !== user.uid) {
+      fcmRegisteredFor.current = user.uid;
       registerFcmToken(user.uid);
     }
+  }, [user?.uid, profileReady, role]);
 
+  useEffect(() => {
+    if (!user) return;
     // Listen for push messages while the app is open
     const unsubscribe = listenForForegroundMessages((payload) => {
       console.log("Foreground push received:", payload);
@@ -129,7 +144,7 @@ export function AuthProvider({ children }) {
     return () => {
       if (typeof unsubscribe === "function") unsubscribe();
     };
-  }, [user, profile, profileReady]);
+  }, [user?.uid]);
 
   async function signUp(email, password, name) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -206,38 +221,22 @@ export function AuthProvider({ children }) {
   }
 
   async function completeProfile(details) {
-    console.log("AuthContext.completeProfile called", { uid: auth.currentUser?.uid, details });
+    if (import.meta.env.DEV) {
+      console.log("AuthContext.completeProfile called", { uid: auth.currentUser?.uid, details });
+    }
     if (!auth.currentUser) throw new Error("Not signed in.");
     const uid = auth.currentUser.uid;
     const email = auth.currentUser.email;
 
-    // create audit doc to trace the attempt
-    let auditRef = null;
-    try {
-      auditRef = await addDoc(collection(db, "profileCompletionAudit"), {
-        uid,
-        email,
-        stage: "attempt",
-        details: details || null,
-        createdAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.warn("completeProfile: failed to write audit attempt", err);
-      auditRef = null;
-    }
+    // NOTE: this used to write two `profileCompletionAudit` docs per signup
+    // (attempt + outcome) purely to debug a past issue. Nothing read them.
+    // Removed — that was 2 of the ~7 writes every registration cost.
 
     let uniqueId;
     try {
       uniqueId = await generateUniqueId(uid, email);
     } catch (err) {
       console.error("completeProfile: generateUniqueId failed", err);
-      if (auditRef) {
-        try {
-          await setDoc(auditRef, { stage: "failure", error: err.message || String(err), failedAt: serverTimestamp() }, { merge: true });
-        } catch (e) {
-          console.warn("completeProfile: failed to update audit failure", e);
-        }
-      }
       throw new Error(err.message || "Could not generate Unique ID. Try again later.");
     }
 
@@ -254,13 +253,6 @@ export function AuthProvider({ children }) {
 
     try {
       await setDoc(doc(db, "users", uid), payload, { merge: true });
-      if (auditRef) {
-        try {
-          await setDoc(auditRef, { stage: "success", uniqueId, completedAt: serverTimestamp() }, { merge: true });
-        } catch (e) {
-          console.warn("completeProfile: failed to mark audit success", e);
-        }
-      }
       // Notify Course Rep for this department + level (not whole department)
       try {
         const { notifyCourseRepOfNewStudent } = await import("../lib/notify");
@@ -282,20 +274,12 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error("completeProfile: setDoc users failed", err);
-      // If the write fails, try to clean up the idLookup entry we reserved
-      try {
-        const lookupRef = doc(db, "idLookup", uniqueId);
-        await setDoc(lookupRef, { reservedFailedAt: serverTimestamp() }, { merge: true });
-      } catch (cleanupErr) {
-        console.warn("completeProfile: failed to mark idLookup cleanup", cleanupErr);
-      }
-      if (auditRef) {
-        try {
-          await setDoc(auditRef, { stage: "failure", error: err.message || String(err), failedAt: serverTimestamp() }, { merge: true });
-        } catch (e) {
-          console.warn("completeProfile: failed to update audit failure", e);
-        }
-      }
+      // The idLookup reservation for `uniqueId` is now orphaned. We can't
+      // release it from the client — firestore.rules denies update+delete on
+      // /idLookup (see rules line 95) — so the old cleanup write here only ever
+      // produced a permission-denied round-trip. Dropped. Reclaiming orphans
+      // needs a scheduled Cloud Function; the ID space is large enough that
+      // leaking one per failed signup is tolerable meanwhile.
       throw new Error("Failed to save profile. Please try again.");
     }
 
@@ -340,7 +324,11 @@ export function AuthProvider({ children }) {
     if (!auth.currentUser) return false;
     await auth.currentUser.reload();
     const verified = auth.currentUser.emailVerified;
-    if (verified) {
+    // VerifyEmail polls this every 4s. Mirroring `emailVerified` into Firestore
+    // on every tick was a write that changed nothing but still billed — and woke
+    // every listener on the user doc. Write it once, only if it's not already set.
+    if (verified && !emailVerifiedWritten.current && profile?.emailVerified !== true) {
+      emailVerifiedWritten.current = true;
       await setDoc(doc(db, "users", auth.currentUser.uid), { emailVerified: true }, { merge: true });
     }
     return verified;

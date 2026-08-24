@@ -3,9 +3,24 @@ import { Menu } from "lucide-react";
 import { Outlet } from "react-router-dom";
 import UserSidebar from "../components/UserSidebar";
 import UserTopbar from "../components/UserTopbar";
-import { useUserDashboardData } from "../hooks/useUserDashboardData";
+import {
+  UserDashboardDataProvider,
+  useUserDashboardData,
+} from "../hooks/useUserDashboardData";
 
+/**
+ * The provider owns the single set of dashboard listeners; this shell and every
+ * routed child read from it. Do not call the subscribing hook anywhere else.
+ */
 export default function UserLayout() {
+  return (
+    <UserDashboardDataProvider>
+      <UserLayoutShell />
+    </UserDashboardDataProvider>
+  );
+}
+
+function UserLayoutShell() {
   const { profile, unreadCount } = useUserDashboardData();
   const [search, setSearch] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);

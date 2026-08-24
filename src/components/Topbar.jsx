@@ -61,7 +61,11 @@ export default function Topbar({ search, onSearchChange }) {
   useEffect(() => {
     if (!canSearchPeople) return;
     const unsubA = onSnapshot(
-      query(collection(db, "users"), where("role", "in", ["agent", "alphaAgent"])),
+      query(
+        collection(db, "users"),
+        where("role", "in", ["agent", "alphaAgent"]),
+        limit(100)
+      ),
       (snap) => setAgents(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
       () => setAgents([])
     );

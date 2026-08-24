@@ -26,22 +26,27 @@ export default function VerifyEmail() {
   const [code, setCode] = useState("");
   const pollRef = useRef(null);
 
-  if (profile?.emailVerified) {
-    navigate("/complete-profile", { replace: true });
-    return null;
-  }
+  const alreadyVerified = profile?.emailVerified === true;
+
+  // Navigating during render (and returning early, above the hooks below) meant
+  // this component rendered a different number of hooks on the verifying render
+  // than on every other one. Redirect from an effect instead.
+  useEffect(() => {
+    if (alreadyVerified) navigate("/complete-profile", { replace: true });
+  }, [alreadyVerified, navigate]);
 
   useEffect(() => {
+    if (alreadyVerified) return;
     pollRef.current = setInterval(async () => {
       const verified = await refreshEmailVerified().catch(() => false);
-      if (verified || profile?.emailVerified) {
+      if (verified) {
         clearInterval(pollRef.current);
         navigate("/complete-profile", { replace: true });
       }
     }, POLL_INTERVAL);
     return () => clearInterval(pollRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.emailVerified]);
+  }, [alreadyVerified]);
 
   useEffect(() => {
     if (cooldown <= 0) return;

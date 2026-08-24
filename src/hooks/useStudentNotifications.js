@@ -6,6 +6,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   setDoc,
   updateDoc,
   serverTimestamp,
@@ -33,7 +34,8 @@ export function useStudentNotifications() {
     const q = query(
       collection(db, "notifications"),
       where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(100)
     );
     const unsub = onSnapshot(q, (snap) => {
       setSystemNotifs(
@@ -43,14 +45,15 @@ export function useStudentNotifications() {
       );
     });
     return unsub;
-  }, [user]);
+  }, [user?.uid]);
 
   // Published announcements
   useEffect(() => {
     const q = query(
       collection(db, "announcements"),
       where("published", "==", true),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(50)
     );
     const unsub = onSnapshot(
       q,
@@ -66,9 +69,11 @@ export function useStudentNotifications() {
   // Which announcements this student has already read
   useEffect(() => {
     if (!user) return;
+    // Grows by one doc per announcement per user forever, so it must be capped.
     const q = query(
       collection(db, "announcementReads"),
-      where("userId", "==", user.uid)
+      where("userId", "==", user.uid),
+      limit(200)
     );
     const unsub = onSnapshot(q, (snap) => {
       const map = {};
@@ -79,7 +84,7 @@ export function useStudentNotifications() {
       setReadMap(map);
     });
     return unsub;
-  }, [user]);
+  }, [user?.uid]);
 
   // Filter announcements by audience + expiry
   const relevantAnnouncements = useMemo(() => {

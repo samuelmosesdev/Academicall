@@ -3,6 +3,7 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react
 import { collection, serverTimestamp, writeBatch, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import Modal from "./Modal";
+import { refreshCbtQuestions } from "../hooks/useCbtData";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 
 const TEMPLATE_CSV = `topic,questionText,optionA,optionB,optionC,optionD,correct,difficulty,explanation
@@ -167,6 +168,7 @@ export default function ImportQuestionsModal({ open, onClose, courses = [] }) {
         await batch.commit();
         success += chunk.length;
       }
+      await refreshCbtQuestions();
       setResult({ success, failed }); setParsed([]); setFileName("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (err) {

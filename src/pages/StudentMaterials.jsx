@@ -63,7 +63,7 @@ export default function StudentMaterials() {
       () => setLoading(false)
     );
     return () => unsub();
-  }, [user]);
+  }, [user?.uid]);
 
   const byCourse = useMemo(() => {
     const map = new Map();

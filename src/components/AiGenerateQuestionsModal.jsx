@@ -12,6 +12,7 @@ import {
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { generateQuestionsFromPdf } from "../lib/geminiGenerate";
+import { refreshCbtQuestions } from "../hooks/useCbtData";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
@@ -175,6 +176,7 @@ export default function AiGenerateQuestionsModal({
           createdAt: serverTimestamp(),
         });
       }
+      await refreshCbtQuestions();
       onSaved?.(toSave.length);
       handleClose();
     } catch (err) {

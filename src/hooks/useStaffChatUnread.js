@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   collection,
   doc,
@@ -21,8 +21,18 @@ export function useStaffChatUnread() {
   const [unread, setUnread] = useState(0);
   const [latestAt, setLatestAt] = useState(null);
 
+  // Firestore Timestamps are class instances rebuilt on every snap.data(), so
+  // `profile?.staffChatLastReadAt` is a new reference even when the value is
+  // unchanged. Compare on the primitive instead, or this effect re-attaches the
+  // 80-doc listener below on every single user-doc change.
+  const lastReadMs = profile?.staffChatLastReadAt?.toMillis
+    ? profile.staffChatLastReadAt.toMillis()
+    : profile?.staffChatLastReadAt?.seconds
+      ? profile.staffChatLastReadAt.seconds * 1000
+      : 0;
+
   useEffect(() => {
-    if (!user) {
+    if (!user?.uid) {
       setUnread(0);
       return;
     }
@@ -34,11 +44,6 @@ export function useStaffChatUnread() {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        const lastReadMs = profile?.staffChatLastReadAt?.toMillis
-          ? profile.staffChatLastReadAt.toMillis()
-          : profile?.staffChatLastReadAt?.seconds
-            ? profile.staffChatLastReadAt.seconds * 1000
-            : 0;
         let count = 0;
         let maxT = 0;
         snap.docs.forEach((d) => {
@@ -59,10 +64,13 @@ export function useStaffChatUnread() {
       () => setUnread(0)
     );
     return unsub;
-  }, [user?.uid, profile?.staffChatLastReadAt]);
+  }, [user?.uid, lastReadMs]);
 
-  async function markStaffChatRead() {
-    if (!user) return;
+  // MUST be stable. Callers put this in effect dependency arrays, and it writes
+  // to users/{uid} — an unstable identity here closed a write -> snapshot ->
+  // re-render -> write loop that burned the daily quota in minutes.
+  const markStaffChatRead = useCallback(async () => {
+    if (!user?.uid) return;
     try {
       await setDoc(
         doc(db, "users", user.uid),
@@ -72,7 +80,7 @@ export function useStaffChatUnread() {
     } catch (e) {
       console.warn("markStaffChatRead", e);
     }
-  }
+  }, [user?.uid]);
 
   return { unread, markStaffChatRead, latestAt };
 }

@@ -29,7 +29,7 @@ const fieldClass =
 
 export default function StudentPractice() {
   const { user, profile } = useAuth();
-  const { practiceSets, questions, loading } = useCbtData();
+  const { practiceSets, questions, loading } = useCbtData({ withQuestions: true });
 
   // Filters
   const [search, setSearch] = useState("");

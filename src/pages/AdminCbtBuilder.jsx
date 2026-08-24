@@ -14,7 +14,7 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import { db } from "../firebase/config";
-import { useCbtData } from "../hooks/useCbtData";
+import { useCbtData, refreshCbtQuestions } from "../hooks/useCbtData";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 import ImportQuestionsModal from "../components/ImportQuestionsModal";
 
@@ -34,7 +34,7 @@ const emptyForm = {
 };
 
 export default function AdminCbtBuilder() {
-  const { courses, questions, practiceSets, loading } = useCbtData();
+  const { courses, questions, practiceSets, loading } = useCbtData({ withQuestions: true });
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [filterFaculty, setFilterFaculty] = useState("");
@@ -106,6 +106,7 @@ export default function AdminCbtBuilder() {
         difficulty: form.difficulty,
         createdAt: serverTimestamp(),
       });
+      await refreshCbtQuestions();
       setForm(emptyForm);
       setShowForm(false);
     } catch (err) {
@@ -120,6 +121,7 @@ export default function AdminCbtBuilder() {
     if (!ok) return;
     try {
       await deleteDoc(doc(db, "cbtQuestions", q.id));
+      await refreshCbtQuestions();
     } catch (err) {
       alert(err.message || "Delete failed.");
     }

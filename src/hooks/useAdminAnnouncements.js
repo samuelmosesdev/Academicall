@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 export function useAdminAnnouncements() {
@@ -7,7 +7,7 @@ export function useAdminAnnouncements() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(100));
     const unsub = onSnapshot(
       q,
       (snap) => {

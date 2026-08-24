@@ -56,7 +56,7 @@ export default function UserDashboard() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const { kpis, loading } = useUserDashboardData();
-  const { practiceSets, loading: cbtLoading } = useCbtData();
+  const { practiceSets, loading: cbtLoading } = useCbtData({ withQuestions: true });
 
   const [feedTab, setFeedTab] = useState("department"); // department | general
   const [deptPosts, setDeptPosts] = useState([]);

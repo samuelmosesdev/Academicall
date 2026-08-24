@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   collection,
+  getCountFromServer,
   onSnapshot,
   query,
   where,
@@ -32,26 +33,23 @@ export function useDashboardData() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
-      setUsers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    });
-
-    const unsubAgents = onSnapshot(collection(db, "agents"), (snap) => {
-      setAgents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-
-    const unsubDocuments = onSnapshot(collection(db, "documents"), (snap) => {
-      setDocumentsCount(snap.size);
-    });
-
-    const subsQuery = query(
-      collection(db, "subscriptions"),
-      where("status", "==", "active")
+    // `users` and `agents` are streamed because the KPI cards, the free-vs-paid
+    // donut and the growth chart all derive from the documents themselves.
+    // Bounded so an admin page view can't scale linearly with the user table.
+    const unsubUsers = onSnapshot(
+      query(collection(db, "users"), limit(1000)),
+      (snap) => {
+        setUsers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      }
     );
-    const unsubSubs = onSnapshot(subsQuery, (snap) => {
-      setActiveSubscriptions(snap.size);
-    });
+
+    const unsubAgents = onSnapshot(
+      query(collection(db, "agents"), limit(200)),
+      (snap) => {
+        setAgents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      }
+    );
 
     const activityQuery = query(
       collection(db, "activityLog"),
@@ -65,9 +63,29 @@ export function useDashboardData() {
     return () => {
       unsubUsers();
       unsubAgents();
-      unsubDocuments();
-      unsubSubs();
       unsubActivity();
+    };
+  }, []);
+
+  // These two are pure counts. Streaming every document just to read snap.size
+  // billed one read per document per dashboard view; an aggregation query bills
+  // one read per 1,000 index entries instead. They aren't live any more, which
+  // is fine for headline counters.
+  useEffect(() => {
+    let alive = true;
+
+    getCountFromServer(collection(db, "documents"))
+      .then((snap) => alive && setDocumentsCount(snap.data().count))
+      .catch(() => alive && setDocumentsCount(0));
+
+    getCountFromServer(
+      query(collection(db, "subscriptions"), where("status", "==", "active"))
+    )
+      .then((snap) => alive && setActiveSubscriptions(snap.data().count))
+      .catch(() => alive && setActiveSubscriptions(0));
+
+    return () => {
+      alive = false;
     };
   }, []);
 

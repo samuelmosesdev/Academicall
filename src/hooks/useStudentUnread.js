@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, limit, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 
@@ -18,7 +18,8 @@ export function useStudentUnread() {
     // Prefer user-targeted notifications with readByUser !== true
     const q = query(
       collection(db, "notifications"),
-      where("userId", "==", user.uid)
+      where("userId", "==", user.uid),
+      limit(100)
     );
     const unsub = onSnapshot(
       q,

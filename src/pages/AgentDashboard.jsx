@@ -21,7 +21,7 @@ export default function AgentDashboard() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [showAiImport, setShowAiImport] = useState(false);
-  const { courses, questions, loading: cbtLoading } = useCbtData();
+  const { courses, questions, loading: cbtLoading } = useCbtData({ withQuestions: true });
   const { documents, loading: docsLoading } = useAdminDocuments();
 
   const firstName =

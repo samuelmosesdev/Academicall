@@ -19,7 +19,7 @@ export default function ArchivedNotifications() {
     return onSnapshot(q, (snap) => {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
-  }, [user]);
+  }, [user?.uid]);
 
   function toggleSelect(id) {
     const s = new Set(selectedIds);

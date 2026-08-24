@@ -58,7 +58,7 @@ export function useStudentCourses() {
       () => setEnrollments([])
     );
     return () => unsub();
-  }, [user]);
+  }, [user?.uid]);
 
   const enrolledCourseIds = useMemo(() => {
     const set = new Set();

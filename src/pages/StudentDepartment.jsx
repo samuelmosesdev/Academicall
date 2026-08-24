@@ -225,7 +225,7 @@ export default function StudentDepartment() {
       setSavedIds(ids);
     });
     return () => unsub();
-  }, [user]);
+  }, [user?.uid]);
 
   async function saveMaterial(mat) {
     if (!user || savedIds.has(mat.id)) return;

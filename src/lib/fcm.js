@@ -4,6 +4,11 @@ import { messaging, db } from "../firebase/config";
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
+// Tokens already written during this page session, keyed `${uid}:${token}`.
+// The write below uses serverTimestamp(), so repeating it always mutates the
+// user doc — which wakes every listener on that doc. Never write it twice.
+const writtenTokens = new Set();
+
 /**
  * Ask for permission and save the device token
  */
@@ -30,7 +35,7 @@ export async function registerFcmToken(uid) {
       serviceWorkerRegistration: registration,
     });
 
-    if (token) {
+    if (token && !writtenTokens.has(`${uid}:${token}`)) {
       // Save token under the user document
       await setDoc(
         doc(db, "users", uid),
@@ -44,6 +49,7 @@ export async function registerFcmToken(uid) {
         },
         { merge: true }
       );
+      writtenTokens.add(`${uid}:${token}`);
 
       console.log("FCM token saved");
     }

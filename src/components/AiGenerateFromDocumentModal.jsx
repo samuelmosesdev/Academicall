@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { generateQuestionsFromDocument } from "../lib/geminiGenerate";
+import { refreshCbtQuestions } from "../hooks/useCbtData";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
@@ -79,6 +80,7 @@ export default function AiGenerateFromDocumentModal({
         });
         saved += 1;
       }
+      await refreshCbtQuestions();
 
       const easyN = list.filter((q) => q.difficulty === "easy").length;
       const medN = list.filter((q) => q.difficulty === "medium").length;
