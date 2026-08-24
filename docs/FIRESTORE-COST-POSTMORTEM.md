@@ -299,6 +299,45 @@ separate Firebase project, and keep the credentials in `.env.development`.
 
 ## How to verify a fix
 
-Open the Firebase console → Firestore → Usage. Load the page you changed, leave it
-idle for 60 seconds, and watch the read and write counters. **They should be flat.**
-A counter that climbs while nothing is happening is a loop, every time.
+### Locally, for free (preferred)
+
+```bash
+npm run emulators     # needs JDK 21+ (brew install openjdk@21)
+npm run seed          # throwaway users + sample data, demo project only
+npm run dev           # .env.development points at the emulator automatically
+```
+
+Sign in with `student@example.test` / `admin@example.test`, password
+`emulator-only-pw`. Emulator UI at http://127.0.0.1:4000.
+
+To measure whether a page loops, poll the document the page writes to and count
+distinct values — each distinct value is one write:
+
+```js
+// node count.mjs <uid> <field> <seconds>
+const [uid, field, secs] = process.argv.slice(2);
+const url = `http://127.0.0.1:8080/v1/projects/demo-uofa-reader/databases/(default)/documents/users/${uid}`;
+const seen = new Set(); const t0 = Date.now();
+while ((Date.now() - t0) / 1000 < Number(secs)) {
+  const j = await (await fetch(url, { headers: { Authorization: "Bearer owner" } })).json();
+  const v = j?.fields?.[field]?.timestampValue;
+  if (v) seen.add(v);
+  await new Promise(r => setTimeout(r, 400));
+}
+console.log("distinct writes:", seen.size);
+```
+
+Measured on this codebase, idling 60s on Staff HQ:
+
+| | writes to `users/{uid}` |
+|---|---|
+| before the fix | **108** (a floor — sampling-limited) |
+| after the fix | **1** |
+
+Anything above single digits while a page sits idle is a loop.
+
+### Against production, after deploying
+
+Firebase console → Firestore → Usage. Load the page, leave it idle 60 seconds,
+watch the read and write counters. **They should be flat.** A counter that climbs
+while nothing is happening is a loop, every time.
