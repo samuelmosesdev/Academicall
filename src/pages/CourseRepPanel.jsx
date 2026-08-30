@@ -31,6 +31,9 @@ import AiCourseImportModal from "../components/AiCourseImportModal";
 import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
 import { displayLabel } from "../components/UserAvatar";
+import { classEventsApi } from "../lib/api";
+import { requestsApi } from "../lib/api";
+import { coursesApi } from "../lib/api";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -46,7 +49,7 @@ const LEVELS = [
 ];
 
 export default function CourseRepPanel() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const allowed =
     isCourseRep(profile) || isAdmin(profile) || isAlpha(profile);
 
@@ -102,6 +105,13 @@ export default function CourseRepPanel() {
 
   // Classes created by this rep
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      classEventsApi.list().then(({ events = [] }) => {
+        if (alive) setMyClasses(events.filter((event) => event.createdBy === user?.uid));
+      }).catch(() => alive && setMyClasses([]));
+      return () => { alive = false; };
+    }
     if (!user?.uid) return;
     const q = query(
       collection(db, "classEvents"),
@@ -120,10 +130,17 @@ export default function CourseRepPanel() {
       },
       () => setMyClasses([])
     );
-  }, [user?.uid]);
+  }, [user?.uid, authMode]);
 
   // My requests (course / material)
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      requestsApi.list().then(({ requests = [] }) => {
+        if (alive) setMyRequests(requests.filter((request) => request.requesterUid === user?.uid));
+      }).catch(() => alive && setMyRequests([]));
+      return () => { alive = false; };
+    }
     if (!user?.uid) return;
     const unsub = onSnapshot(
       collection(db, "requests"),
@@ -139,10 +156,24 @@ export default function CourseRepPanel() {
       () => setMyRequests([])
     );
     return unsub;
-  }, [user?.uid]);
+  }, [user?.uid, authMode]);
 
   // Courses already for this department
   useEffect(() => {
+    if (authMode === "api") {
+      if (!department) {
+        setDeptCourses([]);
+        return undefined;
+      }
+      let alive = true;
+      coursesApi.list().then(({ courses = [] }) => {
+        if (!alive) return;
+        setDeptCourses(courses
+          .filter((course) => course.department === department && (!level || !course.level || course.level === level))
+          .sort((a, b) => String(a.code || "").localeCompare(String(b.code || ""))));
+      }).catch(() => alive && setDeptCourses([]));
+      return () => { alive = false; };
+    }
     if (!department) {
       setDeptCourses([]);
       return;
@@ -165,10 +196,14 @@ export default function CourseRepPanel() {
       },
       () => setDeptCourses([])
     );
-  }, [department]);
+  }, [department, authMode]);
 
   // Students in same department AND level only
   useEffect(() => {
+    if (authMode === "api") {
+      setStudentCount(null);
+      return;
+    }
     if (!department || !level) {
       setStudentCount(0);
       return;
@@ -189,7 +224,7 @@ export default function CourseRepPanel() {
         setStudentCount(null);
       }
     })();
-  }, [department, level]);
+  }, [department, level, authMode]);
 
   // NOTE: Fan-out of notifications and per-student timetable events
   // is handled server-side by a Cloud Function listening to `classEvents`.
@@ -212,7 +247,15 @@ export default function CourseRepPanel() {
       const start = new Date(startsAt);
       const end = endsAt ? new Date(endsAt) : null;
 
-      const classRef = await addDoc(collection(db, "classEvents"), {
+      const { event } = authMode === "api"
+        ? await classEventsApi.create({
+            title: title.trim(), courseCode: courseCode.trim().toUpperCase() || null,
+            venue: venue.trim() || null, notes: notes.trim() || null,
+            startsAt: start.toISOString(), endsAt: end ? end.toISOString() : null,
+            faculty: faculty || null, department, level: level || null,
+            createdByName: profile?.name || user.email,
+          })
+        : { event: await addDoc(collection(db, "classEvents"), {
         title: title.trim(),
         courseCode: courseCode.trim().toUpperCase() || null,
         venue: venue.trim() || null,
@@ -225,7 +268,7 @@ export default function CourseRepPanel() {
         createdBy: user.uid,
         createdByName: profile?.name || user.email,
         createdAt: serverTimestamp(),
-      });
+      }) };
       const when = start.toLocaleString();
       const body = [
         courseCode && courseCode.trim().toUpperCase(),
@@ -241,7 +284,7 @@ export default function CourseRepPanel() {
         action: "class.schedule",
         targetUid: null,
         targetName: null,
-        reference: classRef.id,
+        reference: event.id,
         meta: { title: title.trim() },
       });
 
@@ -267,7 +310,8 @@ export default function CourseRepPanel() {
     );
     if (!ok) return;
     try {
-      await deleteDoc(doc(db, "classEvents", ev.id));
+      if (authMode === "api") await classEventsApi.remove(ev.id);
+      else await deleteDoc(doc(db, "classEvents", ev.id));
       const when =
         (ev.startsAt?.toDate?.() || ev.startsAt) &&
         new Date(ev.startsAt?.toDate?.() || ev.startsAt).toLocaleString();
@@ -304,7 +348,7 @@ export default function CourseRepPanel() {
     }
     setCBusy(true);
     try {
-      await addDoc(collection(db, "requests"), {
+      await requestsApi.create({
         type: "course",
         status: "pending",
         title: `Add course ${cCode.trim().toUpperCase()} — ${cTitle.trim()}`,
@@ -324,7 +368,6 @@ export default function CourseRepPanel() {
             published: false,
           },
         },
-        createdAt: serverTimestamp(),
       });
       setCCode("");
       setCTitle("");
@@ -353,7 +396,7 @@ export default function CourseRepPanel() {
       const url = res.secure_url || res.url;
       const bytes = res.bytes || matFile.size;
       // Create a request for admin approval (safer than direct publish)
-      await addDoc(collection(db, "requests"), {
+      await requestsApi.create({
         type: "material",
         status: "pending",
         title: `Material: ${matTitle.trim()} (${course.code})`,
@@ -376,7 +419,6 @@ export default function CourseRepPanel() {
             status: "published",
           },
         },
-        createdAt: serverTimestamp(),
       });
       setMatTitle("");
       setMatFile(null);

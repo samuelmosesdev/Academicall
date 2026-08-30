@@ -9,6 +9,8 @@ import {
   limit,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
+import { usersApi, documentsApi, activityApi, subscriptionsApi } from "../lib/api";
 
 /**
  * Live admin dashboard data.
@@ -25,6 +27,7 @@ import { db } from "../firebase/config";
  *  - activityLog      { userName, avatarUrl, action, detail, status, createdAt }
  */
 export function useDashboardData() {
+  const { authMode } = useAuth();
   const [users, setUsers] = useState([]);
   const [agents, setAgents] = useState([]);
   const [documentsCount, setDocumentsCount] = useState(0);
@@ -33,6 +36,19 @@ export function useDashboardData() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      Promise.all([usersApi.list(), documentsApi.list(), activityApi.list(), subscriptionsApi.count()]).then(([userData, documentData, activityData, subscriptionData]) => {
+        if (!alive) return;
+        setUsers(userData.users || []);
+        setAgents((userData.users || []).filter((user) => ["agent", "alphaAgent"].includes(user.role)));
+        setDocumentsCount((documentData.documents || []).length);
+        setRecentActivity(activityData.activity || []);
+        setActiveSubscriptions(subscriptionData.count || 0);
+        setLoading(false);
+      }).catch(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     // `users` and `agents` are streamed because the KPI cards, the free-vs-paid
     // donut and the growth chart all derive from the documents themselves.
     // Bounded so an admin page view can't scale linearly with the user table.
@@ -65,13 +81,14 @@ export function useDashboardData() {
       unsubAgents();
       unsubActivity();
     };
-  }, []);
+  }, [authMode]);
 
   // These two are pure counts. Streaming every document just to read snap.size
   // billed one read per document per dashboard view; an aggregation query bills
   // one read per 1,000 index entries instead. They aren't live any more, which
   // is fine for headline counters.
   useEffect(() => {
+    if (authMode === "api") return;
     let alive = true;
 
     getCountFromServer(collection(db, "documents"))
@@ -87,7 +104,7 @@ export function useDashboardData() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [authMode]);
 
   const kpis = useMemo(() => {
     const activeAgents = agents.filter((a) => a.status === "active").length;

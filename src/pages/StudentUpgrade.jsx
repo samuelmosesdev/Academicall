@@ -7,14 +7,13 @@ import {
   Shield,
   Loader2,
 } from "lucide-react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { usePaymentSettings } from "../hooks/usePaymentSettings";
 import { PRO_FEATURES, isPro, planLabel } from "../lib/subscription";
-import { db } from "../firebase/config";
+import { paymentsApi, notificationsApi } from "../lib/api";
 
 export default function StudentUpgrade() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const { settings, plans, loading } = usePaymentSettings();
   const pro = isPro(profile);
   const [claiming, setClaiming] = useState(null);
@@ -30,7 +29,7 @@ export default function StudentUpgrade() {
     // Record intent so admin can match payment → student quickly
     if (user) {
       try {
-        await addDoc(collection(db, "paymentClaims"), {
+        const payload = {
           userId: user.uid,
           email: profile?.email || user.email || "",
           name: profile?.name || profile?.nickname || "",
@@ -39,8 +38,8 @@ export default function StudentUpgrade() {
           planName: plan.name,
           amountLabel: plan.amountLabel,
           status: "clicked_checkout",
-          createdAt: serverTimestamp(),
-        });
+        };
+        if (authMode === "api") await paymentsApi.createClaim({ plan: plan.id, meta: payload });
       } catch {
         /* non-blocking */
       }
@@ -54,7 +53,7 @@ export default function StudentUpgrade() {
     setClaimMsg("");
     setClaimOk(false);
     try {
-      await addDoc(collection(db, "paymentClaims"), {
+      const payload = {
         userId: user.uid,
         email: profile?.email || user.email || "",
         name: profile?.name || profile?.nickname || "",
@@ -68,21 +67,19 @@ export default function StudentUpgrade() {
         amountLabel: plan.amountLabel,
         // Must stay in the allowed set in firestore.rules
         status: "awaiting_review",
-        createdAt: serverTimestamp(),
-      });
+      };
+      if (authMode !== "api") {
+        setClaimMsg("Payment reporting will be available after this account is migrated to the Academicall API.");
+        return;
+      }
+      await paymentsApi.createClaim({ plan: plan.id, meta: payload });
       // Surface in admin notification bell (best-effort)
       try {
-        await addDoc(collection(db, "notifications"), {
+        await notificationsApi.create({
           type: "payment_claim",
           title: "Student reported a payment",
           body: `${profile?.name || profile?.nickname || user.email || "A student"} says they paid for ${plan.name} (${plan.amountLabel || plan.id}). Review under Payments.`,
-          fromUserId: user.uid,
-          fromUserName: profile?.name || profile?.nickname || "",
-          fromUserEmail: profile?.email || user.email || "",
-          planId: plan.id,
-          planName: plan.name,
-          readByAdmin: false,
-          createdAt: serverTimestamp(),
+          data: { fromUserId: user.uid, fromUserName: profile?.name || profile?.nickname || "", fromUserEmail: profile?.email || user.email || "", planId: plan.id, planName: plan.name },
         });
       } catch {
         /* claim already saved — notification is best-effort */

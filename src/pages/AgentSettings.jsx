@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Save, Loader2, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { db } from "../firebase/config";
+import { usersApi } from "../lib/api";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 
 const fieldClass =
@@ -45,13 +44,12 @@ export default function AgentSettings() {
     setSaving(true);
     setMsg("");
     try {
-      await updateDoc(doc(db, "users", user.uid), {
+      await usersApi.updateMe({
         name: name.trim(),
         faculty: faculty || null,
         department: department || null,
         canImportAI: !!prefs.canImportAI,
         autoPublish: !!prefs.autoPublish,
-        settingsUpdatedAt: serverTimestamp(),
       });
       setMsg("Settings saved.");
     } catch (err) {

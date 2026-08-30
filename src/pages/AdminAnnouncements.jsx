@@ -9,14 +9,14 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { Megaphone, Plus, Trash2, Pin, MessageCircle, Globe } from "lucide-react";
-import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { announcementsApi, feedApi } from "../lib/api";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
 
 export default function AdminAnnouncements() {
-  const { profile, user } = useAuth();
+  const { profile, user, authMode } = useAuth();
   const [tab, setTab] = useState("announcements");
 
   const [items, setItems] = useState([]);
@@ -26,6 +26,7 @@ export default function AdminAnnouncements() {
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState("all");
   const [pinned, setPinned] = useState(false);
+  const [published, setPublished] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -40,6 +41,11 @@ export default function AdminAnnouncements() {
   const [openComments, setOpenComments] = useState({});
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      announcementsApi.list().then(({ announcements = [] }) => alive && setItems(announcements)).catch(() => alive && setItems([])).finally(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     return onSnapshot(
       collection(db, "announcements"),
       (snap) => {
@@ -54,9 +60,14 @@ export default function AdminAnnouncements() {
       },
       () => setLoading(false)
     );
-  }, []);
+  }, [authMode]);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      feedApi.list("general").then(({ posts = [] }) => alive && setGeneral(posts)).catch(() => alive && setGeneral([])).finally(() => alive && setGLoading(false));
+      return () => { alive = false; };
+    }
     return onSnapshot(
       collection(db, "generalPosts"),
       (snap) => {
@@ -71,7 +82,7 @@ export default function AdminAnnouncements() {
       },
       () => setGLoading(false)
     );
-  }, []);
+  }, [authMode]);
 
   async function handlePublish(e) {
     e.preventDefault();
@@ -82,20 +93,18 @@ export default function AdminAnnouncements() {
     }
     setBusy(true);
     try {
-      await addDoc(collection(db, "announcements"), {
+      await announcementsApi.create({
         title: title.trim(),
         body: body.trim(),
         audience,
         pinned: !!pinned,
-        createdAt: serverTimestamp(),
-        createdBy: user?.uid || null,
-        createdByName: profile?.name || "Admin",
-        active: true,
+        published: !!published,
       });
       setTitle("");
       setBody("");
       setAudience("all");
       setPinned(false);
+      setPublished(true);
       setShowForm(false);
     } catch (err) {
       setError(err.message || "Could not publish.");
@@ -113,7 +122,13 @@ export default function AdminAnnouncements() {
     }
     setGBusy(true);
     try {
-      await addDoc(collection(db, "generalPosts"), {
+      if (authMode === "api") await feedApi.create("general", {
+        title: gTitle.trim(), body: gBody.trim(), pinned: !!gPinned,
+        authorName: profile?.nickname || profile?.name || "Staff",
+        authorPhoto: profile?.photoURL || profile?.avatarUrl || null,
+        comments: [], reactions: [],
+      });
+      else await addDoc(collection(db, "generalPosts"), {
         title: gTitle.trim(),
         body: gBody.trim(),
         pinned: !!gPinned,
@@ -140,7 +155,7 @@ export default function AdminAnnouncements() {
   async function handleDelete(id) {
     if (!window.confirm("Delete this announcement?")) return;
     try {
-      await deleteDoc(doc(db, "announcements", id));
+      await announcementsApi.remove(id);
     } catch (err) {
       alert(err.message || "Delete failed.");
     }
@@ -149,7 +164,8 @@ export default function AdminAnnouncements() {
   async function handleDeleteGeneral(id) {
     if (!window.confirm("Delete this general post?")) return;
     try {
-      await deleteDoc(doc(db, "generalPosts", id));
+      if (authMode === "api") await feedApi.remove("general", id);
+      else await deleteDoc(doc(db, "generalPosts", id));
     } catch (err) {
       alert(err.message || "Delete failed.");
     }
@@ -157,7 +173,8 @@ export default function AdminAnnouncements() {
 
   async function togglePinGeneral(item) {
     try {
-      await updateDoc(doc(db, "generalPosts", item.id), { pinned: !item.pinned });
+      if (authMode === "api") await feedApi.update("general", item.id, { pinned: !item.pinned });
+      else await updateDoc(doc(db, "generalPosts", item.id), { pinned: !item.pinned });
     } catch (err) {
       alert(err.message);
     }
@@ -225,6 +242,10 @@ export default function AdminAnnouncements() {
                   <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
                   Pin
                 </label>
+                <label className="flex items-center gap-2 text-sm text-text-secondary">
+                  <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
+                  Publish now
+                </label>
                 <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">
                   {busy ? "Publishing…" : "Publish"}
                 </button>
@@ -243,7 +264,7 @@ export default function AdminAnnouncements() {
                       {item.title}
                     </p>
                     <p className="mt-1 text-sm text-text-secondary whitespace-pre-wrap">{item.body}</p>
-                    <p className="mt-2 text-xs text-text-muted">{item.createdByName} · {item.audience}</p>
+                    <p className="mt-2 text-xs text-text-muted">{item.createdByName} · {item.audience} · {item.published ? "Published" : "Draft"}</p>
                   </div>
                   <button type="button" onClick={() => handleDelete(item.id)} className="text-status-danger p-1">
                     <Trash2 size={16} />

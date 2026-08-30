@@ -23,9 +23,11 @@ import { FREE_LIMITS, isPro } from "../lib/subscription";
 import { db } from "../firebase/config";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 import AiCourseImportModal from "../components/AiCourseImportModal";
+import { usersApi } from "../lib/api";
+import { logActivity } from "../lib/activityLog";
 
 export default function StudentCourses() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const { courses, loading } = useCbtData();
   const pro = isPro(profile);
   const [selected, setSelected] = useState(() => profile?.selectedCourseIds || []);
@@ -103,10 +105,14 @@ export default function StudentCourses() {
     setSaving(true);
     setMsg("");
     try {
-      await updateDoc(doc(db, "users", user.uid), {
-        selectedCourseIds: selected,
-        customCourses,
-      });
+      if (authMode === "api") {
+        await usersApi.updateMe({ selectedCourseIds: selected, customCourses });
+      } else {
+        await updateDoc(doc(db, "users", user.uid), {
+          selectedCourseIds: selected,
+          customCourses,
+        });
+      }
       setMsg("Your course list was saved.");
     } catch (err) {
       setMsg(err.message || "Could not save.");
@@ -149,7 +155,11 @@ export default function StudentCourses() {
       const next = [...customCourses, entry];
       setCustomCourses(next);
       if (user) {
-        await updateDoc(doc(db, "users", user.uid), { customCourses: next });
+        if (authMode === "api") {
+          await usersApi.updateMe({ customCourses: next });
+        } else {
+          await updateDoc(doc(db, "users", user.uid), { customCourses: next });
+        }
       }
       setManualCode("");
       setManualTitle("");
@@ -203,14 +213,13 @@ export default function StudentCourses() {
     setCustomCourses(next);
     try {
       if (user) {
-        await updateDoc(doc(db, "users", user.uid), { customCourses: next });
-        await addDoc(collection(db, "activityLog"), {
+        await usersApi.updateMe({ customCourses: next });
+        await logActivity({
           actorUid: user.uid,
           actorName: profile?.name || user.email,
           action: "courses.ai_import",
           reference: `${toAdd.length} courses`,
           meta: { codes: toAdd.map((c) => c.code) },
-          createdAt: serverTimestamp(),
         });
       }
       setMsg(`Imported ${toAdd.length} course(s) from your registration.`);

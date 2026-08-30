@@ -1,13 +1,6 @@
 import { useState } from "react";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  writeBatch,
-  doc,
-} from "firebase/firestore";
 import { Sparkles, Upload, X, Loader2, Check } from "lucide-react";
-import { db } from "../firebase/config";
+import { coursesApi, requestsApi } from "../lib/api";
 // Static import — dynamic import broke on production (chunk fetch failed)
 import {
   validateCourseRow,
@@ -88,17 +81,11 @@ export default function AiCourseImportModal({
         setSaving(false);
         return;
       }
-      const batch = writeBatch(db);
-      valid.forEach((payload) => {
-        const ref = doc(collection(db, "courses"));
-        batch.set(ref, {
-          ...payload,
-          published: true,
-          source: "ai-import",
-          createdAt: serverTimestamp(),
-        });
-      });
-      await batch.commit();
+      await Promise.all(valid.map((payload) => coursesApi.create({
+        ...payload,
+        published: true,
+        source: "ai-import",
+      })));
       setMsg(`Imported ${valid.length} course(s).`);
       onDone?.();
       setTimeout(onClose, 1200);
@@ -113,7 +100,7 @@ export default function AiCourseImportModal({
     setSaving(true);
     setError("");
     try {
-      await addDoc(collection(db, "requests"), {
+      await requestsApi.create({
         type: "course_bulk",
         status: "pending",
         title: `AI course import (${rows.length} courses) — ${defaultDepartment}`,
@@ -131,7 +118,6 @@ export default function AiCourseImportModal({
             })
           ),
         },
-        createdAt: serverTimestamp(),
       });
       setMsg("Sent to Admin for approval (Course Reps tab).");
       onDone?.();

@@ -33,6 +33,7 @@ import { fileToCompressedDataUrl } from "../lib/imageUtils";
 import { uploadImageToCloudinary } from "../lib/cloudinaryUpload";
 import { updateProfile } from "firebase/auth";
 import UniqueIdBadge from "../components/UniqueIdBadge";
+import { requestsApi, usersApi } from "../lib/api";
 
 const LEVELS = [
   "100 Level",
@@ -57,7 +58,7 @@ const fieldClass =
   "w-full rounded-xl border border-border-light bg-card-light px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20";
 
 export default function StudentProfile() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
 
   const [bio, setBio] = useState("");
   const [interests, setInterests] = useState("");
@@ -96,7 +97,7 @@ export default function StudentProfile() {
     setInterests(profile.interests || "");
     setDob(profile.dob || "");
     setGender(profile.gender || "");
-    setPhotoDataUrl(profile.photoURL || "");
+    setPhotoDataUrl(profile.photoURL || profile.photoUrl || "");
     setNickname(profile.nickname || profile.nickName || "");
     setShowDepartment(profile.showDepartment !== false);
     setShowPhone(profile.showPhone === true);
@@ -104,6 +105,19 @@ export default function StudentProfile() {
   }, [profile]);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      requestsApi.list().then(({ requests: list = [] }) => {
+        if (!alive) return;
+        setRequests(list.filter((item) => item.type === "profile_change").map((item) => ({
+          id: item.id,
+          ...item.meta,
+          status: item.status,
+          createdAt: item.createdAt,
+        })));
+      }).catch(() => alive && setRequests([]));
+      return () => { alive = false; };
+    }
     if (!user) return;
     const q = query(
       collection(db, "profileChangeRequests"),
@@ -121,7 +135,7 @@ export default function StudentProfile() {
       () => setRequests([])
     );
     return unsub;
-  }, [user?.uid]);
+  }, [user, authMode]);
 
   const pendingByField = useMemo(() => {
     const map = {};
@@ -154,6 +168,23 @@ export default function StudentProfile() {
     setSaved(false);
     setBusy(true);
     try {
+      if (authMode === "api") {
+        await usersApi.updateMe({
+          bio: bio.trim(),
+          interests: interests.trim(),
+          dob: dob || null,
+          gender: gender || null,
+          nickname: nickname.trim(),
+          photoUrl: photoDataUrl && photoDataUrl.startsWith("http") ? photoDataUrl : undefined,
+          avatarUrl: photoDataUrl && photoDataUrl.startsWith("http") ? photoDataUrl : undefined,
+          showDepartment: !!showDepartment,
+          showPhone: !!showPhone,
+          allowAnonymousComments: !!allowAnonymousComments,
+        });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+        return;
+      }
       await updateDoc(doc(db, "users", user.uid), {
         bio: bio.trim(),
         interests: interests.trim(),
@@ -225,6 +256,29 @@ export default function StudentProfile() {
 
     setReqBusy(true);
     try {
+      if (authMode === "api") {
+        await requestsApi.create({
+          type: "profile_change",
+          title: `Profile change: ${meta.label}`,
+          body: reqReason.trim(),
+          meta: {
+            userName: profile.name || "",
+            userEmail: profile.email || user.email || "",
+            uniqueId: profile.uniqueId || null,
+            field: reqField,
+            fieldLabel: meta.label,
+            currentValue: currentValue || "—",
+            requestedValue: newValue,
+            reason: reqReason.trim(),
+          },
+        });
+        setReqSuccess(true);
+        setTimeout(() => {
+          setShowRequestModal(false);
+          setReqSuccess(false);
+        }, 1500);
+        return;
+      }
       await addDoc(collection(db, "profileChangeRequests"), {
         userId: user.uid,
         userName: profile.name || "",
@@ -720,12 +774,19 @@ export default function StudentProfile() {
               }
             }
 
-            // Write both field names so every UI (topbar uses avatarUrl, profile uses photoURL) updates
-            await updateDoc(doc(db, "users", user.uid), {
-              photoURL: finalUrl,
-              avatarUrl: finalUrl,
-              updatedAt: serverTimestamp(),
-            });
+            if (authMode === "api") {
+              await usersApi.updateMe({
+                photoUrl: finalUrl,
+                avatarUrl: finalUrl,
+              });
+            } else {
+              // Write both field names so every UI (topbar uses avatarUrl, profile uses photoURL) updates
+              await updateDoc(doc(db, "users", user.uid), {
+                photoURL: finalUrl,
+                avatarUrl: finalUrl,
+                updatedAt: serverTimestamp(),
+              });
+            }
 
             // Firebase Auth profile (best-effort — Auth rejects huge data URLs)
             if (auth.currentUser && String(finalUrl).startsWith("http")) {

@@ -9,10 +9,9 @@ import {
   Trash2,
   AlertCircle,
 } from "lucide-react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase/config";
 import { generateQuestionsFromPdf } from "../lib/geminiGenerate";
 import { refreshCbtQuestions } from "../hooks/useCbtData";
+import { questionsApi } from "../lib/api";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
@@ -160,7 +159,7 @@ export default function AiGenerateQuestionsModal({
     setError("");
     try {
       for (const q of toSave) {
-        await addDoc(collection(db, "cbtQuestions"), {
+        await questionsApi.create({
           courseCode: selectedCourse.code || "",
           courseTitle: selectedCourse.title || "",
           faculty: selectedCourse.faculty || "",
@@ -172,8 +171,6 @@ export default function AiGenerateQuestionsModal({
           correctIndex: q.correctIndex,
           explanation: q.explanation || "",
           difficulty: q.difficulty || "medium",
-          source: "ai-gemini",
-          createdAt: serverTimestamp(),
         });
       }
       await refreshCbtQuestions();

@@ -23,9 +23,10 @@ import { useTheme } from "../context/ThemeContext";
 import { db } from "../firebase/config";
 import BackButton from "./BackButton";
 import { isAdmin, isAlpha, isStaff } from "../lib/roles";
+import { activityApi, usersApi } from "../lib/api";
 
 export default function Topbar({ search, onSearchChange }) {
-  const { profile, user, logout } = useAuth();
+  const { profile, user, logout, authMode } = useAuth();
   const { unreadCount } = useNotifications();
   const { unread: staffUnread } = useStaffChatUnread();
   const { theme, toggleTheme, isDark } = useTheme();
@@ -50,16 +51,30 @@ export default function Topbar({ search, onSearchChange }) {
   // Load recent activity refs for global search (admin/alpha)
   useEffect(() => {
     if (!canSearchPeople) return;
+    if (authMode === "api") {
+      let alive = true;
+      activityApi.list().then(({ activity = [] }) => alive && setLogs(activity)).catch(() => {});
+      return () => { alive = false; };
+    }
     const unsub = onSnapshot(
       query(collection(db, "activityLog"), orderBy("createdAt", "desc"), limit(120)),
       (snap) => setLogs(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
       () => setLogs([])
     );
     return unsub;
-  }, [canSearchPeople]);
+  }, [canSearchPeople, authMode]);
 
   useEffect(() => {
     if (!canSearchPeople) return;
+    if (authMode === "api") {
+      let alive = true;
+      usersApi.list().then(({ users = [] }) => {
+        if (!alive) return;
+        setAgents(users.filter((item) => ["agent", "alphaAgent"].includes(item.role)));
+        setStudents(users.filter((item) => ["user", "courseRep"].includes(item.role)));
+      }).catch(() => {});
+      return () => { alive = false; };
+    }
     const unsubA = onSnapshot(
       query(
         collection(db, "users"),
@@ -78,7 +93,7 @@ export default function Topbar({ search, onSearchChange }) {
       unsubA();
       unsubS();
     };
-  }, [canSearchPeople]);
+  }, [canSearchPeople, authMode]);
 
   useEffect(() => {
     const term = q.trim().toLowerCase();

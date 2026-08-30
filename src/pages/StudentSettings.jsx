@@ -26,6 +26,7 @@ import { useTheme } from "../context/ThemeContext";
 import { isPro, planLabel, FREE_LIMITS } from "../lib/subscription";
 import { db, auth } from "../firebase/config";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
+import { usersApi } from "../lib/api";
 
 const fieldClass =
   "w-full rounded-lg border border-border-light bg-surface-light px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-teal focus:outline-none";
@@ -41,7 +42,7 @@ const DEFAULT_PREFS = {
 };
 
 export default function StudentSettings() {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, authMode, logout } = useAuth();
   const { theme, setTheme, isDark, fontScale, setFontScale, fontScales } = useTheme();
   const navigate = useNavigate();
   const pro = isPro(profile);
@@ -86,20 +87,37 @@ export default function StudentSettings() {
     setMsg("");
     setErr("");
     try {
-      await updateDoc(doc(db, "users", user.uid), {
-        name: name.trim(),
-        faculty: faculty || null,
-        department: department || null,
-        level: level || null,
-        settings: {
-          notifAnnouncements: !!prefs.notifAnnouncements,
-          notifClassReminders: !!prefs.notifClassReminders,
-          defaultReminderMinutes: Number(prefs.defaultReminderMinutes) || 15,
-          defaultPracticeSize: Number(prefs.defaultPracticeSize) || 15,
-          showDashboardTips: !!prefs.showDashboardTips,
-        },
-        settingsUpdatedAt: serverTimestamp(),
-      });
+      if (authMode === "api") {
+        await usersApi.updateMe({
+          name: name.trim(),
+          faculty: faculty || null,
+          department: department || null,
+          level: level || null,
+          settings: {
+            notifAnnouncements: !!prefs.notifAnnouncements,
+            notifClassReminders: !!prefs.notifClassReminders,
+            defaultReminderMinutes: Number(prefs.defaultReminderMinutes) || 15,
+            defaultPracticeSize: Number(prefs.defaultPracticeSize) || 15,
+            showDashboardTips: !!prefs.showDashboardTips,
+          },
+          settingsUpdatedAt: new Date().toISOString(),
+        });
+      } else {
+        await updateDoc(doc(db, "users", user.uid), {
+          name: name.trim(),
+          faculty: faculty || null,
+          department: department || null,
+          level: level || null,
+          settings: {
+            notifAnnouncements: !!prefs.notifAnnouncements,
+            notifClassReminders: !!prefs.notifClassReminders,
+            defaultReminderMinutes: Number(prefs.defaultReminderMinutes) || 15,
+            defaultPracticeSize: Number(prefs.defaultPracticeSize) || 15,
+            showDashboardTips: !!prefs.showDashboardTips,
+          },
+          settingsUpdatedAt: serverTimestamp(),
+        });
+      }
       setMsg("Settings saved.");
     } catch (ex) {
       setErr(ex.message || "Could not save.");

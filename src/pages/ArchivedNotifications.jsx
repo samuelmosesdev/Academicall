@@ -2,13 +2,19 @@ import { useEffect, useState } from "react";
 import { collection, query, where, orderBy, onSnapshot, writeBatch, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { notificationsApi } from "../lib/api";
 
 export default function ArchivedNotifications() {
-  const { user } = useAuth();
+  const { user, authMode } = useAuth();
   const [items, setItems] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      notificationsApi.list(true).then(({ notifications = [] }) => alive && setItems(notifications)).catch(() => {});
+      return () => { alive = false; };
+    }
     if (!user) return;
     const q = query(
       collection(db, "notifications"),
@@ -19,7 +25,7 @@ export default function ArchivedNotifications() {
     return onSnapshot(q, (snap) => {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
-  }, [user?.uid]);
+  }, [user, authMode]);
 
   function toggleSelect(id) {
     const s = new Set(selectedIds);
@@ -29,6 +35,12 @@ export default function ArchivedNotifications() {
 
   async function bulkUnarchive() {
     if (selectedIds.size === 0) return;
+    if (authMode === "api") {
+      await Promise.all([...selectedIds].map((id) => notificationsApi.update(id, { archived: false })));
+      setItems((current) => current.filter((item) => !selectedIds.has(item.id)));
+      setSelectedIds(new Set());
+      return;
+    }
     const batch = writeBatch(db);
     selectedIds.forEach((id) => {
       batch.update(doc(db, "notifications", id), { archived: false, archivedAt: null });
@@ -40,6 +52,12 @@ export default function ArchivedNotifications() {
   async function bulkTrash() {
     if (selectedIds.size === 0) return;
     if (!window.confirm(`Move ${selectedIds.size} notifications to Trash?`)) return;
+    if (authMode === "api") {
+      await Promise.all([...selectedIds].map((id) => notificationsApi.update(id, { archived: false, deleted: true })));
+      setItems((current) => current.filter((item) => !selectedIds.has(item.id)));
+      setSelectedIds(new Set());
+      return;
+    }
     const batch = writeBatch(db);
     selectedIds.forEach((id) => {
       batch.update(doc(db, "notifications", id), { deleted: true, deletedAt: serverTimestamp() });

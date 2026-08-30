@@ -25,9 +25,10 @@ import {
 } from "lucide-react";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { materialSavesApi } from "../lib/api";
 
 export default function StudentMaterials() {
-  const { user } = useAuth();
+  const { user, authMode } = useAuth();
   const [saves, setSaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState(null);
@@ -43,6 +44,11 @@ export default function StudentMaterials() {
   }, [native]);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      materialSavesApi.list().then(({ saves = [] }) => alive && setSaves(saves.map((item) => ({ id: item.id, ...item.meta, materialId: item.materialId, title: item.title, fileUrl: item.url })))).catch(() => alive && setSaves([])).finally(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     if (!user) return;
     const q = query(
       collection(db, "materialSaves"),
@@ -63,7 +69,7 @@ export default function StudentMaterials() {
       () => setLoading(false)
     );
     return () => unsub();
-  }, [user?.uid]);
+  }, [user, authMode]);
 
   const byCourse = useMemo(() => {
     const map = new Map();
@@ -120,7 +126,9 @@ export default function StudentMaterials() {
     if (!window.confirm("Remove this material from your Materials?")) return;
     setRemoving(saveId);
     try {
-      await deleteDoc(doc(db, "materialSaves", saveId));
+      if (authMode === "api") await materialSavesApi.remove(saveId);
+      else await deleteDoc(doc(db, "materialSaves", saveId));
+      setSaves((current) => current.filter((item) => item.id !== saveId));
     } catch (e) {
       alert(e.message || "Could not remove.");
     } finally {

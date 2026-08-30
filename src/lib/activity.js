@@ -5,6 +5,7 @@
  */
 import { doc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { usersApi } from "./api";
 
 function todayKey() {
   const d = new Date();
@@ -40,6 +41,11 @@ export async function recordDailyActivity(user, profile) {
   }
 
   try {
+    if (localStorage.getItem("academicall_token")) {
+      await usersApi.updateMe({ lastActiveDate: today, studyStreakDays: nextStreak, lastActiveAt: new Date().toISOString() });
+      localStorage.setItem(storageKey, today);
+      return;
+    }
     await updateDoc(doc(db, "users", user.uid), {
       lastActiveDate: today,
       studyStreakDays: nextStreak,
@@ -55,13 +61,17 @@ export async function recordDailyActivity(user, profile) {
  * Call when a student opens a material / document.
  * Increments materialsOpenedCount on the user and openCount on the document.
  */
-export async function recordMaterialOpen(user, docId) {
+export async function recordMaterialOpen(user, docId, profile = null) {
   if (!user?.uid || !docId) return;
   const sessionKey = `uofa_open_${user.uid}_${docId}`;
   if (sessionStorage.getItem(sessionKey)) return; // once per session per doc
   sessionStorage.setItem(sessionKey, "1");
 
   try {
+    if (localStorage.getItem("academicall_token")) {
+      await usersApi.updateMe({ materialsOpenedCount: Number(profile?.materialsOpenedCount || 0) + 1 });
+      return;
+    }
     await updateDoc(doc(db, "users", user.uid), {
       materialsOpenedCount: increment(1),
       lastActiveAt: serverTimestamp(),

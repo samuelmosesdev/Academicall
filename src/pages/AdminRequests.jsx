@@ -11,6 +11,7 @@ import { Search, Check, X, FileEdit, Loader2, GraduationCap, Users } from "lucid
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { logActivity } from "../lib/activityLog";
+import { coursesApi, documentsApi, notificationsApi, requestsApi } from "../lib/api";
 
 const STATUS_TABS = [
   { id: "pending", label: "Pending" },
@@ -20,17 +21,20 @@ const STATUS_TABS = [
 ];
 
 export default function AdminRequests() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const [profileReqs, setProfileReqs] = useState([]);
   const [genericReqs, setGenericReqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [who, setWho] = useState("student"); // student | courseRep
-  const [tab, setTab] = useState("pending");
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [note, setNote] = useState({});
 
   useEffect(() => {
+    if (authMode === "api") {
+      requestsApi.listProfileChanges().then(({ requests: list = [] }) => setProfileReqs(list.map((item) => ({ ...item, _source: "profile", _who: "student" })))).catch(() => setProfileReqs([]));
+      return;
+    }
     return onSnapshot(
       collection(db, "profileChangeRequests"),
       (snap) => {
@@ -46,9 +50,13 @@ export default function AdminRequests() {
       },
       () => setLoading(false)
     );
-  }, []);
+  }, [authMode]);
 
   useEffect(() => {
+    if (authMode === "api") {
+      requestsApi.list().then(({ requests: list = [] }) => setGenericReqs(list.map((item) => ({ ...item, _source: "generic", _who: item.requesterRole === "courseRep" ? "courseRep" : "student" })))).catch(() => setGenericReqs([]));
+      return;
+    }
     return onSnapshot(
       collection(db, "requests"),
       (snap) => {
@@ -67,7 +75,7 @@ export default function AdminRequests() {
       },
       () => {}
     );
-  }, []);
+  }, [authMode]);
 
   const all = useMemo(() => {
     const merged = [...profileReqs, ...genericReqs];
@@ -115,20 +123,13 @@ export default function AdminRequests() {
   async function reviewProfile(req, decision) {
     setBusyId(req.id);
     try {
-      if (decision === "approved") {
-        await updateDoc(doc(db, "users", req.userId), {
-          [req.field]: req.requestedValue,
-          updatedAt: serverTimestamp(),
-        });
+      if (authMode === "api") {
+        await requestsApi.updateProfileChange(req.id, { status: decision, reviewedBy: user.uid, reviewedByName: profile?.name || user.email, adminNote: (note[req.id] || "").trim() || null });
+      } else {
+        if (decision === "approved") await updateDoc(doc(db, "users", req.userId), { [req.field]: req.requestedValue, updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, "profileChangeRequests", req.id), { status: decision, reviewedAt: serverTimestamp(), reviewedBy: user.uid, reviewedByName: profile?.name || user.email, adminNote: (note[req.id] || "").trim() || null });
       }
-      await updateDoc(doc(db, "profileChangeRequests", req.id), {
-        status: decision,
-        reviewedAt: serverTimestamp(),
-        reviewedBy: user.uid,
-        reviewedByName: profile?.name || user.email,
-        adminNote: (note[req.id] || "").trim() || null,
-      });
-      await addDoc(collection(db, "notifications"), {
+      await notificationsApi.create({
         userId: req.userId,
         type: "request_" + decision,
         title:
@@ -139,9 +140,6 @@ export default function AdminRequests() {
           note[req.id] ? ` — ${note[req.id]}` : ""
         }`,
         readByUser: false,
-        createdByUid: user.uid,
-        createdByName: profile?.name || user.email,
-        createdAt: serverTimestamp(),
       }).catch(() => {});
       await logActivity({
         actorUid: user.uid,
@@ -163,49 +161,50 @@ export default function AdminRequests() {
     try {
       if (decision === "approved" && req.type === "course_bulk" && req.payload?.courses) {
         for (const row of req.payload.courses) {
-          await addDoc(collection(db, "courses"), {
+          await coursesApi.create({
             ...row,
             code: (row.code || "").toUpperCase(),
-            published: true,
             source: "courseRep-ai",
-            approvedBy: user.uid,
-            createdAt: serverTimestamp(),
           });
         }
       }
       if (decision === "approved" && req.type === "course" && req.payload?.courseDraft) {
         const draft = req.payload.courseDraft;
-        await addDoc(collection(db, "courses"), {
+        await coursesApi.create({
           ...draft,
           code: (draft.code || "").toUpperCase(),
           department: draft.department || null,
           faculty: draft.faculty || null,
-          published: true,
           source: "courseRep",
-          approvedBy: user.uid,
-          requestedBy: req.requesterUid,
-          createdAt: serverTimestamp(),
         });
       }
       if (decision === "approved" && req.type === "material" && req.payload?.documentDraft) {
-        await addDoc(collection(db, "documents"), {
+        await documentsApi.create({
           ...req.payload.documentDraft,
-          status: "published",
-          approvedBy: user.uid,
-          uploadedAt: serverTimestamp(),
+          source: req.payload.documentDraft.source || "courseRep",
         });
       }
 
-      await updateDoc(doc(db, "requests", req.id), {
-        status: decision,
-        reviewedAt: serverTimestamp(),
-        reviewedBy: user.uid,
-        reviewedByName: profile?.name || user.email,
-        reviewNote: (note[req.id] || "").trim() || null,
-      });
+      if (authMode === "api") {
+        await requestsApi.update(req.id, {
+          status: decision,
+          reviewedAt: new Date().toISOString(),
+          reviewedBy: user.uid,
+          reviewedByName: profile?.name || user.email,
+          reviewNote: (note[req.id] || "").trim() || null,
+        });
+      } else {
+        await updateDoc(doc(db, "requests", req.id), {
+          status: decision,
+          reviewedAt: serverTimestamp(),
+          reviewedBy: user.uid,
+          reviewedByName: profile?.name || user.email,
+          reviewNote: (note[req.id] || "").trim() || null,
+        });
+      }
 
       if (req.requesterUid) {
-        await addDoc(collection(db, "notifications"), {
+        await notificationsApi.create({
           userId: req.requesterUid,
           type: "request_" + decision,
           title:
@@ -214,9 +213,6 @@ export default function AdminRequests() {
             (req.title || req.type) +
             (note[req.id] ? ` — ${note[req.id]}` : ""),
             readByUser: false,
-            createdByUid: user.uid,
-            createdByName: profile?.name || user.email,
-          createdAt: serverTimestamp(),
         }).catch(() => {});
       }
 

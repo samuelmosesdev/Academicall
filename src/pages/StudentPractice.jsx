@@ -20,6 +20,7 @@ import { db } from "../firebase/config";
 import { Link } from "react-router-dom";
 import { Crown } from "lucide-react";
 import { FREE_LIMITS, isPro } from "../lib/subscription";
+import { usersApi } from "../lib/api";
 
 const LEVELS = ["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "Postgraduate", "General"];
 const DIFFICULTIES = ["all", "easy", "medium", "hard"];
@@ -28,7 +29,7 @@ const fieldClass =
   "rounded-lg border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
 
 export default function StudentPractice() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const { practiceSets, questions, loading } = useCbtData({ withQuestions: true });
 
   // Filters
@@ -116,10 +117,17 @@ export default function StudentPractice() {
     // Update student stats (best-effort)
     if (user) {
       try {
-        await updateDoc(doc(db, "users", user.uid), {
-          questionsPracticedCount: increment(sessionQuestions.length),
-          lastPracticeAt: serverTimestamp(),
-        });
+        if (authMode === "api") {
+          await usersApi.updateMe({
+            questionsPracticedCount: (Number(profile?.questionsPracticedCount) || 0) + sessionQuestions.length,
+            lastPracticeAt: new Date().toISOString(),
+          });
+        } else {
+          await updateDoc(doc(db, "users", user.uid), {
+            questionsPracticedCount: increment(sessionQuestions.length),
+            lastPracticeAt: serverTimestamp(),
+          });
+        }
       } catch {
         // non-critical
       }

@@ -1,20 +1,14 @@
 import { useMemo, useState } from "react";
 import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  serverTimestamp,
-} from "firebase/firestore";
-import {
   Plus,
   Trash2,
   Search,
   ClipboardList,
   FileSpreadsheet,
 } from "lucide-react";
-import { db } from "../firebase/config";
 import { useCbtData, refreshCbtQuestions } from "../hooks/useCbtData";
+import { useAuth } from "../context/AuthContext";
+import { questionsApi } from "../lib/api";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 import ImportQuestionsModal from "../components/ImportQuestionsModal";
 
@@ -34,6 +28,7 @@ const emptyForm = {
 };
 
 export default function AdminCbtBuilder() {
+  const { authMode } = useAuth();
   const { courses, questions, practiceSets, loading } = useCbtData({ withQuestions: true });
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(emptyForm);
@@ -91,7 +86,7 @@ export default function AdminCbtBuilder() {
 
     setSaving(true);
     try {
-      await addDoc(collection(db, "cbtQuestions"), {
+      const payload = {
         courseId: selectedCourse.id,
         courseCode: selectedCourse.code,
         courseTitle: selectedCourse.title,
@@ -104,9 +99,9 @@ export default function AdminCbtBuilder() {
         correctIndex: Number(form.correctIndex),
         explanation: form.explanation.trim() || null,
         difficulty: form.difficulty,
-        createdAt: serverTimestamp(),
-      });
-      await refreshCbtQuestions();
+      };
+      await questionsApi.create(payload);
+      await refreshCbtQuestions(authMode);
       setForm(emptyForm);
       setShowForm(false);
     } catch (err) {
@@ -120,8 +115,8 @@ export default function AdminCbtBuilder() {
     const ok = window.confirm(`Delete this question from ${q.courseCode}?`);
     if (!ok) return;
     try {
-      await deleteDoc(doc(db, "cbtQuestions", q.id));
-      await refreshCbtQuestions();
+      await questionsApi.remove(q.id);
+      await refreshCbtQuestions(authMode);
     } catch (err) {
       alert(err.message || "Delete failed.");
     }

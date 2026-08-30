@@ -1,17 +1,35 @@
 import { useEffect, useState } from "react";
 import { collection, limit, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
+import { usersApi } from "../lib/api";
 
 /**
  * Loads students, course reps, and agents for the Admin Users page.
  * (Previously only role == "user", so Course Reps disappeared after assignment.)
  */
 export function useAdminUsers() {
+  const { authMode } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      usersApi.list().then(({ users: list = [] }) => {
+        if (!alive) return;
+        setUsers(list);
+        setLoading(false);
+        setError(null);
+      }).catch((err) => {
+        if (!alive) return;
+        setError(err.message || "Failed to load users");
+        setLoading(false);
+      });
+      return () => { alive = false; };
+    }
+
     // Prefer one query for the roles we care about.
     // Firestore "in" supports up to 30 values.
     const q = query(
@@ -74,7 +92,7 @@ export function useAdminUsers() {
       unsub();
       fallbackUnsub?.();
     };
-  }, []);
+  }, [authMode]);
 
   function retry() {
     setLoading(true);

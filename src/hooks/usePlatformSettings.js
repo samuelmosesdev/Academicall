@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { settingsApi } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 
 const SETTINGS_REF = doc(db, "settings", "platform");
 
@@ -53,11 +55,21 @@ export const DEFAULT_SETTINGS = {
 };
 
 export function usePlatformSettings() {
+  const { authMode } = useAuth();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      settingsApi.get("platform").then(({ value }) => {
+        if (!alive) return;
+        if (value) setSettings({ ...DEFAULT_SETTINGS, ...value });
+        setLoading(false);
+      }).catch(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     const unsub = onSnapshot(
       SETTINGS_REF,
       (snap) => {
@@ -68,13 +80,14 @@ export function usePlatformSettings() {
       () => setLoading(false)
     );
     return unsub;
-  }, []);
+  }, [authMode]);
 
   async function saveSettings(partial) {
     setSaving(true);
     try {
       const next = { ...settings, ...partial, updatedAt: new Date() };
-      await setDoc(SETTINGS_REF, next, { merge: true });
+      if (authMode === "api") await settingsApi.update("platform", next);
+      else await setDoc(SETTINGS_REF, next, { merge: true });
       setSettings(next);
       return { ok: true };
     } catch (err) {

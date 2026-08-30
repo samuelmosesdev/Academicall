@@ -27,6 +27,7 @@ import {
   Lock,
 } from "lucide-react";
 import { db } from "../firebase/config";
+import { classEventsApi, documentsApi, feedApi, materialSavesApi, usersApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
@@ -65,7 +66,7 @@ function myReaction(list, uid) {
 }
 
 export default function StudentDepartment() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const department = profile?.department || "";
   const faculty = profile?.faculty || "";
   const level = profile?.level || "";
@@ -102,6 +103,11 @@ export default function StudentDepartment() {
   // courseRepDepartment / courseRepLevel fields. Live via onSnapshot so the
   // page unlocks the moment Admin assigns a rep — no refresh needed.
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      usersApi.list().then(({ users = [] }) => alive && setHasCourseRep(users.some((item) => item.role === "courseRep" && item.department === department && String(item.level || item.courseRepLevel || "").trim() === String(level).trim()))).catch(() => alive && setHasCourseRep(false));
+      return () => { alive = false; };
+    }
     if (!department || !level) {
       setHasCourseRep(false);
       return;
@@ -125,9 +131,14 @@ export default function StudentDepartment() {
       () => setHasCourseRep(false)
     );
     return () => unsub();
-  }, [department, level]);
+  }, [department, level, authMode]);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      classEventsApi.list().then(({ events = [] }) => alive && setClasses(events.filter((event) => event.department === department && matchesStudentLevel(event.level, level)))).catch(() => alive && setClasses([])).finally(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     if (!department || !level) {
       setLoading(false);
       setClasses([]);
@@ -153,9 +164,15 @@ export default function StudentDepartment() {
       () => setClasses([])
     );
     return () => unsub();
-  }, [department, level]);
+  }, [department, level, authMode]);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      if (!department || !level) return undefined;
+      documentsApi.list().then(({ documents = [] }) => alive && setMaterials(documents.filter((item) => item.department === department && item.source === "courseRep" && matchesStudentLevel(item.level, level)))).catch(() => alive && setMaterials([]));
+      return () => { alive = false; };
+    }
     if (!department || !level) return;
     const q = query(
       collection(db, "documents"),
@@ -182,9 +199,15 @@ export default function StudentDepartment() {
       }
     );
     return () => unsub();
-  }, [department, level]);
+  }, [department, level, authMode]);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      if (!department || !level) return undefined;
+      feedApi.list("course", `department=${encodeURIComponent(department)}`).then(({ posts = [] }) => alive && setPosts(posts.filter((item) => matchesStudentLevel(item.level, level)))).catch(() => alive && setPosts([]));
+      return () => { alive = false; };
+    }
     if (!department || !level) return;
     const q = query(
       collection(db, "coursePosts"),
@@ -208,10 +231,15 @@ export default function StudentDepartment() {
       () => setPosts([])
     );
     return () => unsub();
-  }, [department, level]);
+  }, [department, level, authMode]);
 
   useEffect(() => {
     if (!user) return;
+    if (authMode === "api") {
+      let alive = true;
+      materialSavesApi.list().then(({ saves = [] }) => alive && setSavedIds(new Set(saves.map((item) => item.materialId)))).catch(() => alive && setSavedIds(new Set()));
+      return () => { alive = false; };
+    }
     const q = query(
       collection(db, "materialSaves"),
       where("userId", "==", user.uid)
@@ -225,12 +253,22 @@ export default function StudentDepartment() {
       setSavedIds(ids);
     });
     return () => unsub();
-  }, [user?.uid]);
+  }, [user, authMode]);
 
   async function saveMaterial(mat) {
     if (!user || savedIds.has(mat.id)) return;
     setSaveBusy((p) => ({ ...p, [mat.id]: true }));
     try {
+      if (authMode === "api") {
+        await materialSavesApi.create({
+          materialId: mat.id,
+          title: mat.title || "Untitled",
+          url: mat.fileUrl || mat.url || null,
+          meta: { ...mat, department: mat.department || department, faculty: mat.faculty || faculty, courseCode: mat.courseCode || "GENERAL" },
+        });
+        setSavedIds((current) => new Set(current).add(mat.id));
+        return;
+      }
       await addDoc(collection(db, "materialSaves"), {
         userId: user.uid,
         materialId: mat.id,
@@ -270,7 +308,8 @@ export default function StudentDepartment() {
         createdAt: new Date().toISOString(),
         reactions: [],
       });
-      await updateDoc(doc(db, "coursePosts", postId), { comments });
+      if (authMode === "api") await feedApi.update("course", postId, { comments });
+      else await updateDoc(doc(db, "coursePosts", postId), { comments });
       setCommentText((p) => ({ ...p, [postId]: "" }));
       setExpandedComments((p) => ({ ...p, [postId]: true }));
     } catch (e) {
@@ -343,7 +382,8 @@ export default function StudentDepartment() {
           name: profile?.name || user.email || "Student",
         });
       }
-      await updateDoc(doc(db, collectionName, docId), { reactions });
+      if (authMode === "api") await feedApi.update("course", docId, { reactions });
+      else await updateDoc(doc(db, collectionName, docId), { reactions });
     } catch (e) {
       alert(e.message || "Could not react.");
     }
@@ -395,7 +435,8 @@ export default function StudentDepartment() {
       }
       comment.reactions = reactions;
       comments[idx] = comment;
-      await updateDoc(doc(db, collectionName, docId), { comments });
+      if (authMode === "api") await feedApi.update("course", docId, { comments });
+      else await updateDoc(doc(db, collectionName, docId), { comments });
     } catch (e) {
       alert(e.message || "Could not react to comment.");
     }

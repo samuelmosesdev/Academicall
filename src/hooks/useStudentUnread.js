@@ -7,10 +7,14 @@ import { useAuth } from "../context/AuthContext";
  * Unread platform notifications for the student (department updates, etc.)
  */
 export function useStudentUnread() {
-  const { user } = useAuth();
+  const { user, authMode } = useAuth();
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
+    if (authMode === "api") {
+      setUnread(0);
+      return;
+    }
     if (!user) {
       setUnread(0);
       return;
@@ -39,7 +43,7 @@ export function useStudentUnread() {
       }
     );
     return unsub;
-  }, [user?.uid]);
+  }, [user, authMode]);
 
   return { unread };
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+port { useState } from "react";
 import {
   X,
   Sparkles,
@@ -7,17 +7,9 @@ import {
   AlertCircle,
   FileText,
 } from "lucide-react";
-import {
-  addDoc,
-  collection,
-  doc,
-  serverTimestamp,
-  updateDoc,
-  increment,
-} from "firebase/firestore";
-import { db } from "../firebase/config";
 import { generateQuestionsFromDocument } from "../lib/geminiGenerate";
 import { refreshCbtQuestions } from "../hooks/useCbtData";
+import { documentsApi, questionsApi } from "../lib/api";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
@@ -62,7 +54,7 @@ export default function AiGenerateFromDocumentModal({
       setSaving(true);
       let saved = 0;
       for (const q of list) {
-        await addDoc(collection(db, "cbtQuestions"), {
+        await questionsApi.create({
           documentId: docItem.id,
           documentTitle: docItem.title || "",
           faculty: docItem.faculty || null,
@@ -76,7 +68,6 @@ export default function AiGenerateFromDocumentModal({
           explanation: q.explanation || "",
           difficulty: q.difficulty || "medium",
           source: "document-ai",
-          createdAt: serverTimestamp(),
         });
         saved += 1;
       }
@@ -86,12 +77,11 @@ export default function AiGenerateFromDocumentModal({
       const medN = list.filter((q) => q.difficulty === "medium").length;
       const hardN = list.filter((q) => q.difficulty === "hard").length;
 
-      await updateDoc(doc(db, "documents", docItem.id), {
-        questionCount: increment(saved),
-        easyQuestionCount: increment(easyN),
-        mediumQuestionCount: increment(medN),
-        hardQuestionCount: increment(hardN),
-        lastAiGeneratedAt: serverTimestamp(),
+      await documentsApi.update(docItem.id, {
+        questionCount: (docItem.questionCount || 0) + saved,
+        easyQuestionCount: (docItem.easyQuestionCount || 0) + easyN,
+        mediumQuestionCount: (docItem.mediumQuestionCount || 0) + medN,
+        hardQuestionCount: (docItem.hardQuestionCount || 0) + hardN,
       });
 
       setDoneCount(saved);

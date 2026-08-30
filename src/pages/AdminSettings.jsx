@@ -12,7 +12,6 @@ import {
   Sparkles,
   Wallet,
   Shield,
-  Bell,
   Link2,
   Building2,
 } from "lucide-react";
@@ -20,6 +19,7 @@ import { db } from "../firebase/config";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { settingsApi } from "../lib/api";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
@@ -38,13 +38,21 @@ const DEFAULTS = {
 
 export default function AdminSettings() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, authMode } = useAuth();
   const { fontScale, setFontScale, fontScales } = useTheme();
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      settingsApi.get("general").then(({ value }) => {
+        if (!alive) return;
+        setForm(value ? { ...DEFAULTS, ...value } : { ...DEFAULTS });
+      }).catch(() => alive && setForm({ ...DEFAULTS }));
+      return () => { alive = false; };
+    }
     const unsub = onSnapshot(
       doc(db, "appSettings", "general"),
       (snap) => {
@@ -53,7 +61,7 @@ export default function AdminSettings() {
       () => setForm({ ...DEFAULTS })
     );
     return unsub;
-  }, []);
+  }, [authMode]);
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -65,9 +73,7 @@ export default function AdminSettings() {
     setSaving(true);
     setMsg("");
     try {
-      await setDoc(
-        doc(db, "appSettings", "general"),
-        {
+      const payload = {
           appName: form.appName?.trim() || "Academicall",
           supportEmail: form.supportEmail?.trim() || "",
           supportWhatsapp: form.supportWhatsapp?.trim() || "",
@@ -77,8 +83,11 @@ export default function AdminSettings() {
           maintenanceMode: !!form.maintenanceMode,
           announceBanner: form.announceBanner?.trim() || "",
           defaultPlanNote: form.defaultPlanNote?.trim() || "",
-          updatedAt: serverTimestamp(),
-        },
+        };
+      if (authMode === "api") await settingsApi.update("general", payload);
+      else await setDoc(
+        doc(db, "appSettings", "general"),
+        { ...payload, updatedAt: serverTimestamp() },
         { merge: true }
       );
       setMsg("Settings saved.");

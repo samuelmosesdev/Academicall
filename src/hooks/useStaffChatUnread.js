@@ -11,13 +11,14 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { chatApi } from "../lib/api";
 
 /**
  * Unread Staff HQ messages for the current staff user.
  * lastReadAt stored on users/{uid}.staffChatLastReadAt
  */
 export function useStaffChatUnread() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const [unread, setUnread] = useState(0);
   const [latestAt, setLatestAt] = useState(null);
 
@@ -32,6 +33,18 @@ export function useStaffChatUnread() {
       : 0;
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      chatApi.list().then(({ messages = [] }) => {
+        if (!alive) return;
+        const own = user?.uid;
+        const visible = messages.filter((message) => !message.deleted && message.authorId !== own && message.authorUid !== own);
+        const latest = messages.reduce((max, message) => Math.max(max, message.createdAt ? new Date(message.createdAt).getTime() : 0), 0);
+        setUnread(visible.length);
+        setLatestAt(latest || null);
+      }).catch(() => alive && setUnread(0));
+      return () => { alive = false; };
+    }
     if (!user?.uid) {
       setUnread(0);
       return;
@@ -64,12 +77,16 @@ export function useStaffChatUnread() {
       () => setUnread(0)
     );
     return unsub;
-  }, [user?.uid, lastReadMs]);
+  }, [user?.uid, lastReadMs, authMode]);
 
   // MUST be stable. Callers put this in effect dependency arrays, and it writes
   // to users/{uid} — an unstable identity here closed a write -> snapshot ->
   // re-render -> write loop that burned the daily quota in minutes.
   const markStaffChatRead = useCallback(async () => {
+    if (authMode === "api") {
+      setUnread(0);
+      return;
+    }
     if (!user?.uid) return;
     try {
       await setDoc(
@@ -80,7 +97,7 @@ export function useStaffChatUnread() {
     } catch (e) {
       console.warn("markStaffChatRead", e);
     }
-  }, [user?.uid]);
+  }, [user?.uid, authMode]);
 
   return { unread, markStaffChatRead, latestAt };
 }

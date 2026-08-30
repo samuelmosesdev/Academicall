@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Camera, Loader2, Save } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase/config";
+import { usersApi } from "../lib/api";
 import { uploadImageToCloudinary } from "../lib/cloudinaryUpload";
 import { ROLE_LABELS } from "../lib/roles";
 
@@ -39,11 +38,7 @@ export default function StaffProfile() {
       const res = await uploadImageToCloudinary(file);
       const url = res.secure_url;
       setPhotoURL(url);
-      await updateDoc(doc(db, "users", user.uid), {
-        photoURL: url,
-        avatarUrl: url,
-        updatedAt: serverTimestamp(),
-      });
+      await usersApi.updateMe({ photoUrl: url });
       setMsg("Photo updated");
       setTimeout(() => setMsg(""), 2000);
     } catch (ex) {
@@ -60,14 +55,12 @@ export default function StaffProfile() {
     setBusy(true);
     setErr("");
     try {
-      await updateDoc(doc(db, "users", user.uid), {
+      await usersApi.updateMe({
         name: name.trim(),
         nickname: nickname.trim(),
         phone: phone.trim() || null,
         bio: bio.trim(),
-        photoURL: photoURL || null,
-        avatarUrl: photoURL || null,
-        updatedAt: serverTimestamp(),
+        photoUrl: photoURL || null,
       });
       setMsg("Profile saved");
       setTimeout(() => setMsg(""), 2500);

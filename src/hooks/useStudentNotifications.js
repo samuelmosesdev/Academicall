@@ -11,10 +11,10 @@ import {
   updateDoc,
   serverTimestamp,
   writeBatch,
-  getDocs,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { announcementsApi, notificationsApi } from "../lib/api";
 
 /**
  * Student notifications = system notifications + published announcements
@@ -22,7 +22,7 @@ import { useAuth } from "../context/AuthContext";
  * announcementReads/{uid_announcementId}.
  */
 export function useStudentNotifications() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const [systemNotifs, setSystemNotifs] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [readMap, setReadMap] = useState({}); // { [announcementId]: true }
@@ -30,6 +30,17 @@ export function useStudentNotifications() {
 
   // System notifications for this user
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      Promise.all([notificationsApi.list(), announcementsApi.list(), announcementsApi.listReads()]).then(([notificationData, announcementData, readData]) => {
+        if (!alive) return;
+        setSystemNotifs((notificationData.notifications || []).map((item) => ({ ...item, _type: "system" })));
+        setAnnouncements((announcementData.announcements || []).map((item) => ({ ...item, _type: "announcement" })));
+        setReadMap(Object.fromEntries((readData.reads || []).filter((item) => item.announcementId).map((item) => [item.announcementId, true])));
+        setLoading(false);
+      }).catch(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     if (!user) return;
     const q = query(
       collection(db, "notifications"),
@@ -45,10 +56,11 @@ export function useStudentNotifications() {
       );
     });
     return unsub;
-  }, [user?.uid]);
+  }, [user, authMode]);
 
   // Published announcements
   useEffect(() => {
+    if (authMode === "api") return;
     const q = query(
       collection(db, "announcements"),
       where("published", "==", true),
@@ -64,10 +76,11 @@ export function useStudentNotifications() {
       () => setLoading(false)
     );
     return unsub;
-  }, []);
+  }, [authMode]);
 
   // Which announcements this student has already read
   useEffect(() => {
+    if (authMode === "api") return;
     if (!user) return;
     // Grows by one doc per announcement per user forever, so it must be capped.
     const q = query(
@@ -84,7 +97,7 @@ export function useStudentNotifications() {
       setReadMap(map);
     });
     return unsub;
-  }, [user?.uid]);
+  }, [user, authMode]);
 
   // Filter announcements by audience + expiry
   const relevantAnnouncements = useMemo(() => {
@@ -133,6 +146,11 @@ export function useStudentNotifications() {
 
   async function markAnnouncementRead(announcementId) {
     if (!user || readMap[announcementId]) return;
+    if (authMode === "api") {
+      await announcementsApi.markRead(announcementId);
+      setReadMap((current) => ({ ...current, [announcementId]: true }));
+      return;
+    }
     const id = `${user.uid}_${announcementId}`;
     await setDoc(doc(db, "announcementReads", id), {
       userId: user.uid,
@@ -142,6 +160,11 @@ export function useStudentNotifications() {
   }
 
   async function markSystemRead(notifId) {
+    if (authMode === "api") {
+      await notificationsApi.markRead(notifId);
+      setSystemNotifs((items) => items.map((item) => item.id === notifId ? { ...item, readByUser: true } : item));
+      return;
+    }
     await updateDoc(doc(db, "notifications", notifId), {
       readByUser: true,
       readAt: serverTimestamp(),
@@ -150,6 +173,11 @@ export function useStudentNotifications() {
 
   async function markAllRead() {
     if (!user) return;
+    if (authMode === "api") {
+      await Promise.all(systemNotifs.filter((item) => !item.readByUser).map((item) => notificationsApi.markRead(item.id)));
+      setSystemNotifs((items) => items.map((item) => ({ ...item, readByUser: true })));
+      return;
+    }
     const batch = writeBatch(db);
 
     // Unread announcements

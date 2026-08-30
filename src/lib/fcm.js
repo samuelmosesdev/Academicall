@@ -1,16 +1,45 @@
 import { getToken, onMessage } from "firebase/messaging";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { messaging, db } from "../firebase/config";
+import { messaging } from "../firebase/config";
+import { api, notificationsApi, usersApi } from "./api";
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
-// Tokens already written during this page session, keyed `${uid}:${token}`.
-// The write below uses serverTimestamp(), so repeating it always mutates the
-// user doc — which wakes every listener on that doc. Never write it twice.
+// Keep the same token from being re-registered in a single browser session.
 const writtenTokens = new Set();
 
+async function persistFcmTokenViaApi(uid, token) {
+  const payload = { uid, token, platform: "web" };
+  const candidates = [
+    () => usersApi.updateMe({ fcmToken: token, fcmTokenPlatform: "web" }),
+    () => usersApi.updateMe({ deviceToken: token, devicePlatform: "web" }),
+    () => notificationsApi.registerDeviceToken({ uid, token, platform: "web" }),
+    () => notificationsApi.registerFcmToken({ uid, token, platform: "web" }),
+    () => api("/users/me/device-token", { method: "POST", body: payload }),
+    () => api("/users/me/fcm-token", { method: "POST", body: payload }),
+    () => api("/notifications/device-token", { method: "POST", body: payload }),
+    () => api("/notifications/fcm-token", { method: "POST", body: payload }),
+  ];
+
+  let lastError = null;
+
+  for (const candidate of candidates) {
+    try {
+      const response = await candidate();
+      if (response && response.ok !== false) {
+        return true;
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  console.warn("FCM token API registration failed:", lastError || "unknown error");
+  return false;
+}
+
 /**
- * Ask for permission and save the device token
+ * Ask for permission and save the device token via the app API instead of
+ * writing to Firestore directly, which can trigger churn and quota leaks.
  */
 export async function registerFcmToken(uid) {
   if (!messaging || !uid || !VAPID_KEY) {
@@ -19,13 +48,17 @@ export async function registerFcmToken(uid) {
   }
 
   try {
+    if (typeof Notification === "undefined") {
+      console.warn("Browser notifications are not supported in this environment.");
+      return null;
+    }
+
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
       console.log("Notification permission denied");
       return null;
     }
 
-    // Register the service worker
     const registration = await navigator.serviceWorker.register(
       "/firebase-messaging-sw.js"
     );
@@ -35,23 +68,17 @@ export async function registerFcmToken(uid) {
       serviceWorkerRegistration: registration,
     });
 
-    if (token && !writtenTokens.has(`${uid}:${token}`)) {
-      // Save token under the user document
-      await setDoc(
-        doc(db, "users", uid),
-        {
-          fcmTokens: {
-            [token]: {
-              updatedAt: serverTimestamp(),
-              platform: "web",
-            },
-          },
-        },
-        { merge: true }
-      );
-      writtenTokens.add(`${uid}:${token}`);
+    if (!token) return null;
 
-      console.log("FCM token saved");
+    const tokenKey = `${uid}:${token}`;
+    if (writtenTokens.has(tokenKey)) {
+      return token;
+    }
+
+    const stored = await persistFcmTokenViaApi(uid, token);
+    if (stored) {
+      writtenTokens.add(tokenKey);
+      console.log("FCM token saved via API");
     }
 
     return token;

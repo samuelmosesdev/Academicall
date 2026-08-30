@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { KeyRound, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { auth, db } from "../firebase/config";
+import { authApi } from "../lib/api";
 import { homePathFor } from "../lib/roles";
 import { useNavigate } from "react-router-dom";
 
@@ -37,13 +35,7 @@ export default function ForceChangePassword() {
     }
     setBusy(true);
     try {
-      const cred = EmailAuthProvider.credential(user.email, current);
-      await reauthenticateWithCredential(auth.currentUser, cred);
-      await updatePassword(auth.currentUser, next);
-      await updateDoc(doc(db, "users", user.uid), {
-        mustChangePassword: false,
-        passwordChangedAt: serverTimestamp(),
-      });
+      await authApi.changePassword({ currentPassword: current, newPassword: next });
       navigate(homePathFor(profile), { replace: true });
     } catch (err) {
       const code = err?.code || "";

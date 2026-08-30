@@ -26,7 +26,7 @@ Signup → App gets Firebase idToken
    - Better: verify your own domain (SPF/DKIM) so inbox delivery is strong.
 4. Note:
    - **API key**
-   - **Sender email** (must be verified in Brevo)
+   - **Sender email**: `noreply@academicall.site` (must be verified in Brevo)
    - Sender name: `Academical`
 
 ---

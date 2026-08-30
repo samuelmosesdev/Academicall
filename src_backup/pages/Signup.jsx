@@ -1,147 +1,128 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
-import BrandLogo from "../components/BrandLogo";
+import { GraduationCap, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { friendlyAuthError } from "../lib/authErrors";
-import GoogleIcon from "../components/GoogleIcon";
-import AuthAmbientBackground from "../components/AuthAmbientBackground";
-
-const inputClass =
-  "w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-teal-400 focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-white/80";
 
 export default function Signup() {
-  const { signUp, signInWithGoogle } = useAuth();
+  const { registerWithApi } = useAuth();
   const navigate = useNavigate();
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [show, setShow] = useState(false);
+  const [showC, setShowC] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
+
     if (password !== confirm) {
       setError("Passwords do not match.");
       return;
     }
-    setBusy(true);
-    try {
-      await signUp(email.trim(), password, name.trim());
-      navigate("/verify-email", { replace: true });
-    } catch (err) {
-      setError(friendlyAuthError(err.code) || err.message);
-    } finally {
-      setBusy(false);
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
     }
-  }
 
-  async function handleGoogle() {
-    setError("");
     setBusy(true);
     try {
-      await signInWithGoogle();
-      navigate("/dashboard", { replace: true });
+      await registerWithApi(email.trim(), password, name.trim());
+      navigate("/login-redirect", { replace: true });
     } catch (err) {
-      setError(friendlyAuthError(err.code) || err.message);
+      console.error("FULL SIGNUP ERROR →", err);
+      console.error("Error message →", err.message);
+      setError(err.message || friendlyAuthError(err.code) || "Registration failed");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-      <AuthAmbientBackground />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f7faf6] px-4 py-10">
+      <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-[#a6f2cf]/35 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#ffdcc5]/40 blur-3xl" />
 
-      <div className="relative z-10 w-full max-w-sm rounded-2xl border border-white/15 bg-[#0b1220]/85 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-        <div className="mb-6">
-          <BrandLogo size={40} textClass="text-white" />
-        </div>
+      <div className="relative w-full max-w-md rounded-3xl border border-white/60 bg-white/85 p-8 shadow-xl shadow-[#005239]/08 backdrop-blur-xl">
+        <Link to="/" className="mb-6 flex items-center gap-2">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#005239] text-white">
+            <GraduationCap size={20} />
+          </span>
+          <span className="text-lg font-extrabold text-[#005239]">Academicall</span>
+        </Link>
 
-        <h1 className="mb-1 text-xl font-semibold text-white">Create account</h1>
-        <p className="mb-6 text-sm text-white/70">Join UniAbuja Readers Hub to start learning.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-[#181c1a]">Create your account</h1>
+        <p className="mt-1 text-sm text-[#3f4943]">Join students elevating their academic journey.</p>
 
         {error && (
-          <p className="mb-4 rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm text-red-200">
+          <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </p>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-3.5">
           <div>
-            <label className={labelClass}>Full name</label>
+            <label className="mb-1 block text-xs font-semibold text-[#3f4943]">Full name</label>
             <input
-              type="text"
-              required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className={inputClass}
-              placeholder="Your name"
+              required
+              className="w-full rounded-xl border border-[#bec9c2] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#005239] focus:ring-2 focus:ring-[#005239]/15"
             />
           </div>
+
           <div>
-            <label className={labelClass}>Email</label>
+            <label className="mb-1 block text-xs font-semibold text-[#3f4943]">Email</label>
             <input
               type="email"
-              required
-              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
-              placeholder="you@example.com"
+              required
+              className="w-full rounded-xl border border-[#bec9c2] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#005239] focus:ring-2 focus:ring-[#005239]/15"
             />
           </div>
+
           <div>
-            <label className={labelClass}>Password</label>
+            <label className="mb-1 block text-xs font-semibold text-[#3f4943]">Password</label>
             <div className="relative">
               <input
-                type={showPassword ? "text" : "password"}
-                required
-                autoComplete="new-password"
+                type={show ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`${inputClass} pr-10`}
-                placeholder="At least 6 characters"
+                required
+                minLength={6}
+                className="w-full rounded-xl border border-[#bec9c2] bg-white px-3 py-2.5 pr-10 text-sm outline-none focus:border-[#005239] focus:ring-2 focus:ring-[#005239]/15"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShow((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6f7973]"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {show ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
+
           <div>
-            <label className={labelClass}>Confirm password</label>
+            <label className="mb-1 block text-xs font-semibold text-[#3f4943]">Confirm password</label>
             <div className="relative">
               <input
-                type={showConfirm ? "text" : "password"}
-                required
-                autoComplete="new-password"
+                type={showC ? "text" : "password"}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className={`${inputClass} pr-10`}
-                placeholder="Repeat password"
+                required
+                className="w-full rounded-xl border border-[#bec9c2] bg-white px-3 py-2.5 pr-10 text-sm outline-none focus:border-[#005239] focus:ring-2 focus:ring-[#005239]/15"
               />
               <button
                 type="button"
-                onClick={() => setShowConfirm((v) => !v)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-                aria-label={showConfirm ? "Hide password" : "Show password"}
+                onClick={() => setShowC((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6f7973]"
               >
-                {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showC ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
@@ -149,31 +130,15 @@ export default function Signup() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-teal-500 px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-400 disabled:opacity-60"
+            className="mt-2 w-full rounded-full bg-[#fb923c] py-3 text-sm font-bold text-white shadow-md shadow-orange-500/25 hover:opacity-95 disabled:opacity-60"
           >
-            {busy ? "Creating account…" : "Sign up"}
+            {busy ? "Creating…" : "Create account"}
           </button>
         </form>
 
-        <div className="my-5 flex items-center gap-3">
-          <div className="h-px flex-1 bg-white/15" />
-          <span className="text-xs text-white/50">or</span>
-          <div className="h-px flex-1 bg-white/15" />
-        </div>
-
-        <button
-          type="button"
-          onClick={handleGoogle}
-          disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/15 disabled:opacity-60"
-        >
-          <GoogleIcon />
-          Continue with Google
-        </button>
-
-        <p className="mt-6 text-center text-sm text-white/70">
+        <p className="mt-6 text-center text-sm text-[#3f4943]">
           Already have an account?{" "}
-          <Link to="/login" className="font-medium text-teal-300 hover:text-teal-200">
+          <Link to="/login" className="font-bold text-[#005239] hover:underline">
             Sign in
           </Link>
         </p>

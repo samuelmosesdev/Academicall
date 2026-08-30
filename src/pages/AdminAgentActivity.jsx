@@ -15,10 +15,11 @@ import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { isAdmin, isAlpha, ROLE_LABELS } from "../lib/roles";
 import { logActivity } from "../lib/activityLog";
+import { activityApi, usersApi } from "../lib/api";
 
 export default function AdminAgentActivity() {
   const { agentId } = useParams();
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const navigate = useNavigate();
   const [agent, setAgent] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -27,13 +28,21 @@ export default function AdminAgentActivity() {
 
   useEffect(() => {
     if (!agentId || !allowed) return;
+    if (authMode === "api") {
+      usersApi.get(agentId).then(({ user: item }) => setAgent(item)).catch(() => setAgent(null));
+      return;
+    }
     return onSnapshot(doc(db, "users", agentId), (snap) => {
       setAgent(snap.exists() ? { id: snap.id, ...snap.data() } : null);
     });
-  }, [agentId, allowed]);
+  }, [agentId, allowed, authMode]);
 
   useEffect(() => {
     if (!agentId || !allowed) return;
+    if (authMode === "api") {
+      activityApi.list(agentId).then(({ activity = [] }) => { setLogs(activity); setLoading(false); }).catch(() => setLoading(false));
+      return;
+    }
     const q = query(
       collection(db, "activityLog"),
       where("actorUid", "==", agentId),
@@ -58,7 +67,7 @@ export default function AdminAgentActivity() {
         });
       }
     );
-  }, [agentId, allowed]);
+  }, [agentId, allowed, authMode]);
 
   if (!allowed) {
     return <p className="text-sm text-text-muted">Only Admin and Alpha can view agent activity.</p>;
@@ -67,7 +76,8 @@ export default function AdminAgentActivity() {
   async function toggleSuspend() {
     if (!agent || !isAdmin(profile)) return;
     const next = agent.status === "suspended" ? "active" : "suspended";
-    await updateDoc(doc(db, "users", agent.id), { status: next });
+    if (authMode === "api") await usersApi.update(agent.id, { status: next });
+    else await updateDoc(doc(db, "users", agent.id), { status: next });
     await logActivity({
       actorUid: user.uid,
       actorName: profile?.name || user.email,
@@ -79,7 +89,8 @@ export default function AdminAgentActivity() {
 
   async function requirePassword() {
     if (!agent || !isAdmin(profile)) return;
-    await updateDoc(doc(db, "users", agent.id), { mustChangePassword: true });
+    if (authMode === "api") await usersApi.update(agent.id, { mustChangePassword: true });
+    else await updateDoc(doc(db, "users", agent.id), { mustChangePassword: true });
     await logActivity({
       actorUid: user.uid,
       actorName: profile?.name || user.email,

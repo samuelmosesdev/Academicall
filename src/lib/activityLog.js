@@ -1,18 +1,19 @@
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
-
-/** e.g. ACA-20260822-A3F9 */
-export function makeActivityRef() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `ACA-${y}${m}${day}-${rand}`;
-}
+import { activityApi } from "./api";
 
 /**
- * Write an audit entry with a unique ref number.
+ * Write an audit entry. Best-effort — failures are logged, not thrown to UI.
+ *
+ * @param {Object} opts
+ * @param {string} opts.actorUid
+ * @param {string} opts.actorName
+ * @param {string} opts.action - e.g. "role.change", "user.suspend", "request.approve"
+ * @param {string} [opts.targetUid]
+ * @param {string} [opts.targetName]
+ * @param {string} [opts.reference]
+ * @param {Object} [opts.meta]
+ * @param {string} [opts.status]
  */
 export async function logActivity({
   actorUid,
@@ -24,23 +25,24 @@ export async function logActivity({
   meta = {},
   status = "success",
 }) {
-  const ref = reference || makeActivityRef();
   try {
-    const docRef = await addDoc(collection(db, "activityLog"), {
+    if (localStorage.getItem("academicall_token")) {
+      await activityApi.create({ action, status, reference, meta: { ...meta, targetUid, targetName, actorName } });
+      return;
+    }
+    await addDoc(collection(db, "activityLog"), {
       actorUid: actorUid || null,
       actorName: actorName || "System",
-      userName: actorName || "System",
+      userName: actorName || "System", // legacy field used by some dashboard tables
       action,
       targetUid,
       targetName,
-      reference: ref,
+      reference,
       meta,
       status,
       createdAt: serverTimestamp(),
     });
-    return { id: docRef.id, reference: ref };
   } catch (err) {
     console.warn("activityLog write failed:", err?.message || err);
-    return { id: null, reference: ref };
   }
 }

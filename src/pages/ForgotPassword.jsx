@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { sendPasswordResetEmail } from "firebase/auth";
 import BrandLogo from "../components/BrandLogo";
 import AuthAmbientBackground from "../components/AuthAmbientBackground";
-import { auth } from "../firebase/config";
 import { friendlyAuthError } from "../lib/authErrors";
+import { authApi } from "../lib/api";
 
 const inputClass =
   "w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-teal-400 focus:outline-none";
@@ -20,9 +19,7 @@ export default function ForgotPassword() {
     setError("");
     setBusy(true);
     try {
-      await sendPasswordResetEmail(auth, email.trim(), {
-        url: `${window.location.origin}/login`,
-      });
+      await authApi.requestPasswordReset({ email: email.trim() });
       setSent(true);
     } catch (err) {
       setError(friendlyAuthError(err.code) || err.message);

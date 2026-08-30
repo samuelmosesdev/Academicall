@@ -37,6 +37,7 @@ import {
 } from "../lib/cloudinaryUpload";
 import { isAdmin } from "../lib/roles";
 import { useStaffChatUnread } from "../hooks/useStaffChatUnread";
+import { chatApi } from "../lib/api";
 
 const REACTIONS = [
   { type: "like", emoji: "👍" },
@@ -131,7 +132,7 @@ function ReactionChip({ reactions, myUid, onToggle }) {
 }
 
 export default function StaffChat() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const admin = isAdmin(profile);
   const { markStaffChatRead } = useStaffChatUnread();
   const [messages, setMessages] = useState([]);
@@ -173,6 +174,15 @@ export default function StaffChat() {
 
   // Live listener — keep all docs; sort client-side so nothing vanishes on timestamp lag
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      chatApi.list().then(({ messages: list = [] }) => {
+        if (!alive) return;
+        setMessages(list);
+        setLoading(false);
+      }).catch(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     const q = query(
       collection(db, "staffChat"),
       orderBy("createdAt", "asc"),
@@ -206,7 +216,7 @@ export default function StaffChat() {
       unsub();
       fallbackUnsub?.();
     };
-  }, []);
+  }, [authMode]);
 
   useEffect(() => {
     if (stickBottom.current) {
@@ -233,7 +243,7 @@ export default function StaffChat() {
     stickBottom.current = true;
     const clientAt = new Date().toISOString();
     try {
-      await addDoc(collection(db, "staffChat"), {
+      const payload = {
         type: "text",
         text: body,
         ...authorMeta(),
@@ -249,8 +259,11 @@ export default function StaffChat() {
               text: replyTo.text,
             }
           : null,
-        createdAt: serverTimestamp(),
-      });
+      };
+      if (authMode === "api") {
+        const { message } = await chatApi.create(payload);
+        setMessages((current) => [...current, message]);
+      } else await addDoc(collection(db, "staffChat"), { ...payload, createdAt: serverTimestamp() });
       setText("");
       setReplyTo(null);
     } catch (err) {
@@ -268,7 +281,7 @@ export default function StaffChat() {
     const clientAt = new Date().toISOString();
     try {
       const res = await uploadImageToCloudinary(file, setUploadPct);
-      await addDoc(collection(db, "staffChat"), {
+      const payload = {
         type: "image",
         text: text.trim() || null,
         mediaUrl: res.secure_url,
@@ -279,8 +292,11 @@ export default function StaffChat() {
         deleted: false,
         edited: false,
         clientAt,
-        createdAt: serverTimestamp(),
-      });
+      };
+      if (authMode === "api") {
+        const { message } = await chatApi.create(payload);
+        setMessages((current) => [...current, message]);
+      } else await addDoc(collection(db, "staffChat"), { ...payload, createdAt: serverTimestamp() });
       setText("");
     } catch (err) {
       alert(err.message || "Image upload failed.");
@@ -304,7 +320,8 @@ export default function StaffChat() {
       reactions.push({ uid: user.uid, type });
     }
     try {
-      await updateDoc(doc(db, "staffChat", msgId), { reactions });
+      if (authMode === "api") await chatApi.update(msgId, { reactions });
+      else await updateDoc(doc(db, "staffChat", msgId), { reactions });
     } catch (err) {
       alert(err.message || "Could not react.");
     }
@@ -337,13 +354,15 @@ export default function StaffChat() {
     if (!mine && !admin) return;
     if (!window.confirm(mine ? "Delete this message?" : "Delete this message as admin?")) return;
     try {
-      await updateDoc(doc(db, "staffChat", msg.id), {
+      const payload = {
         deleted: true,
-        deletedAt: serverTimestamp(),
+        deletedAt: new Date().toISOString(),
         deletedBy: user.uid,
         deletedByName: displayLabel(profile, "Staff"),
         deletedByRole: profile?.role || "admin",
-      });
+      };
+      if (authMode === "api") await chatApi.update(msg.id, payload);
+      else await updateDoc(doc(db, "staffChat", msg.id), payload);
       setMenuId(null);
     } catch (err) {
       alert(err.message || "Could not delete.");
@@ -354,7 +373,8 @@ export default function StaffChat() {
     const body = editText.trim();
     if (!body || msg.authorUid !== user?.uid) return;
     try {
-      await updateDoc(doc(db, "staffChat", msg.id), {
+      if (authMode === "api") await chatApi.update(msg.id, { text: body, edited: true, editedAt: new Date().toISOString() });
+      else await updateDoc(doc(db, "staffChat", msg.id), {
         text: body,
         edited: true,
         editedAt: serverTimestamp(),
@@ -395,7 +415,7 @@ export default function StaffChat() {
             { type: mime }
           );
           const res = await uploadVoiceToCloudinary(file, setUploadPct);
-          await addDoc(collection(db, "staffChat"), {
+          const payload = {
             type: "voice",
             mediaUrl: res.secure_url,
             mediaDuration: duration,
@@ -404,8 +424,11 @@ export default function StaffChat() {
             deleted: false,
             edited: false,
             clientAt,
-            createdAt: serverTimestamp(),
-          });
+          };
+          if (authMode === "api") {
+            const { message } = await chatApi.create(payload);
+            setMessages((current) => [...current, message]);
+          } else await addDoc(collection(db, "staffChat"), { ...payload, createdAt: serverTimestamp() });
         } catch (err) {
           alert(err.message || "Voice note failed.");
         } finally {
@@ -444,7 +467,7 @@ export default function StaffChat() {
     try {
       const startsAt = new Date(meetForm.startsAt);
       const endsAt = meetForm.endsAt ? new Date(meetForm.endsAt) : null;
-      await addDoc(collection(db, "staffChat"), {
+      const payload = {
         type: "meeting",
         text: meetForm.notes.trim() || null,
         meeting: {
@@ -458,8 +481,11 @@ export default function StaffChat() {
         deleted: false,
         edited: false,
         clientAt,
-        createdAt: serverTimestamp(),
-      });
+      };
+      if (authMode === "api") {
+        const { message } = await chatApi.create(payload);
+        setMessages((current) => [...current, message]);
+      } else await addDoc(collection(db, "staffChat"), { ...payload, createdAt: serverTimestamp() });
       setMeetForm({ title: "", startsAt: "", endsAt: "", venue: "", notes: "" });
       setShowMeeting(false);
       stickBottom.current = true;

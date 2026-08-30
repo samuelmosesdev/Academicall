@@ -16,10 +16,11 @@ import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { isAdmin, isAlpha } from "../lib/roles";
 import { logActivity } from "../lib/activityLog";
+import { activityApi, usersApi } from "../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function AdminActivityLog() {
-  const { profile } = useAuth();
+  const { profile, authMode } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
@@ -29,6 +30,21 @@ export default function AdminActivityLog() {
 
   useEffect(() => {
     if (!allowed) return;
+    if (authMode === "api") {
+      let alive = true;
+      activityApi.list().then(({ activity = [] }) => {
+        if (!alive) return;
+        setLogs(activity.map((item) => ({
+          ...item,
+          actorName: item.meta?.actorName || item.userName || item.user?.name,
+          targetUid: item.meta?.targetUid,
+          targetName: item.meta?.targetName,
+        })));
+        setLoading(false);
+      }).catch(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
+
     const q = query(
       collection(db, "activityLog"),
       orderBy("createdAt", "desc"),
@@ -43,7 +59,7 @@ export default function AdminActivityLog() {
       () => setLoading(false)
     );
     return unsub;
-  }, [allowed]);
+  }, [allowed, authMode]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -61,6 +77,18 @@ export default function AdminActivityLog() {
 
   async function doToggleSuspend(uid) {
     try {
+      if (authMode === "api") {
+        const { user } = await usersApi.get(uid);
+        const status = user.status === "suspended" ? "active" : "suspended";
+        await usersApi.update(uid, { status });
+        await logActivity({
+          action: "user.suspend",
+          targetUid: uid,
+          meta: { status },
+        });
+        alert("Status updated");
+        return;
+      }
       const uref = doc(db, "users", uid);
       const snap = await getDoc(uref);
       if (!snap.exists()) throw new Error("User not found");
@@ -82,6 +110,17 @@ export default function AdminActivityLog() {
   async function doRevertRole(l) {
     if (!l.targetUid || !l.meta?.from) return alert("No previous role recorded");
     try {
+      if (authMode === "api") {
+        await usersApi.update(l.targetUid, { role: l.meta.from });
+        await logActivity({
+          action: "role.revert",
+          targetUid: l.targetUid,
+          targetName: l.targetName || null,
+          meta: { from: l.meta.to, to: l.meta.from },
+        });
+        alert("Role reverted");
+        return;
+      }
       await updateDoc(doc(db, "users", l.targetUid), { role: l.meta.from });
       await logActivity({
         actorUid: profile?.uid || null,
@@ -99,6 +138,7 @@ export default function AdminActivityLog() {
 
   async function doCancelClass(l) {
     if (!l.reference) return alert("No class reference recorded");
+    if (authMode === "api") return alert("Class cancellation is not available in the API yet.");
     try {
       await deleteDoc(doc(db, "classEvents", l.reference));
       await logActivity({
@@ -189,7 +229,9 @@ export default function AdminActivityLog() {
               <span className="text-xs text-text-muted">
                 {l.createdAt?.toDate
                   ? l.createdAt.toDate().toLocaleString()
-                  : "—"}
+                  : l.createdAt
+                    ? new Date(l.createdAt).toLocaleString()
+                    : "—"}
               </span>
             </div>
             <p className="mt-1 text-sm text-text-primary">

@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Bell, Megaphone, CheckCheck, X } from "lucide-react";
 import { useStudentNotifications } from "../hooks/useStudentNotifications";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { notificationsApi } from "../lib/api";
 
 function timeAgo(ts) {
   if (!ts) return "";
@@ -44,10 +43,7 @@ export default function StudentNotifications() {
 
   async function handleArchive(item, toArchive = true) {
     try {
-      await updateDoc(doc(db, "notifications", item.id), {
-        archived: toArchive === true,
-        archivedAt: toArchive ? serverTimestamp() : null,
-      });
+      await notificationsApi.update(item.id, { archived: toArchive === true });
     } catch (e) {
       /* ignore */
     }
@@ -56,10 +52,7 @@ export default function StudentNotifications() {
   async function handleDelete(item) {
     if (!window.confirm("Move this notification to Trash?")) return;
     try {
-      await updateDoc(doc(db, "notifications", item.id), {
-        deleted: true,
-        deletedAt: serverTimestamp(),
-      });
+      await notificationsApi.update(item.id, { deleted: true });
       if (selected?.id === item.id) setSelected(null);
     } catch (e) {
       alert(e.message || "Could not delete");

@@ -21,11 +21,12 @@ export default function ProtectedRoute({ children, requiredRole }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (!profile) {
+  const role = profile?.role || user?.role || "user";
+  const isStaff = role === "admin" || role === "agent" || role === "alphaAgent";
+  if (!profile && !isStaff) {
     return <Navigate to="/complete-profile" replace />;
   }
 
-  const role = profile.role || "user";
   // Course Rep is still a student-side account
   const isStudentSide = role === "user" || role === "courseRep";
   const verified = Boolean((profile && profile.emailVerified) || (user && user.emailVerified));

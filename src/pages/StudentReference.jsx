@@ -10,17 +10,26 @@ import {
 import { BookMarked, Calendar } from "lucide-react";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { classEventsApi } from "../lib/api";
 
 /**
  * Reference page: classEvents for the student's faculty/department/courses
  * + optional referenceItems collection.
  */
 export default function StudentReference() {
-  const { profile } = useAuth();
+  const { profile, authMode } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      classEventsApi.list().then(({ events = [] }) => {
+        if (!alive) return;
+        setEvents(events.filter((event) => !profile?.department || event.department === profile.department));
+      }).catch(() => alive && setEvents([])).finally(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     // Prefer filtering by department when set; otherwise show recent global events
     let q;
     if (profile?.department) {
@@ -79,7 +88,7 @@ export default function StudentReference() {
       unsub();
       fallbackUnsub?.();
     };
-  }, [profile?.department]);
+  }, [profile?.department, authMode]);
 
   const upcoming = useMemo(() => {
     const now = Date.now();

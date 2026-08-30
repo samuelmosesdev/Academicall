@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { Megaphone, Loader2, Pin } from "lucide-react";
-import { db } from "../firebase/config";
 import Modal from "./Modal";
+import { announcementsApi } from "../lib/api";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -50,20 +49,15 @@ export default function CreateAnnouncementModal({
     }
     setBusy(true);
     try {
-      await addDoc(collection(db, "coursePosts"), {
+      await announcementsApi.create({
         title: title.trim(),
         body: body.trim(),
         courseCode: courseCode.trim().toUpperCase() || null,
         pinned,
+        audience: "department",
         faculty: faculty || null,
         department,
         level: level || null,
-        createdBy: user?.uid || null,
-        authorName: authorName || user?.email || "Course Rep",
-        authorRole: "courseRep",
-        authorPhoto: null,
-        comments: [],
-        createdAt: serverTimestamp(),
       });
       reset();
       onClose?.(true);

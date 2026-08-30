@@ -15,13 +15,11 @@ export default function VerifyEmail() {
   const [cooldown, setCooldown] = useState(0);
   const pollRef = useRef(null);
 
-  // Already verified (e.g. navigated here manually) — nothing to do.
-  if (profile?.emailVerified) {
-    navigate("/complete-profile", { replace: true });
-    return null;
-  }
-
   useEffect(() => {
+    if (profile?.emailVerified) {
+      navigate("/complete-profile", { replace: true });
+      return undefined;
+    }
     pollRef.current = setInterval(async () => {
       const verified = await refreshEmailVerified().catch(() => false);
       if (verified) {
@@ -31,13 +29,15 @@ export default function VerifyEmail() {
     }, POLL_INTERVAL);
     return () => clearInterval(pollRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [profile?.emailVerified, navigate, refreshEmailVerified]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
     const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [cooldown]);
+
+  if (profile?.emailVerified) return null;
 
   async function handleResend() {
     setError("");

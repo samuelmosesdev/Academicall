@@ -13,9 +13,10 @@ import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { useSubscriptionPlans } from "../hooks/useSubscriptionPlans";
+import { usersApi } from "../lib/api";
 
 export default function StudentSubscription() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const { plans, loading, formatPrice } = useSubscriptionPlans();
   const isPaid = profile?.plan === "annual" || profile?.plan === "paid";
   const isMonthly = profile?.plan === "monthly";
@@ -27,7 +28,9 @@ export default function StudentSubscription() {
     setBusy(true);
     setMessage("");
     try {
-      await updateDoc(doc(db, "users", user.uid), {
+      if (authMode === "api") {
+        await usersApi.updateMe({ plan });
+      } else await updateDoc(doc(db, "users", user.uid), {
         plan,
         planUpdatedAt: serverTimestamp(),
       });

@@ -1,18 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  collection,
-  doc,
-  onSnapshot,
-  query,
-  where,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { initializeApp, deleteApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import {
   Plus,
   Search,
   UserCog,
@@ -26,24 +14,15 @@ import {
 } from "lucide-react";
 import ConfirmModal from "../components/ConfirmModal";
 import { ROLE_LABELS } from "../lib/roles";
-import { db } from "../firebase/config";
 import { isAdmin } from "../lib/roles";
 import { logActivity } from "../lib/activityLog";
 import { useAuth } from "../context/AuthContext";
+import { usersApi } from "../lib/api";
 
 const AGENT_DOMAIN = "academicall.site";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
-
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-};
 
 function generateTempPassword() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#";
@@ -53,7 +32,7 @@ function generateTempPassword() {
 }
 
 export default function AdminAgents() {
-  const { profile, user } = useAuth();
+  const { profile, user, authMode } = useAuth();
   const navigate = useNavigate();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +50,10 @@ export default function AdminAgents() {
   const [pending, setPending] = useState(null);
 
   useEffect(() => {
+    if (authMode === "api") {
+      usersApi.list().then(({ users = [] }) => setAgents(users.filter((item) => item.role === "agent" || item.role === "alphaAgent"))).catch(() => setAgents([]));
+      return;
+    }
     const q = query(
       collection(db, "users"),
       where("role", "in", ["agent", "alphaAgent"])
@@ -84,7 +67,7 @@ export default function AdminAgents() {
       () => setLoading(false)
     );
     return unsub;
-  }, []);
+  }, [authMode]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -116,40 +99,22 @@ export default function AdminAgents() {
     }
 
     setSaving(true);
-    let secondaryApp = null;
     try {
-      secondaryApp = initializeApp(firebaseConfig, "AgentCreator-" + Date.now());
-      const secondaryAuth = getAuth(secondaryApp);
-      const cred = await createUserWithEmailAndPassword(
-        secondaryAuth,
-        fullEmail,
-        password
-      );
-
-      await setDoc(doc(db, "users", cred.user.uid), {
+      const { user: createdUser } = await usersApi.createAgent({
         email: fullEmail,
+        password,
         name: name.trim() || localPart.trim() || fullEmail.split("@")[0],
         role: role === "alphaAgent" ? "alphaAgent" : "agent",
-        status: "active",
-        emailVerified: true,
-        profileComplete: true,
-        mustChangePassword: true,
-        agentDomain: AGENT_DOMAIN,
-        createdAt: serverTimestamp(),
-        createdByAdmin: true,
-        createdByUid: user?.uid || null,
       });
 
       await logActivity({
         actorUid: user.uid,
         actorName: profile?.name || user.email,
         action: "agent.create",
-        targetUid: cred.user.uid,
+        targetUid: createdUser.id,
         targetName: name.trim() || fullEmail,
         meta: { email: fullEmail, role },
       });
-
-      await signOut(secondaryAuth);
 
       setCreatedCreds({
         email: fullEmail,
@@ -171,19 +136,12 @@ export default function AdminAgents() {
       setError(msg);
     } finally {
       setSaving(false);
-      if (secondaryApp) {
-        try {
-          await deleteApp(secondaryApp);
-        } catch {
-          /* ignore */
-        }
-      }
     }
   }
 
   async function toggleSuspend(agent) {
     try {
-      await updateDoc(doc(db, "users", agent.id), {
+      await usersApi.update(agent.id, {
         status: agent.status === "suspended" ? "active" : "suspended",
       });
     } catch (err) {
@@ -193,7 +151,7 @@ export default function AdminAgents() {
 
   async function forcePasswordReset(agent) {
     try {
-      await updateDoc(doc(db, "users", agent.id), {
+      await usersApi.update(agent.id, {
         mustChangePassword: true,
       });
       setSuccess(
@@ -209,7 +167,7 @@ export default function AdminAgents() {
     const { type, agent } = pending;
     try {
       if (type === "promote") {
-        await updateDoc(doc(db, "users", agent.id), { role: "alphaAgent" });
+        await usersApi.update(agent.id, { role: "alphaAgent" });
         await logActivity({
           actorUid: user.uid,
           actorName: profile?.name || user.email,
@@ -221,7 +179,7 @@ export default function AdminAgents() {
         setSuccess("Promoted to Alpha Agent");
       }
       if (type === "demote") {
-        await updateDoc(doc(db, "users", agent.id), { role: "agent" });
+        await usersApi.update(agent.id, { role: "agent" });
         await logActivity({
           actorUid: user.uid,
           actorName: profile?.name || user.email,

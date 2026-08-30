@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { settingsApi } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 
 /** Default plan config — used until admin saves real values in Firestore */
 export const DEFAULT_PLANS = {
@@ -52,12 +54,22 @@ const DOC_REF = () => doc(db, "settings", "subscription");
  * Admin edits write the same document; students read it.
  */
 export function useSubscriptionPlans() {
+  const { authMode } = useAuth();
   const [plans, setPlans] = useState(DEFAULT_PLANS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      settingsApi.get("subscription").then(({ value }) => {
+        if (!alive) return;
+        if (value) setPlans({ ...DEFAULT_PLANS, ...value, free: { ...DEFAULT_PLANS.free, ...(value.free || {}) }, annual: { ...DEFAULT_PLANS.annual, ...(value.annual || {}) }, monthly: { ...DEFAULT_PLANS.monthly, ...(value.monthly || {}) } });
+        setLoading(false);
+      }).catch(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     const unsub = onSnapshot(
       DOC_REF(),
       (snap) => {
@@ -82,7 +94,7 @@ export function useSubscriptionPlans() {
       }
     );
     return () => unsub();
-  }, []);
+  }, [authMode]);
 
   async function savePlans(next) {
     setSaving(true);
@@ -120,7 +132,8 @@ export function useSubscriptionPlans() {
         whatsappSupport: next.whatsappSupport || DEFAULT_PLANS.whatsappSupport,
         updatedAt: serverTimestamp(),
       };
-      await setDoc(DOC_REF(), payload, { merge: true });
+      if (authMode === "api") await settingsApi.update("subscription", payload);
+      else await setDoc(DOC_REF(), payload, { merge: true });
       return true;
     } catch (err) {
       setError(err.message || "Could not save plan settings.");

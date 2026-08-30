@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import {
   Search,
   Eye,
@@ -12,7 +11,6 @@ import {
   GraduationCap,
   BadgeCheck,
 } from "lucide-react";
-import { db } from "../firebase/config";
 import { useAdminUsers } from "../hooks/useAdminUsers";
 import EditUserModal from "../components/EditUserModal";
 import ViewProfileModal from "../components/ViewProfileModal";
@@ -26,6 +24,7 @@ import { FACULTIES, departmentsFor, LEVELS } from "../data/facultyData";
 import { useAuth } from "../context/AuthContext";
 import { logActivity } from "../lib/activityLog";
 import { ROLE_LABELS } from "../lib/roles";
+import { usersApi } from "../lib/api";
 
 const CATEGORIES = [
   {
@@ -131,7 +130,7 @@ export default function AdminUsers() {
     setBusyId(editing.id);
     setActionError("");
     try {
-      await updateDoc(doc(db, "users", editing.id), updates);
+      await usersApi.update(editing.id, updates);
       setEditing(null);
     } catch (err) {
       setActionError(err.message || "Couldn't save changes.");
@@ -145,7 +144,7 @@ export default function AdminUsers() {
     setActionError("");
     try {
       const next = u.status === "suspended" ? "active" : "suspended";
-      await updateDoc(doc(db, "users", u.id), { status: next });
+      await usersApi.update(u.id, { status: next });
       await logActivity({
         actorUid: adminUser.uid,
         actorName: adminProfile?.name || adminUser.email,
@@ -168,10 +167,7 @@ export default function AdminUsers() {
     setBusyId(u.id);
     setActionError("");
     try {
-      if (u.uniqueId) {
-        await deleteDoc(doc(db, "idLookup", u.uniqueId)).catch(() => {});
-      }
-      await deleteDoc(doc(db, "users", u.id));
+      await usersApi.remove(u.id);
       await logActivity({
         actorUid: adminUser.uid,
         actorName: adminProfile?.name || adminUser.email,
@@ -211,7 +207,7 @@ export default function AdminUsers() {
     try {
       const department = repDepartment.trim();
       const level = repLevel.trim();
-      await updateDoc(doc(db, "users", repTarget.id), {
+      await usersApi.update(repTarget.id, {
         role: "courseRep",
         courseRepMeta: {
           faculty: repFaculty || null,
@@ -224,7 +220,7 @@ export default function AdminUsers() {
         department,
         level,
         assignedBy: adminUser.uid,
-        assignedAt: serverTimestamp(),
+        assignedAt: new Date().toISOString(),
       });
       await logActivity({
         actorUid: adminUser.uid,
@@ -257,13 +253,13 @@ export default function AdminUsers() {
     setBusyId(u.id);
     setActionError("");
     try {
-      await updateDoc(doc(db, "users", u.id), {
+      await usersApi.update(u.id, {
         role: "user",
         courseRepMeta: null,
         courseRepDepartment: null,
         courseRepLevel: null,
         assignedBy: adminUser.uid,
-        assignedAt: serverTimestamp(),
+        assignedAt: new Date().toISOString(),
       });
       await logActivity({
         actorUid: adminUser.uid,

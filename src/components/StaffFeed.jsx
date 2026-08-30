@@ -24,7 +24,7 @@ import UserAvatar, { displayLabel, NameWithBadge } from "./UserAvatar";
  * - compact=true shows a short preview for dashboards
  */
 export default function StaffFeed({ compact = false, maxItems = 40 }) {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [faculty, setFaculty] = useState("");
@@ -45,6 +45,11 @@ export default function StaffFeed({ compact = false, maxItems = 40 }) {
           : "Staff";
 
   useEffect(() => {
+    if (authMode === "api") {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
     const unsub = onSnapshot(
       collection(db, "coursePosts"),
       (snap) => {
@@ -70,7 +75,7 @@ export default function StaffFeed({ compact = false, maxItems = 40 }) {
       }
     );
     return unsub;
-  }, []);
+  }, [authMode]);
 
   const faculties = useMemo(() => {
     const s = new Set();

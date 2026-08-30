@@ -10,7 +10,8 @@ import {
   where,
 } from "firebase/firestore";
 import { Wallet, Link2, Crown, Search, UserMinus, Save, CheckCircle2 } from "lucide-react";
-import { db } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
+import { paymentsApi, settingsApi, usersApi } from "../lib/api";
 import { usePaymentSettings } from "../hooks/usePaymentSettings";
 import { DEFAULT_PLANS, isPro } from "../lib/subscription";
 
@@ -19,6 +20,7 @@ const fieldClass =
 
 export default function AdminPayments() {
   const { settings, loading: settingsLoading } = usePaymentSettings();
+  const { authMode } = useAuth();
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -51,15 +53,23 @@ export default function AdminPayments() {
   }, [settings, settingsLoading]);
 
   useEffect(() => {
+    if (authMode === "api") {
+      usersApi.list().then(({ users: list = [] }) => setStudents(list.filter((item) => item.role === "user"))).catch(() => setStudents([]));
+      return;
+    }
     const q = query(collection(db, "users"), where("role", "==", "user"));
     return onSnapshot(
       q,
       (snap) => setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
       () => setStudents([])
     );
-  }, []);
+  }, [authMode]);
 
   useEffect(() => {
+    if (authMode === "api") {
+      paymentsApi.listClaims().then(({ claims: list = [] }) => setClaims(list)).catch(() => setClaims([]));
+      return;
+    }
     return onSnapshot(
       collection(db, "paymentClaims"),
       (snap) => {
@@ -69,7 +79,7 @@ export default function AdminPayments() {
       },
       () => setClaims([])
     );
-  }, []);
+  }, [authMode]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -90,9 +100,7 @@ export default function AdminPayments() {
     setSaving(true);
     setMsg("");
     try {
-      await setDoc(
-        doc(db, "appSettings", "payments"),
-        {
+      await settingsApi.update("payments", {
           headline: form.headline?.trim() || "",
           subheadline: form.subheadline?.trim() || "",
           plans: {
@@ -114,10 +122,7 @@ export default function AdminPayments() {
           },
           priceLabel: form.plans.annual.amountLabel || "₦4,000 / year",
           priceNote: "Paystack checkout · activate Pro after payment",
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      });
       setMsg("Payment settings saved.");
     } catch (err) {
       setMsg(err.message || "Could not save.");
@@ -129,12 +134,7 @@ export default function AdminPayments() {
   async function setPlan(user, plan) {
     setBusyId(user.id);
     try {
-      await updateDoc(doc(db, "users", user.id), {
-        plan,
-        subscription: plan,
-        planUpdatedAt: serverTimestamp(),
-        planUpdatedBy: "admin",
-      });
+      await usersApi.update(user.id, { plan });
     } catch (err) {
       alert(err.message || "Update failed.");
     } finally {
@@ -145,17 +145,8 @@ export default function AdminPayments() {
   async function approveClaim(claim) {
     setBusyId(claim.id);
     try {
-      await updateDoc(doc(db, "users", claim.userId), {
-        plan: "pro",
-        subscription: "pro",
-        subscriptionPlanId: claim.planId || "annual",
-        planUpdatedAt: serverTimestamp(),
-        planUpdatedBy: "admin",
-      });
-      await updateDoc(doc(db, "paymentClaims", claim.id), {
-        status: "activated",
-        activatedAt: serverTimestamp(),
-      });
+      await usersApi.update(claim.userId, { plan: "pro" });
+      await paymentsApi.approveClaim(claim.id);
     } catch (err) {
       alert(err.message || "Could not activate.");
     } finally {

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { DEFAULT_PLANS, resolvePlans } from "../lib/subscription";
+import { settingsApi } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 
 const DEFAULTS = {
   headline: "Unlock Pro · exam-ready access",
@@ -25,10 +27,20 @@ const DEFAULTS = {
 };
 
 export function usePaymentSettings() {
+  const { authMode } = useAuth();
   const [settings, setSettings] = useState(DEFAULTS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      settingsApi.get("payments").then(({ value }) => {
+        if (!alive) return;
+        if (value) setSettings({ ...DEFAULTS, ...value, plans: { ...DEFAULTS.plans, ...(value.plans || {}) } });
+        setLoading(false);
+      }).catch(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     const unsub = onSnapshot(
       doc(db, "appSettings", "payments"),
       (snap) => {
@@ -50,7 +62,7 @@ export function usePaymentSettings() {
       }
     );
     return unsub;
-  }, []);
+  }, [authMode]);
 
   const plans = resolvePlans(settings);
   return { settings, plans, loading, defaults: DEFAULT_PLANS };

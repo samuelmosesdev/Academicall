@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { doc, onSnapshot } from "firebase/firestore";
 import {
   ArrowLeft,
   BookOpen,
@@ -15,7 +14,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { db } from "../firebase/config";
+import { documentsApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { recordMaterialOpen, recordDailyActivity } from "../lib/activity";
 import { isPro } from "../lib/subscription";
@@ -36,16 +35,16 @@ function getExtension(name = "", url = "") {
 }
 
 function useDocumentRecord(docId) {
+  const { authMode } = useAuth();
   const [record, setRecord] = useState(undefined);
   useEffect(() => {
     if (!docId) return;
     setRecord(undefined);
-    const unsub = onSnapshot(
-      doc(db, "documents", docId),
-      (snap) => setRecord(snap.exists() ? { id: snap.id, ...snap.data() } : null),
-      () => setRecord(null)
-    );
-    return unsub;
+    let alive = true;
+    documentsApi.get(docId)
+      .then(({ document }) => alive && setRecord(document || null))
+      .catch(() => alive && setRecord(null));
+    return () => { alive = false; };
   }, [docId]);
   return record;
 }
@@ -64,7 +63,7 @@ export default function DocumentReader() {
   // Count material opens + daily streak when reader opens
   useEffect(() => {
     if (user && docId) {
-      recordMaterialOpen(user, docId);
+      recordMaterialOpen(user, docId, profile);
       if (profile) recordDailyActivity(user, profile);
     }
   }, [user?.uid, docId]);

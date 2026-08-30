@@ -7,6 +7,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import LoginRedirect from "./pages/LoginRedirect";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import ForceChangePassword from "./pages/ForceChangePassword";
 import Signup from "./pages/Signup";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/login-redirect" element={<LoginRedirect />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/change-password"
               element={

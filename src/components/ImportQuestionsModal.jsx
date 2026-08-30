@@ -1,9 +1,8 @@
 import { useMemo, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
-import { collection, serverTimestamp, writeBatch, doc } from "firebase/firestore";
-import { db } from "../firebase/config";
 import Modal from "./Modal";
 import { refreshCbtQuestions } from "../hooks/useCbtData";
+import { questionsApi } from "../lib/api";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 
 const TEMPLATE_CSV = `topic,questionText,optionA,optionB,optionC,optionD,correct,difficulty,explanation
@@ -151,10 +150,7 @@ export default function ImportQuestionsModal({ open, onClose, courses = [] }) {
       const chunkSize = 400;
       for (let i = 0; i < parsed.length; i += chunkSize) {
         const chunk = parsed.slice(i, i + chunkSize);
-        const batch = writeBatch(db);
-        chunk.forEach((partial) => {
-          const ref = doc(collection(db, "cbtQuestions"));
-          batch.set(ref, {
+        await Promise.all(chunk.map((partial) => questionsApi.create({
             ...partial,
             courseId: selectedCourse.id,
             courseCode: selectedCourse.code,
@@ -162,10 +158,7 @@ export default function ImportQuestionsModal({ open, onClose, courses = [] }) {
             faculty: selectedCourse.faculty || null,
             department: selectedCourse.department || null,
             level: selectedCourse.level || null,
-            createdAt: serverTimestamp(),
-          });
-        });
-        await batch.commit();
+        })));
         success += chunk.length;
       }
       await refreshCbtQuestions();

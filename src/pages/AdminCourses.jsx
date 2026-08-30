@@ -1,17 +1,9 @@
-import { useMemo, useState } from "react";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  serverTimestamp,
-  updateDoc,
-  writeBatch,
-} from "firebase/firestore";
-import { Plus, Trash2, Search, BookOpen, Pencil, X, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Trash2, Search, BookOpen, Pencil, X, Upload, Download, FileSpreadsheet, ChevronLeft, ChevronRight } from "lucide-react";
 import AiCourseImportModal from "../components/AiCourseImportModal";
-import { db } from "../firebase/config";
-import { useCbtData } from "../hooks/useCbtData";
+import { useAuth } from "../context/AuthContext";
+import { coursesApi } from "../lib/api";
+import { refreshCbtCourses, useCbtData } from "../hooks/useCbtData";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 import {
   downloadSampleCsv,
@@ -35,6 +27,7 @@ const emptyForm = {
 };
 
 export default function AdminCourses() {
+  const { authMode } = useAuth();
   const { courses, loading } = useCbtData();
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(emptyForm);
@@ -47,18 +40,55 @@ export default function AdminCourses() {
   const [importErrors, setImportErrors] = useState([]);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState("");
+  const [filterFaculty, setFilterFaculty] = useState("");
+  const [filterDepartment, setFilterDepartment] = useState("");
+  const [filterLevel, setFilterLevel] = useState("");
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 20;
 
   const departments = useMemo(() => departmentsFor(form.faculty), [form.faculty]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return courses;
     return courses.filter((c) =>
-      [c.code, c.title, c.faculty, c.department, c.level]
+      (!filterFaculty || c.faculty === filterFaculty) &&
+      (!filterDepartment || c.department === filterDepartment) &&
+      (!filterLevel || c.level === filterLevel) &&
+      (!q || [c.code, c.title, c.faculty, c.department, c.level]
         .filter(Boolean)
-        .some((f) => f.toLowerCase().includes(q))
+        .some((f) => f.toLowerCase().includes(q)))
     );
-  }, [courses, search]);
+  }, [courses, search, filterFaculty, filterDepartment, filterLevel]);
+
+  const filterDepartments = useMemo(() => {
+    if (filterFaculty) return departmentsFor(filterFaculty);
+    return [...new Set(courses.map((c) => c.department).filter(Boolean))].sort();
+  }, [courses, filterFaculty]);
+
+  const facultyOptions = useMemo(
+    () => [...new Set(courses.map((c) => c.faculty).filter(Boolean))].sort(),
+    [courses]
+  );
+  const levelOptions = useMemo(
+    () => [...new Set([...LEVELS, ...courses.map((c) => c.level).filter(Boolean)])].sort(),
+    [courses]
+  );
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pagedCourses = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, filterFaculty, filterDepartment, filterLevel]);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  function countFor(key, value) {
+    return courses.filter((course) => course[key] === value).length;
+  }
 
   function openCreate() {
     setForm(emptyForm);
@@ -107,14 +137,9 @@ export default function AdminCourses() {
 
     setSaving(true);
     try {
-      if (editingId) {
-        await updateDoc(doc(db, "courses", editingId), payload);
-      } else {
-        await addDoc(collection(db, "courses"), {
-          ...payload,
-          createdAt: serverTimestamp(),
-        });
-      }
+      if (editingId) await coursesApi.update(editingId, payload);
+      else await coursesApi.create(payload);
+      if (authMode === "api") await refreshCbtCourses();
       setForm(emptyForm);
       setEditingId(null);
       setShowForm(false);
@@ -131,7 +156,7 @@ export default function AdminCourses() {
     );
     if (!ok) return;
     try {
-      await deleteDoc(doc(db, "courses", c.id));
+      await coursesApi.remove(c.id);
     } catch (err) {
       alert(err.message || "Delete failed.");
     }
@@ -188,28 +213,18 @@ export default function AdminCourses() {
       );
       let added = 0;
       let updated = 0;
-      // Firestore batch limit 500
-      const chunk = 400;
-      for (let i = 0; i < importPreview.length; i += chunk) {
-        const slice = importPreview.slice(i, i + chunk);
-        const batch = writeBatch(db);
-        for (const row of slice) {
-          const payload = {
-            ...normalizeCoursePayload(row),
-            updatedAt: serverTimestamp(),
-          };
-          const existing = byCode.get(payload.code);
-          if (existing) {
-            batch.update(doc(db, "courses", existing.id), payload);
-            updated += 1;
-          } else {
-            const ref = doc(collection(db, "courses"));
-            batch.set(ref, { ...payload, createdAt: serverTimestamp() });
-            added += 1;
-          }
+      for (const row of importPreview) {
+        const payload = normalizeCoursePayload(row);
+        const existing = byCode.get(payload.code);
+        if (existing) {
+          await coursesApi.update(existing.id, payload);
+          updated += 1;
+        } else {
+          await coursesApi.create(payload);
+          added += 1;
         }
-        await batch.commit();
       }
+      if (authMode === "api") await refreshCbtCourses();
       setImportMsg(`Import complete: ${added} added, ${updated} updated.`);
       setImportPreview([]);
       setImportErrors([]);
@@ -263,6 +278,34 @@ export default function AdminCourses() {
             {new Set(courses.map((c) => c.department).filter(Boolean)).size}
           </div>
           <div className="text-xs text-text-muted">Departments</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border-subtle bg-bg-panel p-4 sm:p-5">
+        <div className="mb-3">
+          <h2 className="text-sm font-semibold text-text-primary">Course distribution</h2>
+          <p className="mt-1 text-xs text-text-muted">Choose a faculty, department, or level to see its course count.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "Faculty", value: filterFaculty, setValue: setFilterFaculty, options: facultyOptions, key: "faculty" },
+            { label: "Department", value: filterDepartment, setValue: setFilterDepartment, options: filterDepartments, key: "department" },
+            { label: "Level", value: filterLevel, setValue: setFilterLevel, options: levelOptions, key: "level" },
+          ].map((group) => (
+            <label key={group.key} className="min-w-0 rounded-lg border border-border-subtle bg-bg-app p-3">
+              <span className="mb-1 block text-xs font-medium text-text-muted">{group.label}</span>
+              <select
+                value={group.value}
+                onChange={(e) => group.setValue(e.target.value)}
+                className={`${fieldClass} min-w-0`}
+              >
+                <option value="">All {group.label.toLowerCase()}s ({courses.length})</option>
+                {group.options.map((option) => (
+                  <option key={option} value={option}>{option} ({countFor(group.key, option)})</option>
+                ))}
+              </select>
+            </label>
+          ))}
         </div>
       </div>
 
@@ -483,7 +526,7 @@ export default function AdminCourses() {
             No courses yet. Add the official list so CBT questions use fixed codes.
           </div>
         )}
-        {filtered.map((c) => (
+        {pagedCourses.map((c) => (
           <div key={c.id} className="flex items-start justify-between gap-3 px-4 py-3">
             <div className="min-w-0 flex-1">
               <div className="mb-0.5 flex flex-wrap items-center gap-2">
@@ -521,6 +564,33 @@ export default function AdminCourses() {
           </div>
         ))}
       </div>
+
+      {!loading && filtered.length > 0 && (
+        <div className="flex flex-col gap-3 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-text-muted">
+            Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} courses
+          </p>
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
+            <button
+              type="button"
+              disabled={page === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="inline-flex items-center gap-1 rounded-lg border border-border-subtle px-3 py-2 text-sm text-text-secondary disabled:opacity-40"
+            >
+              <ChevronLeft size={15} /> Previous
+            </button>
+            <span className="whitespace-nowrap text-sm font-medium text-text-primary">Page {page} of {pageCount}</span>
+            <button
+              type="button"
+              disabled={page === pageCount}
+              onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+              className="inline-flex items-center gap-1 rounded-lg border border-border-subtle px-3 py-2 text-sm text-text-secondary disabled:opacity-40"
+            >
+              Next <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <AiCourseImportModal
         open={showAiImport}

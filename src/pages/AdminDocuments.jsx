@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addDoc, collection, deleteDoc, doc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { FileText, Upload, Trash2, Search, ExternalLink, Sparkles } from "lucide-react";
-import { db } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
+import { documentsApi, settingsApi } from "../lib/api";
 import { useAdminDocuments } from "../hooks/useAdminDocuments";
 import { useCbtData } from "../hooks/useCbtData";
 import { uploadDocumentToCloudinary } from "../lib/cloudinaryUpload";
@@ -12,6 +12,7 @@ const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none";
 
 export default function AdminDocuments() {
+  const { authMode } = useAuth();
   const { documents, loading } = useAdminDocuments();
   const { courses } = useCbtData();
   const [search, setSearch] = useState("");
@@ -34,6 +35,10 @@ export default function AdminDocuments() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
+    if (authMode === "api") {
+      settingsApi.get("general").then(({ value }) => value && setAiSettings((current) => ({ ...current, ...value }))).catch(() => {});
+      return;
+    }
     const unsub = onSnapshot(doc(db, "appSettings", "general"), (snap) => {
       if (snap.exists()) {
         const d = snap.data();
@@ -45,7 +50,7 @@ export default function AdminDocuments() {
       }
     });
     return unsub;
-  }, []);
+  }, [authMode]);
 
   const filterDepartments = useMemo(
     () => departmentsFor(filterFaculty),
@@ -110,7 +115,7 @@ export default function AdminDocuments() {
     setProgress(0);
     try {
       const result = await uploadDocumentToCloudinary(file, setProgress);
-      await addDoc(collection(db, "documents"), {
+      await documentsApi.create({
         title: title.trim() || file.name,
         courseId: selectedCourse.id,
         courseCode: selectedCourse.code,
@@ -123,7 +128,6 @@ export default function AdminDocuments() {
         fileUrl: result.secure_url,
         fileName: file.name,
         fileSize: file.size,
-        uploadedAt: serverTimestamp(),
       });
       setTitle("");
       setTags([]);
@@ -146,7 +150,7 @@ export default function AdminDocuments() {
     const ok = window.confirm(`Remove "${docItem.title}"? This only removes it from the app list.`);
     if (!ok) return;
     try {
-      await deleteDoc(doc(db, "documents", docItem.id));
+      await documentsApi.remove(docItem.id);
     } catch (err) {
       alert(err.message || "Delete failed.");
     }

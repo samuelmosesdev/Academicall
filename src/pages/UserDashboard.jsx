@@ -33,6 +33,7 @@ import { useUserDashboardData } from "../hooks/useUserDashboardData";
 import { useCbtData } from "../hooks/useCbtData";
 import { useAuth } from "../context/AuthContext";
 import { recordDailyActivity } from "../lib/activity";
+import { feedApi } from "../lib/api";
 
 
 const REACTIONS = [
@@ -54,7 +55,7 @@ const field =
 
 export default function UserDashboard() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const { kpis, loading } = useUserDashboardData();
   const { practiceSets, loading: cbtLoading } = useCbtData({ withQuestions: true });
 
@@ -76,6 +77,11 @@ export default function UserDashboard() {
     "there";
 
   useEffect(() => {
+    if (authMode === "api") {
+      if (!department) { setDeptPosts([]); return; }
+      feedApi.list("course", `department=${encodeURIComponent(department)}`).then(({ posts = [] }) => setDeptPosts(posts.filter((p) => !level || !p.level || String(p.level).trim() === String(level).trim()).slice(0, 8))).catch(() => setDeptPosts([]));
+      return;
+    }
     if (user && profile) recordDailyActivity(user, profile);
   }, [user?.uid, profile?.lastActiveDate]);
 
@@ -117,10 +123,14 @@ export default function UserDashboard() {
       }
     );
     return unsub;
-  }, [department, level]);
+  }, [department, level, authMode]);
 
   // General feed (admin posts)
   useEffect(() => {
+    if (authMode === "api") {
+      feedApi.list("general").then(({ posts = [] }) => setGeneralPosts(posts.slice(0, 12))).catch(() => setGeneralPosts([]));
+      return;
+    }
     const q = query(collection(db, "generalPosts"), limit(12));
     const unsub = onSnapshot(
       q,
@@ -138,7 +148,7 @@ export default function UserDashboard() {
       () => setGeneralPosts([])
     );
     return unsub;
-  }, []);
+  }, [authMode]);
 
   const activePosts = feedTab === "department" ? deptPosts : generalPosts;
   const previewPosts = activePosts.slice(0, 3);
@@ -167,7 +177,8 @@ export default function UserDashboard() {
           name: displayLabel(profile, "Student"),
         });
       }
-      await updateDoc(doc(db, collectionName, postId), { reactions });
+      if (authMode === "api") await feedApi.update(collectionName === "generalPosts" ? "general" : "course", postId, { reactions });
+      else await updateDoc(doc(db, collectionName, postId), { reactions });
     } catch (e) {
       alert(e.message || "Could not react.");
     }
@@ -223,7 +234,8 @@ export default function UserDashboard() {
         createdAt: new Date().toISOString(),
         reactions: [],
       });
-      await updateDoc(doc(db, collectionName, postId), { comments });
+      if (authMode === "api") await feedApi.update(collectionName === "generalPosts" ? "general" : "course", postId, { comments });
+      else await updateDoc(doc(db, collectionName, postId), { comments });
       setCommentText((p) => ({ ...p, [postId]: "" }));
       setAnonComment((p) => ({ ...p, [postId]: false }));
       setExpanded((p) => ({ ...p, [postId]: true }));

@@ -1,24 +1,32 @@
 import { useEffect, useState } from "react";
-import { collection, limit, onSnapshot, query } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
+import { documentsApi } from "../lib/api";
 
 export function useAdminDocuments() {
+  const { authMode } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, "documents"), limit(500)),
-      (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        list.sort((a, b) => (b.uploadedAt?.seconds || 0) - (a.uploadedAt?.seconds || 0));
-        setDocuments(list);
+    if (authMode === "api") {
+      let alive = true;
+      documentsApi.list().then(({ documents: list = [] }) => {
+        if (!alive) return;
+        setDocuments(list.map((document) => ({
+          ...document,
+          courseCode: document.course?.code || "",
+          courseTitle: document.course?.title || "",
+          uploadedAt: document.createdAt,
+        })));
         setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return unsub;
-  }, []);
+      }).catch(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
+
+    setLoading(false);
+    setDocuments([]);
+    return undefined;
+  }, [authMode]);
 
   return { documents, loading };
 }

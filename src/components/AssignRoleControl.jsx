@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import {
   isAdmin,
@@ -10,6 +8,7 @@ import {
   ROLE_LABELS,
 } from "../lib/roles";
 import { logActivity } from "../lib/activityLog";
+import { usersApi } from "../lib/api";
 import { FACULTIES, departmentsFor, LEVELS } from "../data/facultyData";
 
 /**
@@ -83,7 +82,10 @@ export default function AssignRoleControl({ targetUser }) {
         patch.courseRepLevel = null;
       }
 
-      await updateDoc(doc(db, "users", targetUser.id), patch);
+      await usersApi.update(targetUser.id, {
+        ...patch,
+        assignedAt: new Date().toISOString(),
+      });
       await logActivity({
         actorUid: user.uid,
         actorName: profile?.name || user.email,

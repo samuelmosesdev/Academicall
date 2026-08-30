@@ -14,9 +14,10 @@ export default function VerifyEmail() {
     resendVerificationEmail,
     refreshEmailVerified,
     verifyEmailWithCode,
+    authMode,
   } = useAuth();
   const navigate = useNavigate();
-  const useBrevo = isBrevoVerifyConfigured();
+  const useBrevo = authMode === "api" || isBrevoVerifyConfigured();
 
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");

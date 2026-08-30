@@ -12,13 +12,21 @@ import {
 import { useEffect } from "react";
 import { Bell, CheckCheck, Megaphone, UserPlus, AlertCircle } from "lucide-react";
 import { db } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
+import { notificationsApi } from "../lib/api";
 
 export default function AdminNotifications() {
+  const { authMode } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unread
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      notificationsApi.listAdmin().then(({ notifications = [] }) => alive && setItems(notifications)).catch(() => {});
+      return () => { alive = false; };
+    }
     // Prefer admin-relevant notifications
     const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(
@@ -34,7 +42,7 @@ export default function AdminNotifications() {
       () => setLoading(false)
     );
     return unsub;
-  }, []);
+  }, [authMode]);
 
   const visible = useMemo(() => {
     if (filter === "unread") return items.filter((n) => n.readByAdmin === false);

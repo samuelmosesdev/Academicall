@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection, getDocs, limit, onSnapshot, query } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
+import { coursesApi } from "../lib/api";
+import { questionsApi } from "../lib/api";
 
 /**
  * Live CBT data.
@@ -29,6 +32,20 @@ import { db } from "../firebase/config";
 
 const COURSES_LIMIT = 500;
 const QUESTIONS_LIMIT = 5000;
+let apiCoursesState = { data: [], loading: true };
+const apiCoursesSubscribers = new Set();
+
+async function loadApiCourses() {
+  const { courses: apiCourses = [] } = await coursesApi.list();
+  const list = [...apiCourses].sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
+  apiCoursesState = { data: list, loading: false };
+  apiCoursesSubscribers.forEach((subscriber) => subscriber(apiCoursesState));
+  return list;
+}
+
+export function refreshCbtCourses() {
+  return loadApiCourses();
+}
 // Keep the shared listener warm briefly so navigating between two pages that
 // both use it doesn't tear down and re-attach (which re-bills every document).
 const TEARDOWN_GRACE_MS = 30_000;
@@ -109,26 +126,60 @@ function loadQuestions() {
  * Callers: AdminCbtBuilder, ImportQuestionsModal, AiGenerateQuestionsModal,
  * AiGenerateFromDocumentModal.
  */
-export function refreshCbtQuestions() {
+export function refreshCbtQuestions(authMode) {
+  const mode = authMode || (localStorage.getItem("academicall_token") ? "api" : "firebase");
+  if (mode === "api") {
+    return questionsApi.list().then(({ questions: list = [] }) => {
+      questionsCache = list;
+      questionsSubscribers.forEach((fn) => fn(list));
+      return list;
+    });
+  }
   questionsCache = null;
   return loadQuestions();
 }
 
 export function useCbtData({ withQuestions = false } = {}) {
+  const { authMode } = useAuth();
   const [courses, setCourses] = useState(coursesState.data);
   const [coursesLoading, setCoursesLoading] = useState(coursesState.loading);
   const [questions, setQuestions] = useState(questionsCache || []);
   const [questionsLoading, setQuestionsLoading] = useState(withQuestions && !questionsCache);
 
   useEffect(() => {
-    return acquireCourses((next) => {
-      setCourses(next.data);
-      setCoursesLoading(next.loading);
-    });
-  }, []);
+    if (authMode === "api") {
+      let alive = true;
+      const onCourses = (state) => {
+        if (!alive) return;
+        setCourses(state.data);
+        setCoursesLoading(state.loading);
+      };
+      apiCoursesSubscribers.add(onCourses);
+      onCourses(apiCoursesState);
+      loadApiCourses().catch(() => alive && onCourses({ data: [], loading: false }));
+      return () => { alive = false; apiCoursesSubscribers.delete(onCourses); };
+    }
+
+    setCourses([]);
+    setCoursesLoading(false);
+    return undefined;
+  }, [authMode]);
 
   useEffect(() => {
-    if (!withQuestions) return;
+    if (!withQuestions || authMode !== "api") return;
+    let alive = true;
+    setQuestionsLoading(true);
+    questionsApi.list().then(({ questions: list = [] }) => {
+      if (!alive) return;
+      setQuestions(list);
+      questionsCache = list;
+      setQuestionsLoading(false);
+    }).catch(() => alive && setQuestionsLoading(false));
+    return () => { alive = false; };
+  }, [authMode, withQuestions]);
+
+  useEffect(() => {
+    if (!withQuestions || authMode === "api") return;
     let alive = true;
     const onChange = (list) => {
       if (alive) setQuestions(list);
@@ -146,7 +197,7 @@ export function useCbtData({ withQuestions = false } = {}) {
       alive = false;
       questionsSubscribers.delete(onChange);
     };
-  }, [withQuestions]);
+  }, [withQuestions, authMode]);
 
   /** Unique course codes that actually have questions */
   const practiceSets = useMemo(() => {

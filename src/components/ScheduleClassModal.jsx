@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { CalendarPlus, Loader2 } from "lucide-react";
-import { db } from "../firebase/config";
 import Modal from "./Modal";
 import { logActivity } from "../lib/activityLog";
+import { classEventsApi } from "../lib/api";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -57,19 +56,17 @@ export default function ScheduleClassModal({
     try {
       const start = new Date(startsAt);
       const end = endsAt ? new Date(endsAt) : null;
-      const classRef = await addDoc(collection(db, "classEvents"), {
+      const { event } = await classEventsApi.create({
         title: title.trim(),
         courseCode: courseCode.trim().toUpperCase() || null,
         venue: venue.trim() || null,
         notes: notes.trim() || null,
-        startsAt: start,
-        endsAt: end,
+        startsAt: start.toISOString(),
+        endsAt: end ? end.toISOString() : null,
         faculty: faculty || null,
         department,
         level: level || null,
-        createdBy: user?.uid || null,
         createdByName: authorName || user?.email || "Course Rep",
-        createdAt: serverTimestamp(),
       });
       await logActivity({
         actorUid: user?.uid,
@@ -77,7 +74,7 @@ export default function ScheduleClassModal({
         action: "class.schedule",
         targetUid: null,
         targetName: null,
-        reference: classRef.id,
+        reference: event.id,
         meta: { title: title.trim(), department, level },
       });
       reset();

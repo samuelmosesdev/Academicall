@@ -19,7 +19,7 @@ import BrandLogo from "./BrandLogo";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { isPro } from "../lib/subscription";
-import { useStudentUnread } from "../hooks/useStudentUnread";
+import { useUserDashboardData } from "../hooks/useUserDashboardData";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/dashboard" },
@@ -45,7 +45,7 @@ export default function UserSidebar({ onNavigate }) {
   const { profile } = useAuth();
   const pro = isPro(profile);
   const isRep = profile?.role === "courseRep";
-  const { unread } = useStudentUnread();
+  const { unreadCount: unread = 0 } = useUserDashboardData();
 
   function go(to) {
     navigate(to);

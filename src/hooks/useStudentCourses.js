@@ -1,72 +1,46 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  getDocs,
-  writeBatch,
-  increment,
-} from "firebase/firestore";
-import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { coursesApi, enrollmentsApi } from "../lib/api";
 
-/**
- * Live courses + the signed-in student's enrollments.
- * Enrolling writes to `enrollments` and bumps users/{uid}.coursesEnrolledCount.
- */
 export function useStudentCourses() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const [courses, setCourses] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
 
   useEffect(() => {
-    const unsubCourses = onSnapshot(
-      collection(db, "courses"),
-      (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        list.sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
-        setCourses(list);
-        setLoading(false);
-      },
-      () => {
-        setCourses([]);
-        setLoading(false);
-      }
-    );
-    return () => unsubCourses();
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
+    if (authMode !== "api" || !user) {
+      setCourses([]);
       setEnrollments([]);
-      return;
+      setLoading(false);
+      return undefined;
     }
-    const q = query(collection(db, "enrollments"), where("userId", "==", user.uid));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setEnrollments(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      },
-      () => setEnrollments([])
-    );
-    return () => unsub();
-  }, [user?.uid]);
+    let alive = true;
+    setLoading(true);
+    Promise.all([coursesApi.list(), enrollmentsApi.list()])
+      .then(([courseData, enrollmentData]) => {
+        if (!alive) return;
+        setCourses(courseData.courses || []);
+        setEnrollments((enrollmentData.enrollments || []).map((item) => ({
+          ...item,
+          courseId: item.courseId || item.course?.id,
+          courseCode: item.course?.code || item.courseCode,
+          courseTitle: item.course?.title || item.courseTitle,
+        })));
+      })
+      .catch(() => alive && setCourses([]))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [authMode, user]);
 
   const enrolledCourseIds = useMemo(() => {
-    const set = new Set();
-    for (const e of enrollments) {
-      if (e.courseId) set.add(e.courseId);
-      if (e.courseCode) set.add(e.courseCode);
-    }
-    return set;
+    const ids = new Set();
+    enrollments.forEach((enrollment) => {
+      if (enrollment.courseId) ids.add(enrollment.courseId);
+      if (enrollment.courseCode) ids.add(enrollment.courseCode);
+    });
+    return ids;
   }, [enrollments]);
 
   function isEnrolled(course) {
@@ -74,51 +48,23 @@ export function useStudentCourses() {
   }
 
   async function enroll(course) {
-    if (!user || !course) return;
-    if (isEnrolled(course)) return;
+    if (!user || !course || authMode !== "api" || isEnrolled(course)) return;
     setBusyId(course.id);
     try {
-      await addDoc(collection(db, "enrollments"), {
-        userId: user.uid,
-        courseId: course.id,
-        courseCode: course.code || "",
-        courseTitle: course.title || "",
-        faculty: course.faculty || "",
-        department: course.department || "",
-        level: course.level || "",
-        semester: course.semester || "",
-        thumbnailUrl: course.thumbnailUrl || null,
-        progressPct: 0,
-        questionsDone: 0,
-        enrolledAt: serverTimestamp(),
-        lastAccessedAt: serverTimestamp(),
-      });
-      // Keep profile KPI in sync
-      await updateDoc(doc(db, "users", user.uid), {
-        coursesEnrolledCount: increment(1),
-      }).catch(() => {});
+      const { enrollment } = await enrollmentsApi.create({ courseId: course.id });
+      setEnrollments((current) => [...current, enrollment]);
     } finally {
       setBusyId(null);
     }
   }
 
   async function unenroll(course) {
-    if (!user || !course) return;
+    if (!user || !course || authMode !== "api") return;
     setBusyId(course.id);
     try {
-      const matches = enrollments.filter(
-        (e) => e.courseId === course.id || e.courseCode === course.code
-      );
-      const batch = writeBatch(db);
-      for (const e of matches) {
-        batch.delete(doc(db, "enrollments", e.id));
-      }
-      await batch.commit();
-      if (matches.length) {
-        await updateDoc(doc(db, "users", user.uid), {
-          coursesEnrolledCount: increment(-matches.length),
-        }).catch(() => {});
-      }
+      const matches = enrollments.filter((item) => item.courseId === course.id || item.courseCode === course.code);
+      await Promise.all(matches.map((item) => enrollmentsApi.remove(item.id)));
+      setEnrollments((current) => current.filter((item) => !matches.some((match) => match.id === item.id)));
     } finally {
       setBusyId(null);
     }
@@ -129,15 +75,5 @@ export function useStudentCourses() {
     else await enroll(course);
   }
 
-  return {
-    courses,
-    enrollments,
-    loading,
-    busyId,
-    isEnrolled,
-    enroll,
-    unenroll,
-    toggle,
-    profile,
-  };
+  return { courses, enrollments, loading, busyId, isEnrolled, enroll, unenroll, toggle, profile };
 }

@@ -6,12 +6,12 @@ import { friendlyAuthError } from "../lib/authErrors";
 import GoogleIcon from "../components/GoogleIcon";
 
 export default function Login() {
-  const { signInWithEmail, signInWithGoogle } = useAuth();
+  const { loginWithApi, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname;
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
@@ -22,10 +22,10 @@ export default function Login() {
     setError("");
     setBusy(true);
     try {
-      await signInWithEmail(email, password);
+      await loginWithApi(identifier.trim(), password);
       navigate(from && from !== "/login" ? from : "/login-redirect", { replace: true });
     } catch (err) {
-      setError(friendlyAuthError(err.code));
+      setError(err.message || friendlyAuthError(err.code) || "Login failed");
     } finally {
       setBusy(false);
     }
@@ -38,7 +38,7 @@ export default function Login() {
       await signInWithGoogle();
       navigate(from && from !== "/login" ? from : "/login-redirect", { replace: true });
     } catch (err) {
-      setError(friendlyAuthError(err.code));
+      setError(friendlyAuthError(err.code) || err.message);
     } finally {
       setBusy(false);
     }
@@ -72,8 +72,8 @@ export default function Login() {
             <input
               type="text"
               autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
               className="w-full rounded-xl border border-[#bec9c2] bg-white px-3 py-2.5 text-sm text-[#181c1a] outline-none focus:border-[#005239] focus:ring-2 focus:ring-[#005239]/15"
             />

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { requestsApi, usersApi } from "../lib/api";
 
 const STATUS_TABS = [
   { id: "pending", label: "Pending" },
@@ -26,7 +27,7 @@ const STATUS_TABS = [
 ];
 
 export default function AdminChangeRequests() {
-  const { user } = useAuth();
+  const { user, authMode } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("pending");
@@ -35,6 +36,13 @@ export default function AdminChangeRequests() {
   const [note, setNote] = useState({});
 
   useEffect(() => {
+    if (authMode === "api") {
+      let alive = true;
+      requestsApi.listProfileChanges().then(({ requests: list = [] }) => {
+        if (alive) { setRequests(list); setLoading(false); }
+      }).catch(() => alive && setLoading(false));
+      return () => { alive = false; };
+    }
     const unsub = onSnapshot(
       collection(db, "profileChangeRequests"),
       (snap) => {
@@ -48,7 +56,7 @@ export default function AdminChangeRequests() {
       () => setLoading(false)
     );
     return unsub;
-  }, []);
+  }, [authMode]);
 
   const filtered = useMemo(() => {
     let list = requests;
@@ -86,15 +94,18 @@ export default function AdminChangeRequests() {
         if (req.field === "faculty") {
           // leave department; admin can fix separately
         }
-        await updateDoc(doc(db, "users", req.userId), patch);
+        if (authMode === "api") await usersApi.update(req.userId, patch);
+        else await updateDoc(doc(db, "users", req.userId), patch);
       }
 
-      await updateDoc(doc(db, "profileChangeRequests", req.id), {
+      const review = {
         status: decision,
-        reviewedAt: serverTimestamp(),
+        reviewedAt: new Date().toISOString(),
         reviewedBy: user.uid,
         adminNote: (note[req.id] || "").trim() || null,
-      });
+      };
+      if (authMode === "api") await requestsApi.updateProfileChange(req.id, review);
+      else await updateDoc(doc(db, "profileChangeRequests", req.id), { ...review, reviewedAt: serverTimestamp() });
     } catch (err) {
       alert(err.message || "Could not process request.");
     } finally {
@@ -103,8 +114,8 @@ export default function AdminChangeRequests() {
   }
 
   function formatDate(ts) {
-    if (!ts?.seconds) return "—";
-    return new Date(ts.seconds * 1000).toLocaleString();
+    if (!ts) return "—";
+    return new Date(ts.seconds ? ts.seconds * 1000 : ts).toLocaleString();
   }
 
   return (

@@ -27,6 +27,7 @@ import { useCbtData } from "../hooks/useCbtData";
 import { isPro } from "../lib/subscription";
 import SubscribeGateModal from "../components/SubscribeGateModal";
 import { db } from "../firebase/config";
+import { classEventsApi, timetableApi } from "../lib/api";
 
 const DAYS = [
   { id: 1, short: "Mon", label: "Monday" },
@@ -138,7 +139,6 @@ function LockedTimetable({ onOpen }) {
 const emptyForm = {
   title: "",
   courseId: "",
-  courseCode: "",
   dayOfWeek: 1,
   startTime: "09:00",
   endTime: "10:00",
@@ -148,7 +148,7 @@ const emptyForm = {
 };
 
 export default function StudentTimetable() {
-  const { user, profile } = useAuth();
+  const { user, profile, authMode } = useAuth();
   const pro = isPro(profile);
   const { courses } = useCbtData();
   const [gateOpen, setGateOpen] = useState(!pro);
@@ -223,7 +223,16 @@ export default function StudentTimetable() {
       setLoading(false);
     };
 
-    const unsub1 = onSnapshot(
+    const unsub1 = authMode === "api" ? (() => {
+      let cancelled = false;
+      Promise.all([timetableApi.list(), classEventsApi.list()]).then(([personalData, sharedData]) => {
+        if (cancelled) return;
+        personal = (personalData.events || []).map((event) => ({ ...event, source: "personal" }));
+        shared = (sharedData.events || []).filter((event) => event.department === profile?.department);
+        merge();
+      }).catch(() => setLoading(false));
+      return () => { cancelled = true; };
+    })() : onSnapshot(
       query(collection(db, "timetableEvents"), where("userId", "==", user.uid)),
       (snap) => {
         personal = snap.docs.map((d) => ({ id: d.id, ...d.data(), source: "personal" }));
@@ -232,7 +241,7 @@ export default function StudentTimetable() {
       () => setLoading(false)
     );
 
-    const unsub2 = onSnapshot(
+    const unsub2 = authMode === "api" ? () => {} : onSnapshot(
       collection(db, "classEvents"),
       (snap) => {
         const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -266,6 +275,7 @@ export default function StudentTimetable() {
     };
   }, [
     user,
+    authMode,
     pro,
     weekAnchor,
     profile?.department,
@@ -409,12 +419,11 @@ export default function StudentTimetable() {
     };
     try {
       if (editingId) {
-        await updateDoc(doc(db, "timetableEvents", editingId), payload);
+        if (authMode === "api") await timetableApi.update(editingId, payload);
+        else await updateDoc(doc(db, "timetableEvents", editingId), payload);
       } else {
-        await addDoc(collection(db, "timetableEvents"), {
-          ...payload,
-          createdAt: serverTimestamp(),
-        });
+        if (authMode === "api") await timetableApi.create(payload);
+        else await addDoc(collection(db, "timetableEvents"), { ...payload, createdAt: serverTimestamp() });
       }
       setShowForm(false);
       setEditingId(null);
@@ -432,7 +441,8 @@ export default function StudentTimetable() {
     }
     if (!window.confirm("Remove this class from your timetable?")) return;
     try {
-      await deleteDoc(doc(db, "timetableEvents", id));
+      if (authMode === "api") await timetableApi.remove(id);
+      else await deleteDoc(doc(db, "timetableEvents", id));
     } catch (err) {
       alert(err.message);
     }
