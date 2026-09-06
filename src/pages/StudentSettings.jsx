@@ -1,10 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import {
-  updatePassword,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-} from "firebase/auth";
 import {
   User,
   Palette,
@@ -24,9 +18,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { isPro, planLabel, FREE_LIMITS } from "../lib/subscription";
-import { db, auth } from "../firebase/config";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
-import { usersApi } from "../lib/api";
+import { usersApi, authApi } from "../lib/api";
 
 const fieldClass =
   "w-full rounded-lg border border-border-light bg-surface-light px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-teal focus:outline-none";
@@ -62,7 +55,6 @@ export default function StudentSettings() {
   const [pwdMsg, setPwdMsg] = useState("");
 
   const departments = useMemo(() => departmentsFor(faculty), [faculty]);
-  const isEmailUser = user?.providerData?.some((p) => p.providerId === "password");
 
   useEffect(() => {
     if (!profile) return;
@@ -87,37 +79,20 @@ export default function StudentSettings() {
     setMsg("");
     setErr("");
     try {
-      if (authMode === "api") {
-        await usersApi.updateMe({
-          name: name.trim(),
-          faculty: faculty || null,
-          department: department || null,
-          level: level || null,
-          settings: {
-            notifAnnouncements: !!prefs.notifAnnouncements,
-            notifClassReminders: !!prefs.notifClassReminders,
-            defaultReminderMinutes: Number(prefs.defaultReminderMinutes) || 15,
-            defaultPracticeSize: Number(prefs.defaultPracticeSize) || 15,
-            showDashboardTips: !!prefs.showDashboardTips,
-          },
-          settingsUpdatedAt: new Date().toISOString(),
-        });
-      } else {
-        await updateDoc(doc(db, "users", user.uid), {
-          name: name.trim(),
-          faculty: faculty || null,
-          department: department || null,
-          level: level || null,
-          settings: {
-            notifAnnouncements: !!prefs.notifAnnouncements,
-            notifClassReminders: !!prefs.notifClassReminders,
-            defaultReminderMinutes: Number(prefs.defaultReminderMinutes) || 15,
-            defaultPracticeSize: Number(prefs.defaultPracticeSize) || 15,
-            showDashboardTips: !!prefs.showDashboardTips,
-          },
-          settingsUpdatedAt: serverTimestamp(),
-        });
-      }
+      await usersApi.updateMe({
+        name: name.trim(),
+        faculty: faculty || null,
+        department: department || null,
+        level: level || null,
+        settings: {
+          notifAnnouncements: !!prefs.notifAnnouncements,
+          notifClassReminders: !!prefs.notifClassReminders,
+          defaultReminderMinutes: Number(prefs.defaultReminderMinutes) || 15,
+          defaultPracticeSize: Number(prefs.defaultPracticeSize) || 15,
+          showDashboardTips: !!prefs.showDashboardTips,
+        },
+        settingsUpdatedAt: new Date().toISOString(),
+      });
       setMsg("Settings saved.");
     } catch (ex) {
       setErr(ex.message || "Could not save.");
@@ -129,19 +104,17 @@ export default function StudentSettings() {
   async function changePassword(e) {
     e.preventDefault();
     setPwdMsg("");
-    if (!user?.email || !isEmailUser) {
+    if (!user?.email) {
       setPwdMsg("Password change is only for email/password accounts.");
       return;
     }
-    if (newPassword.length < 6) {
-      setPwdMsg("New password must be at least 6 characters.");
+    if (newPassword.length < 8) {
+      setPwdMsg("New password must be at least 8 characters.");
       return;
     }
     setPwdBusy(true);
     try {
-      const cred = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, cred);
-      await updatePassword(user, newPassword);
+      await authApi.changePassword({ currentPassword, newPassword });
       setCurrentPassword("");
       setNewPassword("");
       setPwdMsg("Password updated.");

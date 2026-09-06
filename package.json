@@ -7,9 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview",
-    "emulators": "bash -c 'export JAVA_HOME=\"${JAVA_HOME:-$(/usr/libexec/java_home -v 21 2>/dev/null || echo /opt/homebrew/opt/openjdk@21)}\"; export PATH=\"$JAVA_HOME/bin:$PATH\"; firebase emulators:start --project demo-uofa-reader --only auth,firestore,storage'",
-    "seed": "node scripts/seed-emulator.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

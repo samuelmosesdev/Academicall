@@ -38,7 +38,7 @@ export default function Login() {
       await signInWithGoogle();
       navigate(from && from !== "/login" ? from : "/login-redirect", { replace: true });
     } catch (err) {
-      setError(friendlyAuthError(err.code) || err.message);
+      setError(err.message || friendlyAuthError(err.code) || "Google sign-in failed");
     } finally {
       setBusy(false);
     }

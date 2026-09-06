@@ -25,13 +25,11 @@ import {
   Hash,
   Sparkles,
 } from "lucide-react";
-import { auth, db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import ImageCropModal from "../components/ImageCropModal";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 import { fileToCompressedDataUrl } from "../lib/imageUtils";
 import { uploadImageToCloudinary } from "../lib/cloudinaryUpload";
-import { updateProfile } from "firebase/auth";
 import UniqueIdBadge from "../components/UniqueIdBadge";
 import { requestsApi, usersApi } from "../lib/api";
 
@@ -786,15 +784,6 @@ export default function StudentProfile() {
                 avatarUrl: finalUrl,
                 updatedAt: serverTimestamp(),
               });
-            }
-
-            // Firebase Auth profile (best-effort — Auth rejects huge data URLs)
-            if (auth.currentUser && String(finalUrl).startsWith("http")) {
-              try {
-                await updateProfile(auth.currentUser, { photoURL: finalUrl });
-              } catch {
-                /* ignore */
-              }
             }
 
             setPhotoDataUrl(finalUrl);

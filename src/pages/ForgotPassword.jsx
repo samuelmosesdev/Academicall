@@ -22,7 +22,7 @@ export default function ForgotPassword() {
       await authApi.requestPasswordReset({ email: email.trim() });
       setSent(true);
     } catch (err) {
-      setError(friendlyAuthError(err.code) || err.message);
+      setError(err.message || friendlyAuthError(err.code) || "Could not send reset email.");
     } finally {
       setBusy(false);
     }

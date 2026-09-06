@@ -6,7 +6,6 @@ import {
   onSnapshot,
   query,
   updateDoc,
-  where,
   limit,
 } from "firebase/firestore";
 import {
@@ -78,52 +77,23 @@ export default function UserDashboard() {
 
   useEffect(() => {
     if (authMode === "api") {
-      if (!department) { setDeptPosts([]); return; }
-      feedApi.list("course", `department=${encodeURIComponent(department)}`).then(({ posts = [] }) => setDeptPosts(posts.filter((p) => !level || !p.level || String(p.level).trim() === String(level).trim()).slice(0, 8))).catch(() => setDeptPosts([]));
+      if (!department) { setDeptPosts([]); setFeedLoading(false); return; }
+      setFeedLoading(true);
+      feedApi
+        .list("course", `department=${encodeURIComponent(department)}`)
+        .then(({ posts = [] }) =>
+          setDeptPosts(
+            posts
+              .filter((p) => !level || !p.level || String(p.level).trim() === String(level).trim())
+              .slice(0, 8)
+          )
+        )
+        .catch(() => setDeptPosts([]))
+        .finally(() => setFeedLoading(false));
       return;
     }
     if (user && profile) recordDailyActivity(user, profile);
-  }, [user?.uid, profile?.lastActiveDate]);
-
-  // Department feed (coursePosts for this department, max ~8 then show 3)
-  useEffect(() => {
-    if (!department) {
-      setDeptPosts([]);
-      setFeedLoading(false);
-      return;
-    }
-    const q = query(
-      collection(db, "coursePosts"),
-      where("department", "==", department)
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        // Prefer same level when set
-        if (level) {
-          const matched = list.filter(
-            (p) => !p.level || String(p.level).trim() === String(level).trim()
-          );
-          if (matched.length) list = matched;
-        }
-        list.sort((a, b) => {
-          if (a.pinned && !b.pinned) return -1;
-          if (!a.pinned && b.pinned) return 1;
-          const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
-          const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
-          return tb - ta;
-        });
-        setDeptPosts(list.slice(0, 8));
-        setFeedLoading(false);
-      },
-      () => {
-        setDeptPosts([]);
-        setFeedLoading(false);
-      }
-    );
-    return unsub;
-  }, [department, level, authMode]);
+  }, [user?.uid, profile?.lastActiveDate, department, level, authMode]);
 
   // General feed (admin posts)
   useEffect(() => {

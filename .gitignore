@@ -1,12 +1,1 @@
 node_modules
-dist
-.env.local
-.env
-*.local
-.DS_Store
-firebase-debug.log
-firestore-debug.log
-database-debug.log
-ui-debug.log
-pubsub-debug.log
-.firebase/

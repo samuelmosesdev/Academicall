@@ -28,7 +28,7 @@ export async function api(endpoint, options = {}) {
       console.error("API Error Response:", data);
       const details = Array.isArray(data.error)
         ? data.error.map((item) => item.message || item.path?.join(".")).filter(Boolean).join(", ")
-        : data.error;
+        : data.reason || data.error;
       const error = new Error(details || data.message || `Request failed with status ${res.status}`);
       error.status = res.status;
       throw error;
@@ -48,7 +48,6 @@ export const authApi = {
   changePassword: (body) => api("/auth/password/change", { method: "POST", body }),
   requestPasswordReset: (body) => api("/auth/password-reset/request", { method: "POST", body }),
   confirmPasswordReset: (body) => api("/auth/password-reset/confirm", { method: "POST", body }),
-  firebase: (idToken) => api("/auth/firebase", { method: "POST", body: { idToken } }),
   google: (credential) => api("/auth/google", { method: "POST", body: { credential } }),
   me: () => api("/auth/me"),
   sendVerification: () => api("/auth/verification/send", { method: "POST" }),
@@ -63,6 +62,7 @@ export const usersApi = {
   get: (id) => api(`/users/${id}`),
   update: (id, body) => api(`/users/${id}`, { method: "PATCH", body }),
   remove: (id) => api(`/users/${id}`, { method: "DELETE" }),
+  resetPassword: (id) => api(`/users/${id}/reset-password`, { method: "POST" }),
   createAgent: (body) => api("/users/agents", { method: "POST", body }),
 };
 

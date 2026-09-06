@@ -1,21 +1,10 @@
 import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  setPersistence,
-  browserSessionPersistence,
-  browserLocalPersistence,
-  connectAuthEmulator,
-} from "firebase/auth";
-import {
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  connectFirestoreEmulator,
-} from "firebase/firestore";
-import { getStorage, connectStorageEmulator } from "firebase/storage";
 import { getMessaging, isSupported } from "firebase/messaging";
-import { isNativeApp } from "../lib/platform";
 
+// Firebase is now used ONLY for optional web-push (FCM) on the frontend.
+// Auth and Firestore were removed as part of retiring hybrid auth — the
+// Academicall API + Postgres is the single source of truth for accounts
+// and data. See src/context/AuthContext.jsx for the API-based auth flow.
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -25,68 +14,30 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Loud guard: pointing a dev build at the production project is how a single
-// runaway listener burns the whole team's daily quota. See
-// docs/FIRESTORE-COST-POSTMORTEM.md.
-const PROD_PROJECT_ID = "uofa-reader";
-const useEmulator = import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true";
+const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
 
-if (import.meta.env.DEV && !useEmulator && firebaseConfig.projectId === PROD_PROJECT_ID) {
-  console.warn(
-    `[firebase] Local dev is connected to the PRODUCTION project "${PROD_PROJECT_ID}". ` +
-      "Every read/write here bills against the live quota.\n" +
-      "To use the local emulator instead: cp .env.development.example .env.development.local " +
-      "&& npm run emulators"
-  );
-}
-
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-
-// Persistent (IndexedDB) cache instead of the default memory-only cache.
-// Without this, every page reload re-fetches every listener's full result set
-// from the server and is billed as a fresh read per document.
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager(),
-  }),
-});
-
-export const storage = getStorage(app);
-
-if (useEmulator) {
-  const host = import.meta.env.VITE_FIREBASE_EMULATOR_HOST || "127.0.0.1";
-  connectFirestoreEmulator(db, host, 8080);
-  connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
-  connectStorageEmulator(storage, host, 9199);
-  console.info(`[firebase] Using local emulators at ${host}`);
-
-  // Without this the app just silently fails to load any data when the
-  // emulator isn't running, which looks like a broken build rather than a
-  // missing terminal.
-  fetch(`http://${host}:8080/`, { mode: "no-cors" }).catch(() => {
-    console.error(
-      `[firebase] VITE_USE_FIREBASE_EMULATOR is on but nothing is listening on ${host}:8080.\n` +
-        "Start it with `npm run emulators`, or delete .env.development.local to " +
-        "go back to the credentials in your .env.local."
-    );
-  });
-}
-
-// Website: session only (logs out when browser session ends).
-// Native app: stay logged in until the user signs out.
-const persistence = isNativeApp()
-  ? browserLocalPersistence
-  : browserSessionPersistence;
-
-setPersistence(auth, persistence).catch((err) => {
-  console.warn("Could not set auth persistence:", err);
-});
-
+export let app = null;
 export let messaging = null;
 
-isSupported().then((supported) => {
-  if (supported) {
-    messaging = getMessaging(app);
+// Legacy stubs: a handful of unreachable fallback code paths (dead code from
+// the pre-migration Firestore version, gated behind `authMode !== "api"`,
+// which never happens once signed in) still import these two names. They
+// are intentionally null now that Auth/Firestore are gone — safe to delete
+// those dead branches entirely in a follow-up cleanup.
+export const auth = null;
+export const db = null;
+
+if (isConfigured) {
+  try {
+    app = initializeApp(firebaseConfig);
+    isSupported().then((supported) => {
+      if (supported) {
+        messaging = getMessaging(app);
+      }
+    });
+  } catch (err) {
+    console.warn("[firebase] init skipped:", err?.message || err);
   }
-});
+} else {
+  console.info("[firebase] not configured — push notifications disabled. This is expected; auth and data use the API.");
+}

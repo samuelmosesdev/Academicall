@@ -1,7 +1,15 @@
 /**
  * UofA Readers Cloud Functions
- * - paystackWebhook / verifyPaystackReference
- * - getR2UploadUrl (presigned PUT for documents, avatars, images)
+ *
+ * DEPRECATED: paystackWebhook below writes to Firestore, which is no longer
+ * the source of truth. Point your Paystack dashboard webhook at the API
+ * instead: POST https://<your-api-domain>/api/v1/payments/webhook/paystack
+ * (see Academicall-api/src/controllers/payments.controller.ts). Once you've
+ * switched the dashboard URL over, this function can be removed.
+ *
+ * - paystackWebhook / verifyPaystackReference (legacy, Firestore-backed)
+ * - getR2UploadUrl (presigned PUT for documents, avatars, images — currently
+ *   unused; the app uploads directly to Cloudinary instead)
  *
  * R2 config (server only — never put secrets in the Vite app):
  *   firebase functions:config:set \

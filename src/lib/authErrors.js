@@ -21,7 +21,6 @@ export function friendlyAuthError(code) {
     case "auth/network-request-failed":
       return "Network error. Check your connection and try again.";
     default:
-      return "Something went wrong. Please try again.";
-      
+      return null;
   }
 }
