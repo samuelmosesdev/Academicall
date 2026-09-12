@@ -179,7 +179,7 @@ export default function UserDashboard() {
           : displayLabel(profile, user.email || "Student"),
         authorPhoto: asAnonymous
           ? null
-          : profile?.photoURL || profile?.avatarUrl || null,
+          : profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null,
         authorRole: asAnonymous ? "user" : profile?.role || "user",
         authorPlan: asAnonymous ? null : profile?.plan || null,
         authorSubscription: asAnonymous ? null : profile?.subscription || null,

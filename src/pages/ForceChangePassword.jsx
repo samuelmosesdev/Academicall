@@ -9,7 +9,7 @@ const field =
   "w-full rounded-xl border border-border-subtle bg-bg-panel px-3 py-2.5 text-sm text-text-primary focus:border-accent focus:outline-none";
 
 export default function ForceChangePassword() {
-  const { user, profile } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -36,7 +36,8 @@ export default function ForceChangePassword() {
     setBusy(true);
     try {
       await authApi.changePassword({ currentPassword: current, newPassword: next });
-      navigate(homePathFor(profile), { replace: true });
+      const freshProfile = await refreshProfile();
+      navigate(homePathFor(freshProfile), { replace: true });
     } catch (err) {
       const code = err?.code || "";
       if (code.includes("wrong-password") || code.includes("invalid-credential")) {

@@ -16,8 +16,8 @@ export default function ViewProfileModal({ user }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        {user.photoURL ? (
-          <img src={user.photoURL} alt="" className="h-16 w-16 rounded-full object-cover" />
+        {(user.photoUrl || user.avatarUrl || user.photoURL) ? (
+          <img src={user.photoUrl || user.avatarUrl || user.photoURL} alt="" className="h-16 w-16 rounded-full object-cover" />
         ) : (
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-soft text-lg font-semibold text-accent">
             {(user.name || user.email || "?")[0].toUpperCase()}

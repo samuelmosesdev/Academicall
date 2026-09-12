@@ -59,7 +59,7 @@ export default function UserAvatar({
   const displayName =
     name || profile?.name || profile?.email || "Student";
   const photo =
-    photoURL || profile?.photoURL || profile?.avatarUrl || null;
+    photoURL || profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null;
   const dept =
     department ??
     profile?.department ??

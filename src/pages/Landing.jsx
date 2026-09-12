@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { homePathFor } from "../lib/roles";
+import { homePathFor, nextOnboardingPath } from "../lib/roles";
 import {
   GraduationCap,
   BookOpen,
@@ -42,19 +42,32 @@ const TESTIMONIALS = [
 
 export default function Landing() {
   const { user, profile, loading, profileReady } = useAuth();
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // Only treat as signed-in once auth is settled — prevents "Open dashboard" after logout
   const signedIn = !loading && !!user && profileReady;
+  // If they're mid-signup (e.g. hit Back while entering their OTP), send them
+  // straight back to that step instead of showing "Open dashboard", which
+  // would just bounce them right back anyway and looks like a broken flow.
+  const pendingPath = signedIn ? nextOnboardingPath(profile) : null;
   const appHome = signedIn ? homePathFor(profile) : "/login";
   const ctaPrimary = signedIn ? appHome : "/signup";
   const ctaPrimaryLabel = signedIn ? "Open dashboard" : "Get started free";
+
+  useEffect(() => {
+    if (pendingPath) navigate(pendingPath, { replace: true });
+  }, [pendingPath, navigate]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Avoid flashing the full marketing page for a split second before the
+  // redirect above kicks in.
+  if (pendingPath) return null;
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f7faf6] text-[#181c1a] antialiased">

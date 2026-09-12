@@ -72,6 +72,26 @@ export function homePathFor(profile) {
 }
 
 /**
+ * Where a signed-in user still needs to go before they can reach their
+ * dashboard — a forced password change, email verification, or profile
+ * completion. Returns null once they're fully onboarded. Mirrors the order
+ * ProtectedRoute enforces, so Landing (and anywhere else) can redirect
+ * straight to the right step instead of dead-ending on a "go to dashboard"
+ * CTA that just bounces back.
+ */
+export function nextOnboardingPath(profile) {
+  if (!profile) return null;
+  if (profile.mustChangePassword) return "/change-password";
+  const r = roleOf(profile);
+  const isStudentSide = r === ROLES.USER || r === ROLES.COURSE_REP;
+  if (isStudentSide) {
+    if (!profile.emailVerified) return "/verify-email";
+    if (!profile.profileComplete) return "/complete-profile";
+  }
+  return null;
+}
+
+/**
  * ProtectedRoute-style check.
  * requiredRole: single role or array. Special:
  *  - "staff" => admin | alpha | agent

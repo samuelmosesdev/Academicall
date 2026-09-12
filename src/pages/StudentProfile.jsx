@@ -56,7 +56,7 @@ const fieldClass =
   "w-full rounded-xl border border-border-light bg-card-light px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20";
 
 export default function StudentProfile() {
-  const { user, profile, authMode } = useAuth();
+  const { user, profile, authMode, refreshProfile } = useAuth();
 
   const [bio, setBio] = useState("");
   const [interests, setInterests] = useState("");
@@ -179,6 +179,7 @@ export default function StudentProfile() {
           showPhone: !!showPhone,
           allowAnonymousComments: !!allowAnonymousComments,
         });
+        await refreshProfile();
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);
         return;
@@ -777,6 +778,7 @@ export default function StudentProfile() {
                 photoUrl: finalUrl,
                 avatarUrl: finalUrl,
               });
+              await refreshProfile();
             } else {
               // Write both field names so every UI (topbar uses avatarUrl, profile uses photoURL) updates
               await updateDoc(doc(db, "users", user.uid), {

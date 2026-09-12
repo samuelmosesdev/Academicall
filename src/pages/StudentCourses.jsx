@@ -27,7 +27,7 @@ import { usersApi } from "../lib/api";
 import { logActivity } from "../lib/activityLog";
 
 export default function StudentCourses() {
-  const { user, profile, authMode } = useAuth();
+  const { user, profile, authMode, refreshProfile } = useAuth();
   const { courses, loading } = useCbtData();
   const pro = isPro(profile);
   const [selected, setSelected] = useState(() => profile?.selectedCourseIds || []);
@@ -107,6 +107,7 @@ export default function StudentCourses() {
     try {
       if (authMode === "api") {
         await usersApi.updateMe({ selectedCourseIds: selected, customCourses });
+        await refreshProfile();
       } else {
         await updateDoc(doc(db, "users", user.uid), {
           selectedCourseIds: selected,
@@ -157,6 +158,7 @@ export default function StudentCourses() {
       if (user) {
         if (authMode === "api") {
           await usersApi.updateMe({ customCourses: next });
+          await refreshProfile();
         } else {
           await updateDoc(doc(db, "users", user.uid), { customCourses: next });
         }
@@ -214,6 +216,7 @@ export default function StudentCourses() {
     try {
       if (user) {
         await usersApi.updateMe({ customCourses: next });
+        await refreshProfile();
         await logActivity({
           actorUid: user.uid,
           actorName: profile?.name || user.email,

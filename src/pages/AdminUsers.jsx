@@ -10,6 +10,7 @@ import {
   Users,
   GraduationCap,
   BadgeCheck,
+  KeyRound,
 } from "lucide-react";
 import { useAdminUsers } from "../hooks/useAdminUsers";
 import EditUserModal from "../components/EditUserModal";
@@ -60,6 +61,7 @@ export default function AdminUsers() {
   const [viewing, setViewing] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [resetResult, setResetResult] = useState(null);
   const [repTarget, setRepTarget] = useState(null);
   const [repFaculty, setRepFaculty] = useState("");
   const [repDepartment, setRepDepartment] = useState("");
@@ -177,6 +179,30 @@ export default function AdminUsers() {
       });
     } catch (err) {
       setActionError(err.message || "Couldn't delete user.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleResetPassword(u) {
+    const ok = window.confirm(
+      `Reset the password for ${u.name || u.email}?\n\nThis issues a brand-new temporary password shown ONCE on screen. Make sure you've verified this person's identity (student ID, phone call, etc.) before handing it to them — this is not a way to recover their old password.`
+    );
+    if (!ok) return;
+    setBusyId(u.id);
+    setActionError("");
+    try {
+      const data = await usersApi.resetPassword(u.id);
+      setResetResult({ email: data.email, tempPassword: data.tempPassword });
+      await logActivity({
+        actorUid: adminUser.uid,
+        actorName: adminProfile?.name || adminUser.email,
+        action: "user.password_reset",
+        targetUid: u.id,
+        targetName: u.name || u.email,
+      });
+    } catch (err) {
+      setActionError(err.message || "Couldn't reset password.");
     } finally {
       setBusyId(null);
     }
@@ -496,6 +522,15 @@ export default function AdminUsers() {
                         <button
                           type="button"
                           disabled={busy}
+                          onClick={() => handleResetPassword(u)}
+                          className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated"
+                          title="Reset password (issues a one-time temp password)"
+                        >
+                          <KeyRound size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
                           onClick={() => toggleSuspend(u)}
                           className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated"
                           title={suspended ? "Reactivate" : "Suspend"}
@@ -635,6 +670,37 @@ export default function AdminUsers() {
           open={!!viewing}
           onClose={() => setViewing(null)}
         />
+      )}
+      {resetResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-xl">
+            <div className="mb-2 flex items-center gap-2 text-status-success">
+              <KeyRound size={18} />
+              <h3 className="text-sm font-semibold text-text-primary">Temporary password issued</h3>
+            </div>
+            <p className="mb-3 text-xs text-text-muted">
+              For <strong>{resetResult.email}</strong>. Shown only this once — copy it now and hand it
+              to the verified user. They'll be required to set a new password on their next login.
+            </p>
+            <div className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-border-subtle bg-bg-elevated px-3 py-2">
+              <code className="text-sm font-mono text-text-primary">{resetResult.tempPassword}</code>
+              <button
+                type="button"
+                className="rounded-md px-2 py-1 text-xs font-medium text-accent-primary hover:bg-accent-primary/10"
+                onClick={() => navigator.clipboard?.writeText(resetResult.tempPassword)}
+              >
+                Copy
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setResetResult(null)}
+              className="w-full rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            >
+              Done
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

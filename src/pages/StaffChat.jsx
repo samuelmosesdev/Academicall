@@ -229,7 +229,7 @@ export default function StaffChat() {
       authorUid: user?.uid,
       authorName: displayLabel(profile, user?.email || "Staff"),
       authorRole: profile?.role || "agent",
-      authorPhoto: profile?.photoURL || profile?.avatarUrl || null,
+      authorPhoto: profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null,
       authorPlan: profile?.plan || null,
       authorSubscription: profile?.subscription || null,
     };

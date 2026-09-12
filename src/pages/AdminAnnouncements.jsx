@@ -125,7 +125,7 @@ export default function AdminAnnouncements() {
       if (authMode === "api") await feedApi.create("general", {
         title: gTitle.trim(), body: gBody.trim(), pinned: !!gPinned,
         authorName: profile?.nickname || profile?.name || "Staff",
-        authorPhoto: profile?.photoURL || profile?.avatarUrl || null,
+        authorPhoto: profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null,
         comments: [], reactions: [],
       });
       else await addDoc(collection(db, "generalPosts"), {
@@ -137,7 +137,7 @@ export default function AdminAnnouncements() {
         authorName: profile?.nickname || profile?.name || "Staff",
         createdByName: profile?.name || "Staff",
         authorRole: profile?.role || "admin",
-        authorPhoto: profile?.photoURL || profile?.avatarUrl || null,
+        authorPhoto: profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null,
         comments: [],
         reactions: [],
       });

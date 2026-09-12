@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Search, BookOpen, Pencil, X, Upload, Download, FileSpreadsheet, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Search,
+  BookOpen,
+  Pencil,
+  X,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+  FolderOpen,
+} from "lucide-react";
 import AiCourseImportModal from "../components/AiCourseImportModal";
 import { useAuth } from "../context/AuthContext";
 import { coursesApi } from "../lib/api";
@@ -26,6 +40,267 @@ const emptyForm = {
   semester: "",
 };
 
+// ---------- Add/Edit Course modal ----------
+function CourseFormModal({ open, editingId, form, setForm, saving, error, onClose, onSubmit }) {
+  const departments = useMemo(() => departmentsFor(form.faculty), [form.faculty]);
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <form
+        onSubmit={onSubmit}
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-xl"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-text-primary">
+            {editingId ? "Edit course" : "Add a course"}
+          </h2>
+          <button type="button" onClick={onClose} className="text-text-muted hover:text-text-primary">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Course code *</label>
+            <input
+              value={form.code}
+              onChange={(e) => setForm({ ...form, code: e.target.value })}
+              placeholder="e.g. CSC 201"
+              className={fieldClass}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Course title *</label>
+            <input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="Introduction to Computing"
+              className={fieldClass}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs text-text-muted">Faculty *</label>
+              <select
+                value={form.faculty}
+                onChange={(e) => setForm({ ...form, faculty: e.target.value, department: "" })}
+                className={fieldClass}
+                required
+              >
+                <option value="">Select faculty</option>
+                {FACULTIES.map((f) => (
+                  <option key={f.name} value={f.name}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-text-muted">Department *</label>
+              <select
+                value={form.department}
+                onChange={(e) => setForm({ ...form, department: e.target.value })}
+                className={fieldClass}
+                disabled={!form.faculty}
+                required
+              >
+                <option value="">Select department</option>
+                {departments.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs text-text-muted">Level *</label>
+              <select
+                value={form.level}
+                onChange={(e) => setForm({ ...form, level: e.target.value })}
+                className={fieldClass}
+                required
+              >
+                <option value="">Select level</option>
+                {LEVELS.map((lvl) => (
+                  <option key={lvl} value={lvl}>{lvl}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-text-muted">Semester (optional)</label>
+              <input
+                value={form.semester}
+                onChange={(e) => setForm({ ...form, semester: e.target.value })}
+                placeholder="e.g. Harmattan / Rain"
+                className={fieldClass}
+              />
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="mt-3 text-sm text-status-danger">{error}</p>}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-bg-elevated"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
+          >
+            {saving ? "Saving…" : editingId ? "Update course" : "Save course"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ---------- Bulk CSV import modal ----------
+function ImportModal({ open, onClose, onFile, importMsg, importErrors, importPreview, importing, onApply }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+            <FileSpreadsheet size={16} className="text-accent" />
+            Bulk update from a spreadsheet
+          </h2>
+          <button type="button" onClick={onClose} className="text-text-muted hover:text-text-primary">
+            <X size={16} />
+          </button>
+        </div>
+
+        <p className="mb-4 text-xs text-text-muted">
+          Download the sample, fill it in (or edit an export from Excel), save as CSV, then upload it here.
+          Rows matching an existing <strong>course code</strong> get updated; new codes are added.
+        </p>
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => downloadSampleCsv()}
+            className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-xs font-medium text-text-secondary hover:bg-bg-elevated"
+          >
+            <Download size={14} /> Download sample CSV
+          </button>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-bg-app hover:bg-accent-strong">
+            <Upload size={14} /> Choose CSV file
+            <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
+          </label>
+        </div>
+
+        {importMsg && <p className="mb-3 text-sm text-text-secondary">{importMsg}</p>}
+
+        {importErrors.length > 0 && (
+          <div className="mb-3 max-h-32 overflow-y-auto rounded-lg border border-status-danger/30 bg-status-danger/5 px-3 py-2 text-xs text-status-danger">
+            {importErrors.slice(0, 15).map((e) => (
+              <div key={e.rowNum}>Row {e.rowNum} ({e.code || "—"}): {e.issues}</div>
+            ))}
+            {importErrors.length > 15 && <div>…and {importErrors.length - 15} more</div>}
+          </div>
+        )}
+
+        {importPreview.length > 0 && (
+          <>
+            <div className="mb-3 max-h-56 overflow-auto rounded-lg border border-border-subtle">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-bg-elevated text-text-muted">
+                  <tr>
+                    <th className="px-2 py-1.5">Code</th>
+                    <th className="px-2 py-1.5">Title</th>
+                    <th className="px-2 py-1.5">Faculty</th>
+                    <th className="px-2 py-1.5">Dept</th>
+                    <th className="px-2 py-1.5">Level</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importPreview.slice(0, 30).map((r, i) => (
+                    <tr key={i} className="border-t border-border-subtle text-text-primary">
+                      <td className="px-2 py-1.5 font-medium">{r.code}</td>
+                      <td className="px-2 py-1.5">{r.title}</td>
+                      <td className="px-2 py-1.5">{r.faculty}</td>
+                      <td className="px-2 py-1.5">{r.department}</td>
+                      <td className="px-2 py-1.5">{r.level}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button
+              type="button"
+              disabled={importing}
+              onClick={onApply}
+              className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
+            >
+              {importing ? "Importing…" : `Apply ${importPreview.length} course(s)`}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------- A single course row ----------
+function CourseRow({ c, onEdit, onDelete }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-bg-elevated/60">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <span className="shrink-0 rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-bold text-accent">
+          {c.code}
+        </span>
+        <p className="truncate text-sm text-text-primary">{c.title}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        {c.level && <span className="text-[11px] text-text-muted">{c.level}</span>}
+        <div className="flex gap-1">
+          <button type="button" onClick={() => onEdit(c)} className="rounded-lg p-1.5 text-text-muted hover:bg-bg-panel hover:text-text-primary" title="Edit">
+            <Pencil size={14} />
+          </button>
+          <button type="button" onClick={() => onDelete(c)} className="rounded-lg p-1.5 text-text-muted hover:bg-bg-panel hover:text-status-danger" title="Delete">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- A collapsible Faculty > Department group ----------
+function DepartmentGroup({ department, courses, defaultOpen, onEdit, onDelete }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="overflow-hidden rounded-lg border border-border-subtle">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 bg-bg-elevated px-3 py-2 text-left"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium text-text-primary">
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          {department || "No department set"}
+        </span>
+        <span className="text-xs text-text-muted">{courses.length} course{courses.length === 1 ? "" : "s"}</span>
+      </button>
+      {open && (
+        <div className="divide-y divide-border-subtle bg-bg-panel">
+          {courses.map((c) => (
+            <CourseRow key={c.id} c={c} onEdit={onEdit} onDelete={onDelete} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminCourses() {
   const { authMode } = useAuth();
   const { courses, loading } = useCbtData();
@@ -36,6 +311,7 @@ export default function AdminCourses() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [showAiImport, setShowAiImport] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [importPreview, setImportPreview] = useState([]);
   const [importErrors, setImportErrors] = useState([]);
   const [importing, setImporting] = useState(false);
@@ -43,11 +319,6 @@ export default function AdminCourses() {
   const [filterFaculty, setFilterFaculty] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
-  const [page, setPage] = useState(1);
-
-  const PAGE_SIZE = 20;
-
-  const departments = useMemo(() => departmentsFor(form.faculty), [form.faculty]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -61,34 +332,50 @@ export default function AdminCourses() {
     );
   }, [courses, search, filterFaculty, filterDepartment, filterLevel]);
 
-  const filterDepartments = useMemo(() => {
-    if (filterFaculty) return departmentsFor(filterFaculty);
-    return [...new Set(courses.map((c) => c.department).filter(Boolean))].sort();
-  }, [courses, filterFaculty]);
+  // Group filtered courses: Faculty -> Department -> [courses], alphabetically,
+  // so the list reads like a table of contents instead of a flat dump.
+  const grouped = useMemo(() => {
+    const byFaculty = new Map();
+    for (const c of filtered) {
+      const fac = c.faculty || "No faculty set";
+      if (!byFaculty.has(fac)) byFaculty.set(fac, new Map());
+      const byDept = byFaculty.get(fac);
+      const dept = c.department || "No department set";
+      if (!byDept.has(dept)) byDept.set(dept, []);
+      byDept.get(dept).push(c);
+    }
+    const faculties = [...byFaculty.entries()]
+      .map(([faculty, deptMap]) => ({
+        faculty,
+        total: [...deptMap.values()].reduce((n, arr) => n + arr.length, 0),
+        departments: [...deptMap.entries()]
+          .map(([department, list]) => ({
+            department,
+            courses: list.sort((a, b) => (a.code || "").localeCompare(b.code || "")),
+          }))
+          .sort((a, b) => a.department.localeCompare(b.department)),
+      }))
+      .sort((a, b) => a.faculty.localeCompare(b.faculty));
+    return faculties;
+  }, [filtered]);
 
   const facultyOptions = useMemo(
     () => [...new Set(courses.map((c) => c.faculty).filter(Boolean))].sort(),
     [courses]
   );
+  const filterDepartments = useMemo(() => {
+    if (filterFaculty) return departmentsFor(filterFaculty);
+    return [...new Set(courses.map((c) => c.department).filter(Boolean))].sort();
+  }, [courses, filterFaculty]);
   const levelOptions = useMemo(
-    () => [...new Set([...LEVELS, ...courses.map((c) => c.level).filter(Boolean)])].sort(),
+    () => [...new Set([...LEVELS, ...courses.map((c) => c.level).filter(Boolean)])],
     [courses]
   );
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pagedCourses = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, filterFaculty, filterDepartment, filterLevel]);
-
-  useEffect(() => {
-    if (page > pageCount) setPage(pageCount);
-  }, [page, pageCount]);
-
-  function countFor(key, value) {
-    return courses.filter((course) => course[key] === value).length;
-  }
+  const hasActiveFilters = Boolean(search || filterFaculty || filterDepartment || filterLevel);
+  // Auto-expand groups only when actively filtering/searching, so a big
+  // catalogue stays collapsed and scannable by default.
+  const autoExpand = hasActiveFilters;
 
   function openCreate() {
     setForm(emptyForm);
@@ -129,7 +416,6 @@ export default function AdminCourses() {
       semester: form.semester.trim() || null,
     };
 
-    // Prevent duplicate codes (except when editing the same doc)
     const duplicate = courses.find(
       (c) => c.code?.toUpperCase() === payload.code && c.id !== editingId
     );
@@ -161,7 +447,6 @@ export default function AdminCourses() {
       alert(err.message || "Delete failed.");
     }
   }
-
 
   async function onExcelFile(e) {
     const file = e.target.files?.[0];
@@ -195,9 +480,7 @@ export default function AdminCourses() {
       }
       setImportPreview(ok);
       setImportErrors(errs);
-      setImportMsg(
-        `Parsed ${rows.length} row(s): ${ok.length} ready, ${errs.length} with issues.`
-      );
+      setImportMsg(`Parsed ${rows.length} row(s): ${ok.length} ready, ${errs.length} with issues.`);
     } catch (err) {
       setImportMsg(err.message || "Could not read file.");
     }
@@ -208,9 +491,7 @@ export default function AdminCourses() {
     setImporting(true);
     setImportMsg("");
     try {
-      const byCode = new Map(
-        courses.map((c) => [String(c.code || "").toUpperCase(), c])
-      );
+      const byCode = new Map(courses.map((c) => [String(c.code || "").toUpperCase(), c]));
       let added = 0;
       let updated = 0;
       for (const row of importPreview) {
@@ -235,362 +516,171 @@ export default function AdminCourses() {
     }
   }
 
+  function clearFilters() {
+    setSearch("");
+    setFilterFaculty("");
+    setFilterDepartment("");
+    setFilterLevel("");
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Courses</h1>
           <p className="text-sm text-text-secondary">
-            Fixed course list per faculty & department. CBT Builder and Excel import use this list only.
+            The fixed course list per faculty & department. CBT Builder and Excel import use only what's here.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong"
-        >
-          <Plus size={16} />
-          Add Course
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowAiImport(true)}
-          className="flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-elevated"
-        >
-          <Upload size={16} />
-          AI import (image/PDF)
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setShowBulkImport(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-elevated"
+          >
+            <FileSpreadsheet size={15} /> Import from CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAiImport(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-elevated"
+          >
+            <Sparkles size={15} /> AI import (image/PDF)
+          </button>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong"
+          >
+            <Plus size={16} /> Add course
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-border-subtle bg-bg-panel p-4">
-          <div className="text-2xl font-bold text-text-primary">{courses.length}</div>
+      {/* Quick stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl border border-border-subtle bg-bg-panel p-3.5">
+          <div className="text-xl font-bold text-text-primary">{courses.length}</div>
           <div className="text-xs text-text-muted">Total courses</div>
         </div>
-        <div className="rounded-xl border border-border-subtle bg-bg-panel p-4">
-          <div className="text-2xl font-bold text-text-primary">
-            {new Set(courses.map((c) => c.faculty).filter(Boolean)).size}
-          </div>
+        <div className="rounded-xl border border-border-subtle bg-bg-panel p-3.5">
+          <div className="text-xl font-bold text-text-primary">{facultyOptions.length}</div>
           <div className="text-xs text-text-muted">Faculties covered</div>
         </div>
-        <div className="rounded-xl border border-border-subtle bg-bg-panel p-4">
-          <div className="text-2xl font-bold text-accent">
+        <div className="rounded-xl border border-border-subtle bg-bg-panel p-3.5">
+          <div className="text-xl font-bold text-accent">
             {new Set(courses.map((c) => c.department).filter(Boolean)).size}
           </div>
           <div className="text-xs text-text-muted">Departments</div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-border-subtle bg-bg-panel p-4 sm:p-5">
-        <div className="mb-3">
-          <h2 className="text-sm font-semibold text-text-primary">Course distribution</h2>
-          <p className="mt-1 text-xs text-text-muted">Choose a faculty, department, or level to see its course count.</p>
+      {/* Compact filter bar — search + 3 dropdowns on one line, not a whole card */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle bg-bg-panel p-3">
+        <div className="flex min-w-[180px] flex-1 items-center gap-2 rounded-lg border border-border-subtle bg-bg-app px-3 py-2">
+          <Search size={14} className="shrink-0 text-text-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search code, title, faculty…"
+            className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+          />
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[
-            { label: "Faculty", value: filterFaculty, setValue: setFilterFaculty, options: facultyOptions, key: "faculty" },
-            { label: "Department", value: filterDepartment, setValue: setFilterDepartment, options: filterDepartments, key: "department" },
-            { label: "Level", value: filterLevel, setValue: setFilterLevel, options: levelOptions, key: "level" },
-          ].map((group) => (
-            <label key={group.key} className="min-w-0 rounded-lg border border-border-subtle bg-bg-app p-3">
-              <span className="mb-1 block text-xs font-medium text-text-muted">{group.label}</span>
-              <select
-                value={group.value}
-                onChange={(e) => group.setValue(e.target.value)}
-                className={`${fieldClass} min-w-0`}
-              >
-                <option value="">All {group.label.toLowerCase()}s ({courses.length})</option>
-                {group.options.map((option) => (
-                  <option key={option} value={option}>{option} ({countFor(group.key, option)})</option>
-                ))}
-              </select>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      
-      {/* Excel / CSV bulk import */}
-      <div className="space-y-3 rounded-xl border border-border-subtle bg-bg-panel p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-text-primary">
-              <FileSpreadsheet size={16} className="text-accent" />
-              Update courses from Excel
-            </h2>
-            <p className="mt-1 text-xs text-text-muted">
-              Download the sample, edit in Excel (add rows), Save As CSV, then upload. Matching{" "}
-              <strong>course codes</strong> are updated; new codes are added.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => downloadSampleCsv()}
-              className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-xs font-medium text-text-secondary hover:bg-bg-elevated"
-            >
-              <Download size={14} /> Download sample
-            </button>
-            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-bg-app hover:bg-accent-strong">
-              <Upload size={14} /> Upload CSV
-              <input type="file" accept=".csv,text/csv" className="hidden" onChange={onExcelFile} />
-            </label>
-          </div>
-        </div>
-
-        {importMsg && <p className="text-sm text-text-secondary">{importMsg}</p>}
-
-        {importErrors.length > 0 && (
-          <div className="max-h-32 overflow-y-auto rounded-lg border border-status-danger/30 bg-status-danger/5 px-3 py-2 text-xs text-status-danger">
-            {importErrors.slice(0, 15).map((e) => (
-              <div key={e.rowNum}>
-                Row {e.rowNum} ({e.code || "—"}): {e.issues}
-              </div>
-            ))}
-            {importErrors.length > 15 && <div>…and {importErrors.length - 15} more</div>}
-          </div>
-        )}
-
-        {importPreview.length > 0 && (
-          <>
-            <div className="max-h-48 overflow-auto rounded-lg border border-border-subtle">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-bg-elevated text-text-muted">
-                  <tr>
-                    <th className="px-2 py-1.5">Code</th>
-                    <th className="px-2 py-1.5">Title</th>
-                    <th className="px-2 py-1.5">Faculty</th>
-                    <th className="px-2 py-1.5">Dept</th>
-                    <th className="px-2 py-1.5">Level</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {importPreview.slice(0, 30).map((r, i) => (
-                    <tr key={i} className="border-t border-border-subtle text-text-primary">
-                      <td className="px-2 py-1.5 font-medium">{r.code}</td>
-                      <td className="px-2 py-1.5">{r.title}</td>
-                      <td className="px-2 py-1.5">{r.faculty}</td>
-                      <td className="px-2 py-1.5">{r.department}</td>
-                      <td className="px-2 py-1.5">{r.level}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <button
-              type="button"
-              disabled={importing}
-              onClick={applyImport}
-              className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
-            >
-              {importing ? "Importing…" : `Apply ${importPreview.length} course(s)`}
-            </button>
-          </>
-        )}
-      </div>
-
-{showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4 rounded-xl border border-border-subtle bg-bg-panel p-5"
+        <select
+          value={filterFaculty}
+          onChange={(e) => { setFilterFaculty(e.target.value); setFilterDepartment(""); }}
+          className="rounded-lg border border-border-subtle bg-bg-app px-2.5 py-2 text-sm text-text-primary"
         >
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">
-              {editingId ? "Edit course" : "New course"}
-            </h2>
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(false);
-                setEditingId(null);
-                setForm(emptyForm);
-              }}
-              className="text-text-muted hover:text-text-primary"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-xs text-text-muted">Course code *</label>
-              <input
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-                placeholder="e.g. CSC 201"
-                className={fieldClass}
-                required
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs text-text-muted">Course title *</label>
-              <input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Introduction to Computing"
-                className={fieldClass}
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-text-muted">Faculty *</label>
-              <select
-                value={form.faculty}
-                onChange={(e) =>
-                  setForm({ ...form, faculty: e.target.value, department: "" })
-                }
-                className={fieldClass}
-                required
-              >
-                <option value="">Select faculty</option>
-                {FACULTIES.map((f) => (
-                  <option key={f.name} value={f.name}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-text-muted">Department *</label>
-              <select
-                value={form.department}
-                onChange={(e) => setForm({ ...form, department: e.target.value })}
-                className={fieldClass}
-                disabled={!form.faculty}
-                required
-              >
-                <option value="">Select department</option>
-                {departments.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-text-muted">Level *</label>
-              <select
-                value={form.level}
-                onChange={(e) => setForm({ ...form, level: e.target.value })}
-                className={fieldClass}
-                required
-              >
-                <option value="">Select level</option>
-                {LEVELS.map((lvl) => (
-                  <option key={lvl} value={lvl}>
-                    {lvl}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-text-muted">Semester (optional)</label>
-              <input
-                value={form.semester}
-                onChange={(e) => setForm({ ...form, semester: e.target.value })}
-                placeholder="e.g. Harmattan / Rain"
-                className={fieldClass}
-              />
-            </div>
-          </div>
-
-          {error && <p className="text-sm text-status-danger">{error}</p>}
-
+          <option value="">All faculties</option>
+          {facultyOptions.map((f) => <option key={f} value={f}>{f}</option>)}
+        </select>
+        <select
+          value={filterDepartment}
+          onChange={(e) => setFilterDepartment(e.target.value)}
+          className="rounded-lg border border-border-subtle bg-bg-app px-2.5 py-2 text-sm text-text-primary"
+        >
+          <option value="">All departments</option>
+          {filterDepartments.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select
+          value={filterLevel}
+          onChange={(e) => setFilterLevel(e.target.value)}
+          className="rounded-lg border border-border-subtle bg-bg-app px-2.5 py-2 text-sm text-text-primary"
+        >
+          <option value="">All levels</option>
+          {levelOptions.map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
+        </select>
+        {hasActiveFilters && (
           <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
+            type="button"
+            onClick={clearFilters}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-accent hover:bg-bg-elevated"
           >
-            {saving ? "Saving…" : editingId ? "Update Course" : "Save Course"}
+            Clear
           </button>
-        </form>
-      )}
-
-      <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 sm:max-w-xs">
-        <Search size={15} className="text-text-muted" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search courses…"
-          className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-        />
+        )}
       </div>
 
-      <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-bg-panel">
+      {/* Course list, grouped by Faculty then Department */}
+      <div className="space-y-4">
         {loading && (
-          <div className="px-4 py-6 text-center text-sm text-text-muted">Loading…</div>
+          <div className="rounded-xl border border-border-subtle bg-bg-panel px-4 py-10 text-center text-sm text-text-muted">
+            Loading…
+          </div>
         )}
         {!loading && filtered.length === 0 && (
-          <div className="px-4 py-8 text-center text-sm text-text-muted">
+          <div className="rounded-xl border border-border-subtle bg-bg-panel px-4 py-10 text-center text-sm text-text-muted">
             <BookOpen size={28} className="mx-auto mb-2 opacity-50" />
-            No courses yet. Add the official list so CBT questions use fixed codes.
+            {hasActiveFilters ? "No courses match these filters." : "No courses yet. Add the official list so CBT questions use fixed codes."}
           </div>
         )}
-        {pagedCourses.map((c) => (
-          <div key={c.id} className="flex items-start justify-between gap-3 px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <div className="mb-0.5 flex flex-wrap items-center gap-2">
-                <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-bold text-accent">
-                  {c.code}
-                </span>
-                {c.level && (
-                  <span className="text-[11px] text-text-muted">{c.level}</span>
-                )}
-              </div>
-              <p className="text-sm font-medium text-text-primary">{c.title}</p>
-              <p className="mt-0.5 text-xs text-text-muted">
-                {[c.faculty, c.department].filter(Boolean).join(" · ")}
-                {c.semester ? ` · ${c.semester}` : ""}
-              </p>
+        {!loading && grouped.map((facGroup) => (
+          <div key={facGroup.faculty} className="rounded-xl border border-border-subtle bg-bg-app p-3">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+                <FolderOpen size={15} className="text-accent" />
+                {facGroup.faculty}
+              </h3>
+              <span className="text-xs text-text-muted">{facGroup.total} course{facGroup.total === 1 ? "" : "s"}</span>
             </div>
-            <div className="flex shrink-0 gap-1">
-              <button
-                type="button"
-                onClick={() => openEdit(c)}
-                className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated hover:text-text-primary"
-                title="Edit"
-              >
-                <Pencil size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(c)}
-                className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated hover:text-status-danger"
-                title="Delete"
-              >
-                <Trash2 size={15} />
-              </button>
+            <div className="space-y-2">
+              {facGroup.departments.map((deptGroup) => (
+                <DepartmentGroup
+                  key={deptGroup.department}
+                  department={deptGroup.department}
+                  courses={deptGroup.courses}
+                  defaultOpen={autoExpand || facGroup.departments.length === 1}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
             </div>
           </div>
         ))}
       </div>
 
-      {!loading && filtered.length > 0 && (
-        <div className="flex flex-col gap-3 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-text-muted">
-            Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} courses
-          </p>
-          <div className="flex items-center justify-between gap-2 sm:justify-end">
-            <button
-              type="button"
-              disabled={page === 1}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-border-subtle px-3 py-2 text-sm text-text-secondary disabled:opacity-40"
-            >
-              <ChevronLeft size={15} /> Previous
-            </button>
-            <span className="whitespace-nowrap text-sm font-medium text-text-primary">Page {page} of {pageCount}</span>
-            <button
-              type="button"
-              disabled={page === pageCount}
-              onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-border-subtle px-3 py-2 text-sm text-text-secondary disabled:opacity-40"
-            >
-              Next <ChevronRight size={15} />
-            </button>
-          </div>
-        </div>
-      )}
+      <CourseFormModal
+        open={showForm}
+        editingId={editingId}
+        form={form}
+        setForm={setForm}
+        saving={saving}
+        error={error}
+        onClose={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); }}
+        onSubmit={handleSubmit}
+      />
+
+      <ImportModal
+        open={showBulkImport}
+        onClose={() => { setShowBulkImport(false); setImportMsg(""); setImportErrors([]); setImportPreview([]); }}
+        onFile={onExcelFile}
+        importMsg={importMsg}
+        importErrors={importErrors}
+        importPreview={importPreview}
+        importing={importing}
+        onApply={applyImport}
+      />
 
       <AiCourseImportModal
         open={showAiImport}

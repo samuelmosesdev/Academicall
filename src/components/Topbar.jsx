@@ -39,7 +39,7 @@ export default function Topbar({ search, onSearchChange }) {
 
   const canSearchPeople = isAdmin(profile) || isAlpha(profile);
   const staffChatPath = profile?.role === "admin" ? "/admin/staff-chat" : "/agent/staff-chat";
-  const photo = profile?.photoURL || profile?.avatarUrl || null;
+  const photo = profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null;
   const initials = (profile?.name || profile?.nickname || "A")
     .split(" ")
     .map((p) => p[0])

@@ -29,7 +29,7 @@ const fieldClass =
   "rounded-lg border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
 
 export default function StudentPractice() {
-  const { user, profile, authMode } = useAuth();
+  const { user, profile, authMode, refreshProfile } = useAuth();
   const { practiceSets, questions, loading } = useCbtData({ withQuestions: true });
 
   // Filters
@@ -122,6 +122,7 @@ export default function StudentPractice() {
             questionsPracticedCount: (Number(profile?.questionsPracticedCount) || 0) + sessionQuestions.length,
             lastPracticeAt: new Date().toISOString(),
           });
+          await refreshProfile();
         } else {
           await updateDoc(doc(db, "users", user.uid), {
             questionsPracticedCount: increment(sessionQuestions.length),

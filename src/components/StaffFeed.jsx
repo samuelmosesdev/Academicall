@@ -117,7 +117,7 @@ export default function StaffFeed({ compact = false, maxItems = 40 }) {
         text,
         authorUid: user.uid,
         authorName: displayLabel(profile, profile?.name || "Staff"),
-        authorPhoto: profile?.photoURL || profile?.avatarUrl || null,
+        authorPhoto: profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null,
         authorRole: profile?.role || "admin",
         authorPlan: profile?.plan || null,
         authorSubscription: profile?.subscription || null,

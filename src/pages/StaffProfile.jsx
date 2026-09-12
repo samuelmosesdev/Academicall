@@ -9,7 +9,7 @@ const field =
   "w-full rounded-xl border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none";
 
 export default function StaffProfile() {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState("");
   const [phone, setPhone] = useState("");
@@ -26,7 +26,7 @@ export default function StaffProfile() {
     setNickname(profile.nickname || profile.nickName || "");
     setPhone(profile.phone || "");
     setBio(profile.bio || "");
-    setPhotoURL(profile.photoURL || profile.avatarUrl || "");
+    setPhotoURL(profile.photoUrl || profile.avatarUrl || "");
   }, [profile]);
 
   async function onPhoto(e) {
@@ -39,6 +39,7 @@ export default function StaffProfile() {
       const url = res.secure_url;
       setPhotoURL(url);
       await usersApi.updateMe({ photoUrl: url });
+      await refreshProfile();
       setMsg("Photo updated");
       setTimeout(() => setMsg(""), 2000);
     } catch (ex) {
@@ -62,6 +63,7 @@ export default function StaffProfile() {
         bio: bio.trim(),
         photoUrl: photoURL || null,
       });
+      await refreshProfile();
       setMsg("Profile saved");
       setTimeout(() => setMsg(""), 2500);
     } catch (ex) {

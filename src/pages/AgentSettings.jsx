@@ -11,7 +11,7 @@ const fieldClass =
 
 export default function AgentSettings() {
   const navigate = useNavigate();
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout, refreshProfile } = useAuth();
   const { fontScale, setFontScale, fontScales } = useTheme();
 
   const [name, setName] = useState("");
@@ -51,6 +51,7 @@ export default function AgentSettings() {
         canImportAI: !!prefs.canImportAI,
         autoPublish: !!prefs.autoPublish,
       });
+      await refreshProfile();
       setMsg("Settings saved.");
     } catch (err) {
       setMsg(err.message || "Save failed.");

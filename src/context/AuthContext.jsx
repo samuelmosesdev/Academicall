@@ -69,6 +69,18 @@ export function AuthProvider({ children }) {
     return Boolean(data.user.emailVerified);
   };
 
+  // Re-fetches /users/me and syncs it into state. Needed anywhere the backend
+  // changes a flag on the current user (e.g. mustChangePassword flips to
+  // false after ForceChangePassword) — without this, ProtectedRoute keeps
+  // reading the stale value from context and bounces the user right back.
+  const refreshProfile = async () => {
+    const data = await authApi.me();
+    const nextUser = { ...data.user, uid: data.user.id };
+    setUser(nextUser);
+    setProfile(nextUser);
+    return nextUser;
+  };
+
   const resendVerificationEmail = async () => authApi.sendVerification();
 
   const verifyEmailWithCode = async (code) => {
@@ -155,6 +167,7 @@ export function AuthProvider({ children }) {
     signInWithGoogle,
     completeProfile,
     refreshEmailVerified,
+    refreshProfile,
     resendVerificationEmail,
     verifyEmailWithCode,
     logout,

@@ -35,7 +35,7 @@ const DEFAULT_PREFS = {
 };
 
 export default function StudentSettings() {
-  const { user, profile, authMode, logout } = useAuth();
+  const { user, profile, authMode, logout, refreshProfile } = useAuth();
   const { theme, setTheme, isDark, fontScale, setFontScale, fontScales } = useTheme();
   const navigate = useNavigate();
   const pro = isPro(profile);
@@ -93,6 +93,7 @@ export default function StudentSettings() {
         },
         settingsUpdatedAt: new Date().toISOString(),
       });
+      await refreshProfile();
       setMsg("Settings saved.");
     } catch (ex) {
       setErr(ex.message || "Could not save.");
@@ -218,7 +219,7 @@ export default function StudentSettings() {
           </div>
         </div>
 
-        {isEmailUser && (
+        {Boolean(user?.email) && (
           <div className="space-y-2 border-t border-border-light pt-4">
             <p className="text-xs font-medium text-ink-muted">Change password</p>
             <input

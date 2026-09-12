@@ -26,6 +26,7 @@ export default function AdminRequests() {
   const [genericReqs, setGenericReqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [who, setWho] = useState("student"); // student | courseRep
+  const [tab, setTab] = useState("pending"); // pending | approved | rejected | all
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [note, setNote] = useState({});

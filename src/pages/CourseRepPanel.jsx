@@ -295,7 +295,7 @@ export default function CourseRepPanel() {
       setEndsAt("");
       setNotes("");
       setMsg(
-        `Class scheduled for ${department}${level ? ` · ${level}` : ""}. ${sent} student(s) notified.`
+        `Class scheduled for ${department}${level ? ` · ${level}` : ""}.`
       );
     } catch (error) {
       setErr(error.message || "Failed to schedule. Check Firestore rules.");

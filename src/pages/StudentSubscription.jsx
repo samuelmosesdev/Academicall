@@ -16,7 +16,7 @@ import { useSubscriptionPlans } from "../hooks/useSubscriptionPlans";
 import { usersApi } from "../lib/api";
 
 export default function StudentSubscription() {
-  const { user, profile, authMode } = useAuth();
+  const { user, profile, authMode, refreshProfile } = useAuth();
   const { plans, loading, formatPrice } = useSubscriptionPlans();
   const isPaid = profile?.plan === "annual" || profile?.plan === "paid";
   const isMonthly = profile?.plan === "monthly";
@@ -30,6 +30,7 @@ export default function StudentSubscription() {
     try {
       if (authMode === "api") {
         await usersApi.updateMe({ plan });
+        await refreshProfile();
       } else await updateDoc(doc(db, "users", user.uid), {
         plan,
         planUpdatedAt: serverTimestamp(),

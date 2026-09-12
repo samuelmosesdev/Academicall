@@ -1,0 +1,535 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  alphaAgent
+  agent
+  courseRep
+  user
+}
+
+enum Plan {
+  free
+  pro
+  annual
+}
+
+enum UserStatus {
+  active
+  suspended
+  deleted
+}
+
+enum NotificationType {
+  general
+  payment_claim
+  class_event
+  announcement
+  system
+}
+
+model User {
+  id                      String     @id @default(uuid())
+  firebaseUid             String?    @unique // legacy/unused — hybrid Firebase auth bridge was removed
+  googleUid               String? // for direct Google Identity Services auth; email is the unique account key
+  email                   String     @unique
+  passwordHash            String? // null when using only Firebase
+  passwordChangedAt       DateTime?
+  mustChangePassword      Boolean    @default(false)
+  passwordResetHash       String?
+  passwordResetExpiresAt  DateTime?
+  name                    String?
+  role                    Role       @default(user)
+  plan                    Plan       @default(free)
+  status                  UserStatus @default(active)
+  uniqueId                String?    @unique // e.g. UAR-24-8831
+  emailVerified           Boolean    @default(false)
+  emailVerificationHash   String?
+  emailVerificationExpiresAt DateTime?
+  emailVerificationSentAt DateTime?
+  emailVerificationAttempts Int      @default(0)
+  profileComplete         Boolean    @default(false)
+  department              String?
+  faculty                 String?
+  level                   String?
+  matricNumber            String?
+  phone                   String?
+  bio                     String?
+  interests               String?
+  dob                     String?
+  gender                  String?
+  nickname                String?
+  showDepartment          Boolean    @default(true)
+  showPhone               Boolean    @default(false)
+  allowAnonymousComments  Boolean    @default(false)
+  photoUrl                String?
+  avatarUrl               String?
+  settings                Json?
+  fcmToken                String?
+  deviceToken             String?
+  fcmTokens               Json?
+  coursesEnrolledCount    Int        @default(0)
+  questionsPracticedCount Int        @default(0)
+  studyStreakDays         Int        @default(0)
+  materialsOpenedCount    Int        @default(0)
+  lastActiveDate          String?
+  lastActiveAt            DateTime?
+  courseRepMeta           Json?
+  assignedBy              String?
+  assignedAt              DateTime?
+  agentDomain             String?
+  createdByAdmin          Boolean    @default(false)
+  createdByUid            String?
+  canImportAI             Boolean    @default(true)
+  autoPublish             Boolean    @default(false)
+  customCourses           Json?
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+
+  // Relations
+  documents            Document[]       @relation("UploadedBy")
+  enrollments          Enrollment[]
+  notifications        Notification[]   @relation("UserNotifications")
+  createdNotifications Notification[]   @relation("CreatedBy")
+  activityLogs         ActivityLog[]
+  paymentClaims        PaymentClaim[]
+  timetableEvents      TimetableEvent[]
+  materialSaves        MaterialSave[]
+  requests             Request[]        @relation("Requester")
+  profileChangeRequests ProfileChangeRequest[]
+  subscriptions       Subscription[]
+
+  @@index([role])
+  @@index([department])
+  @@index([plan])
+  @@map("users")
+}
+
+model Document {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  fileUrl      String?
+  thumbnailUrl String?
+  fileName     String?
+  fileSize     Int?
+  tags         Json?
+  faculty      String?
+  department   String?
+  level        String?
+  source       String? // "courseRep" | "admin" | "agent"
+  uploadedById String
+  uploadedBy   User     @relation("UploadedBy", fields: [uploadedById], references: [id])
+  courseId     String?
+  course       Course?  @relation(fields: [courseId], references: [id])
+  openCount    Int      @default(0)
+  questionCount Int     @default(0)
+  easyQuestionCount Int  @default(0)
+  mediumQuestionCount Int @default(0)
+  hardQuestionCount Int  @default(0)
+  reactions    Json? // { like: number, ... }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([uploadedById])
+  @@index([courseId])
+  @@map("documents")
+}
+
+model Course {
+  id           String   @id @default(uuid())
+  title        String
+  code         String?
+  faculty      String?
+  department   String?
+  level        String?
+  semester     String?
+  description  String?
+  thumbnailUrl String?
+  category     String?
+  source       String?
+  published    Boolean    @default(true)
+  approvedBy   String?
+  requestedBy  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  documents   Document[]
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Enrollment {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId       String?
+  course         Course?   @relation(fields: [courseId], references: [id])
+  courseTitle    String?
+  topicLabel     String?
+  progressPct    Int       @default(0)
+  lastAccessedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?            @relation("CreatedBy", fields: [createdById], references: [id])
+  type        NotificationType @default(general)
+  title       String
+  body        String?
+  data        Json?
+  readByUser  Boolean          @default(false)
+  readAt      DateTime?
+  archived    Boolean          @default(false)
+  archivedAt  DateTime?
+  deleted     Boolean          @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, readByUser])
+  @@index([userId, archived])
+  @@map("notifications")
+}
+
+model AnnouncementRead {
+  id             String   @id @default(uuid())
+  announcementId String?
+  userId         String?
+  readAt         DateTime?
+  meta           Json?
+  createdAt      DateTime @default(now())
+
+  @@index([announcementId])
+  @@index([userId])
+  @@map("announcement_reads")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  userName  String?
+  action    String
+  status    String? // success | error | pending
+  reference String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model PaymentClaim {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String // pending | clicked_checkout | awaiting_review | activated | rejected
+  plan      String?
+  reference String?
+  amount    Int?
+  meta      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("payment_claims")
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  userId    String?
+  reference String?  @unique
+  status    String?
+  plan      String?
+  amount    Int?
+  currency  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("payments")
+}
+
+model PaymentOrphan {
+  id        String   @id @default(uuid())
+  reference String?
+  reason    String?
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([reference])
+  @@map("payment_orphans")
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status    String?
+  plan      String?
+  provider  String?
+  reference String?
+  startsAt  DateTime?
+  endsAt    DateTime?
+  meta      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Agent {
+  id        String   @id @default(uuid())
+  userId    String?
+  name      String?
+  email     String?
+  status    String?
+  domain    String?
+  meta      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("agents")
+}
+
+model TimetableEvent {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  startAt         DateTime?
+  endAt           DateTime?
+  location        String?
+  courseId        String?
+  courseCode      String?
+  dayOfWeek       Int?
+  startTime       String?
+  endTime         String?
+  reminderMinutes Int?
+  reminderEnabled Boolean   @default(true)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("timetable_events")
+}
+
+model ClassEvent {
+  id            String   @id @default(uuid())
+  title         String
+  courseCode    String?
+  venue         String?
+  notes         String?
+  startsAt      DateTime
+  endsAt        DateTime?
+  faculty       String?
+  department    String?
+  level         String?
+  createdBy     String
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([department, level])
+  @@index([createdBy])
+  @@map("class_events")
+}
+
+model MaterialSave {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materialId String?
+  title      String?
+  url        String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("material_saves")
+}
+
+model FeedPost {
+  id          String   @id @default(uuid())
+  kind        String
+  title       String?
+  body        String?
+  courseCode  String?
+  faculty     String?
+  department  String?
+  level       String?
+  pinned      Boolean  @default(false)
+  authorId    String
+  authorName  String?
+  authorRole  String?
+  authorPhoto String?
+  comments    Json?
+  reactions   Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([kind, department, level])
+  @@map("feed_posts")
+}
+
+model Request {
+  id           String   @id @default(uuid())
+  requesterUid String
+  requester    User     @relation("Requester", fields: [requesterUid], references: [id])
+  type         String?
+  title        String?
+  body         String?
+  requesterName String?
+  requesterEmail String?
+  requesterRole String?
+  field        String?
+  fieldLabel   String?
+  requestedValue String?
+  reason       String?
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  reviewedByName String?
+  reviewNote   String?
+  status       String   @default("pending") // pending | approved | rejected
+  meta         Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([requesterUid])
+  @@index([status])
+  @@map("requests")
+}
+
+model ProfileChangeRequest {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userName       String?
+  userEmail      String?
+  uniqueId       String?
+  field          String
+  fieldLabel     String?
+  currentValue   String?
+  requestedValue String
+  reason         String?
+  status         String   @default("pending")
+  reviewedAt     DateTime?
+  reviewedBy     String?
+  reviewedByName String?
+  adminNote      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("profile_change_requests")
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  body      String?
+  createdBy String?
+  published Boolean  @default(true)
+  audience  String   @default("all")
+  faculty   String?
+  department String?
+  level     String?
+  courseCode String?
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("announcements")
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model CbtQuestion {
+  id           String   @id @default(uuid())
+  courseId     String?
+  documentId   String?
+  courseCode   String?
+  courseTitle  String?
+  topic        String?
+  faculty      String?
+  department   String?
+  level        String?
+  questionText String
+  options      Json
+  correctIndex Int
+  explanation  String?
+  difficulty   String   @default("medium")
+  source       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([courseCode])
+  @@map("cbt_questions")
+}
+
+model StaffChatMessage {
+  id                 String    @id @default(uuid())
+  authorId           String
+  authorUid          String?
+  authorName         String?
+  authorRole         String?
+  authorPhoto        String?
+  authorPlan         String?
+  authorSubscription String?
+  type               String    @default("text")
+  text               String?
+  mediaUrl           String?
+  mediaWidth         Int?
+  mediaHeight        Int?
+  mediaDuration      Int?
+  reactions          Json?
+  replyToId          String?
+  replyTo            Json?
+  clientAt           String?
+  meeting            Json?
+  edited             Boolean   @default(false)
+  deletedAt          DateTime?
+  deletedBy          String?
+  deletedByName      String?
+  deletedByRole      String?
+  editedAt           DateTime?
+  deleted            Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([createdAt])
+  @@map("staff_chat_messages")
+}
