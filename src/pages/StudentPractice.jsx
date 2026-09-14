@@ -1,28 +1,34 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import {
   ClipboardCheck,
   Search,
   Filter,
   Play,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle2,
-  XCircle,
-  RotateCcw,
+  Timer,
   BookOpen,
   Layers,
+  Crown,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCbtData } from "../hooks/useCbtData";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 import { doc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { Link } from "react-router-dom";
-import { Crown } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { FREE_LIMITS, isPro } from "../lib/subscription";
-import { usersApi } from "../lib/api";
+import { usersApi, quizzesApi } from "../lib/api";
+import CbtExamWorkspace from "../components/cbt/CbtExamWorkspace";
 
-const LEVELS = ["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "Postgraduate", "General"];
+
+const LEVELS = [
+  "100 Level",
+  "200 Level",
+  "300 Level",
+  "400 Level",
+  "500 Level",
+  "Postgraduate",
+  "General",
+];
 const DIFFICULTIES = ["all", "easy", "medium", "hard"];
 
 const fieldClass =
@@ -39,17 +45,22 @@ export default function StudentPractice() {
   const [level, setLevel] = useState(profile?.level || "");
   const [difficulty, setDifficulty] = useState("all");
 
-  // Practice session state
-  const [activeSet, setActiveSet] = useState(null); // the practiceSet object
+  // Session state
+  const [activeSet, setActiveSet] = useState(null);
   const [sessionQuestions, setSessionQuestions] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState({}); // questionId -> selectedIndex
+  const [answers, setAnswers] = useState({});
+  const [flagged, setFlagged] = useState(new Set());
   const [submitted, setSubmitted] = useState(false);
-  const [showReview, setShowReview] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [myQuizzes, setMyQuizzes] = useState([]);
+  const [myLoading, setMyLoading] = useState(true);
+  const [activeQuizId, setActiveQuizId] = useState(null);
 
   const departments = useMemo(() => departmentsFor(faculty), [faculty]);
-
   const pro = isPro(profile);
+
   const filteredSets = useMemo(() => {
     const q = search.trim().toLowerCase();
     return practiceSets.filter((s) => {
@@ -58,7 +69,6 @@ export default function StudentPractice() {
         s.courseCode.toLowerCase().includes(q) ||
         s.courseTitle.toLowerCase().includes(q) ||
         s.topics.some((t) => t.toLowerCase().includes(q));
-      // Free: department only (and faculty if set)
       const freeFaculty = profile?.faculty || faculty;
       const freeDept = profile?.department || department;
       const matchesFaculty = pro
@@ -70,28 +80,45 @@ export default function StudentPractice() {
       const matchesLevel = !level || s.level === level;
       return matchesSearch && matchesFaculty && matchesDept && matchesLevel;
     });
-  }, [practiceSets, search, faculty, department, level, pro, profile?.faculty, profile?.department]);
+  }, [
+    practiceSets,
+    search,
+    faculty,
+    department,
+    level,
+    pro,
+    profile?.faculty,
+    profile?.department,
+  ]);
 
   const startPractice = useCallback(
-    (set) => {
+    (set, { timed = false } = {}) => {
       let pool = questions.filter((q) => q.courseCode === set.courseCode);
       if (difficulty !== "all") {
         pool = pool.filter((q) => q.difficulty === difficulty);
       }
-      // Shuffle
       pool = [...pool].sort(() => Math.random() - 0.5);
-      // Cap at 40 questions for a reasonable session
-      const cap = isPro(profile) ? 40 : FREE_LIMITS.practiceQuestions;
+      const cap = isPro(profile) ? 50 : FREE_LIMITS.practiceQuestions;
       if (pool.length > cap) pool = pool.slice(0, cap);
-
       if (pool.length === 0) return;
 
+      setActiveQuizId(null);
       setActiveSet(set);
       setSessionQuestions(pool);
       setCurrentIdx(0);
       setAnswers({});
+      setFlagged(new Set());
       setSubmitted(false);
-      setShowReview(false);
+
+      if (timed) {
+        const secs = Math.min(
+          90 * 60,
+          Math.max(10 * 60, Math.round(pool.length * 72))
+        );
+        setTimeLeft(secs);
+      } else {
+        setTimeLeft(null);
+      }
     },
     [questions, difficulty, profile]
   );
@@ -101,25 +128,69 @@ export default function StudentPractice() {
     setAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
   };
 
+  const clearAnswer = (questionId) => {
+    if (submitted) return;
+    setAnswers((prev) => {
+      const next = { ...prev };
+      delete next[questionId];
+      return next;
+    });
+  };
+
+  const toggleFlag = (questionId) => {
+    setFlagged((prev) => {
+      const next = new Set(prev);
+      if (next.has(questionId)) next.delete(questionId);
+      else next.add(questionId);
+      return next;
+    });
+  };
+
   const score = useMemo(() => {
     if (!submitted) return null;
     let correct = 0;
     for (const q of sessionQuestions) {
       if (answers[q.id] === q.correctIndex) correct += 1;
     }
-    return { correct, total: sessionQuestions.length, pct: Math.round((correct / sessionQuestions.length) * 100) };
+    return {
+      correct,
+      total: sessionQuestions.length,
+      pct: Math.round((correct / sessionQuestions.length) * 100) || 0,
+    };
   }, [submitted, sessionQuestions, answers]);
 
-  const finishPractice = async () => {
+  const finishPractice = useCallback(async () => {
     setSubmitted(true);
-    setShowReview(true);
+    setTimeLeft(null);
 
-    // Update student stats (best-effort)
+    if (activeQuizId || activeSet?.quizId) {
+      const id = activeQuizId || activeSet.quizId;
+      try {
+        let correct = 0;
+        for (const q of sessionQuestions) {
+          if (answers[q.id] === q.correctIndex) correct += 1;
+        }
+        const pct =
+          sessionQuestions.length > 0
+            ? Math.round((correct / sessionQuestions.length) * 100)
+            : 0;
+        await quizzesApi.update(id, {
+          status: "completed",
+          score: pct,
+          completedAt: new Date().toISOString(),
+        });
+      } catch {
+        // non-critical
+      }
+    }
+
     if (user) {
       try {
         if (authMode === "api") {
           await usersApi.updateMe({
-            questionsPracticedCount: (Number(profile?.questionsPracticedCount) || 0) + sessionQuestions.length,
+            questionsPracticedCount:
+              (Number(profile?.questionsPracticedCount) || 0) +
+              sessionQuestions.length,
             lastPracticeAt: new Date().toISOString(),
           });
           await refreshProfile();
@@ -133,208 +204,202 @@ export default function StudentPractice() {
         // non-critical
       }
     }
-  };
+  }, [
+    user,
+    authMode,
+    profile?.questionsPracticedCount,
+    sessionQuestions,
+    answers,
+    refreshProfile,
+    activeQuizId,
+    activeSet,
+  ]);
+
+  // Auto-submit when timer hits 0
+  useEffect(() => {
+    if (timeLeft == null || submitted || timeLeft > 0) return;
+    finishPractice();
+  }, [timeLeft, submitted, finishPractice]);
+
+  // Countdown
+  useEffect(() => {
+    if (timeLeft == null || submitted || timeLeft <= 0) return;
+    const id = setInterval(() => {
+      setTimeLeft((t) => (t <= 1 ? 0 : t - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [timeLeft, submitted]);
 
   const exitSession = () => {
     setActiveSet(null);
     setSessionQuestions([]);
     setCurrentIdx(0);
     setAnswers({});
+    setFlagged(new Set());
     setSubmitted(false);
-    setShowReview(false);
+    setTimeLeft(null);
+    setActiveQuizId(null);
   };
 
-  // ─── Active practice session UI ───────────────────────────────────────────
+  useEffect(() => {
+    let alive = true;
+    setMyLoading(true);
+    quizzesApi
+      .listMine()
+      .then((res) => {
+        if (!alive) return;
+        const list = Array.isArray(res?.quizzes)
+          ? res.quizzes
+          : Array.isArray(res)
+            ? res
+            : [];
+        setMyQuizzes(list);
+      })
+      .catch(() => {
+        if (alive) setMyQuizzes([]);
+      })
+      .finally(() => {
+        if (alive) setMyLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [submitted]);
+
+  async function openMyQuiz(quiz, { reset = false } = {}) {
+    let qs = quiz.questions;
+    if (!qs?.length && quiz.questionIds?.length) {
+      qs = quiz.questionIds
+        .map((id) => questions.find((q) => q.id === id))
+        .filter(Boolean);
+    }
+    if (!qs?.length) {
+      try {
+        const full = await quizzesApi.get(quiz.id);
+        qs = full.questions || full.quiz?.questions || [];
+      } catch {
+        return;
+      }
+    }
+    if (!qs?.length) return;
+
+    setActiveQuizId(quiz.id);
+    setActiveSet({
+      courseCode: quiz.courseCode || "QUIZ",
+      courseTitle: quiz.materialTitle || quiz.courseTitle || "Generated quiz",
+      quizId: quiz.id,
+    });
+    setSessionQuestions(qs);
+    setCurrentIdx(0);
+    setAnswers(reset ? {} : quiz.answers || {});
+    setFlagged(new Set());
+    setSubmitted(false);
+    setTimeLeft(null);
+  }
+
+  useEffect(() => {
+    const qid = searchParams.get("quiz");
+    if (!qid || !myQuizzes.length) return;
+    if (activeQuizId === qid) return;
+    const quiz = myQuizzes.find((q) => q.id === qid);
+    if (!quiz) return;
+    openMyQuiz(quiz);
+    const next = new URLSearchParams(searchParams);
+    next.delete("quiz");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, myQuizzes]);
+
+  // ─── Active exam workspace ───────────────────────────────────────────────
   if (activeSet && sessionQuestions.length > 0) {
-    const q = sessionQuestions[currentIdx];
-    const selected = answers[q.id];
-    const isCorrect = submitted && selected === q.correctIndex;
-    const isWrong = submitted && selected !== undefined && selected !== q.correctIndex;
-
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <button
-              onClick={exitSession}
-              className="mb-1 flex items-center gap-1 text-sm text-ink-muted hover:text-teal"
-            >
-              <ChevronLeft size={16} /> Exit practice
-            </button>
-            <h1 className="text-lg font-semibold text-ink">
-              {activeSet.courseCode} — {activeSet.courseTitle}
-            </h1>
-            <p className="text-sm text-ink-muted">
-              Question {currentIdx + 1} of {sessionQuestions.length}
-              {q.topic && ` · ${q.topic}`}
-              {q.difficulty && (
-                <span className="ml-2 rounded-full bg-teal-soft px-2 py-0.5 text-xs font-medium capitalize text-teal">
-                  {q.difficulty}
-                </span>
-              )}
-            </p>
-          </div>
-          {submitted && score && (
-            <div className="rounded-xl bg-teal-soft px-4 py-2 text-center">
-              <div className="text-xl font-bold text-teal">{score.pct}%</div>
-              <div className="text-xs text-ink-muted">
-                {score.correct}/{score.total} correct
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Progress bar */}
-        <div className="h-2 overflow-hidden rounded-full bg-border-light">
-          <div
-            className="h-full rounded-full bg-teal transition-all duration-300"
-            style={{ width: `${((currentIdx + 1) / sessionQuestions.length) * 100}%` }}
-          />
-        </div>
-
-        {/* Question card */}
-        <div className="rounded-2xl border border-border-light bg-card-light p-6 shadow-sm">
-          <p className="mb-6 text-base font-medium leading-relaxed text-ink">{q.questionText}</p>
-
-          <div className="space-y-3">
-            {(q.options || []).map((opt, idx) => {
-              let optionStyle =
-                "border-border-light bg-surface-light text-ink hover:border-teal/40";
-              if (selected === idx && !submitted) {
-                optionStyle = "border-teal bg-teal-soft text-teal font-medium";
-              }
-              if (submitted) {
-                if (idx === q.correctIndex) {
-                  optionStyle = "border-teal bg-teal-soft text-teal font-medium";
-                } else if (selected === idx) {
-                  optionStyle = "border-red-300 bg-red-50 text-red-700";
-                } else {
-                  optionStyle = "border-border-light bg-surface-light text-ink-muted opacity-60";
-                }
-              }
-
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  disabled={submitted}
-                  onClick={() => selectAnswer(q.id, idx)}
-                  className={`flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors ${optionStyle}`}
-                >
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current text-xs font-semibold">
-                    {String.fromCharCode(65 + idx)}
-                  </span>
-                  <span className="flex-1">{opt}</span>
-                  {submitted && idx === q.correctIndex && (
-                    <CheckCircle2 size={18} className="shrink-0 text-teal" />
-                  )}
-                  {submitted && selected === idx && idx !== q.correctIndex && (
-                    <XCircle size={18} className="shrink-0 text-red-500" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {submitted && q.explanation && (
-            <div className="mt-5 rounded-xl border border-teal/20 bg-teal-soft/50 p-4 text-sm text-ink">
-              <span className="font-semibold text-teal">Explanation: </span>
-              {q.explanation}
-            </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            disabled={currentIdx === 0}
-            onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
-            className="flex items-center gap-1 rounded-lg border border-border-light bg-card-light px-4 py-2 text-sm text-ink disabled:opacity-40"
-          >
-            <ChevronLeft size={16} /> Previous
-          </button>
-
-          <div className="flex flex-wrap gap-2">
-            {!submitted && currentIdx === sessionQuestions.length - 1 && (
-              <button
-                type="button"
-                onClick={finishPractice}
-                className="flex items-center gap-2 rounded-lg bg-teal px-5 py-2 text-sm font-semibold text-white hover:bg-teal-dark"
-              >
-                <CheckCircle2 size={16} /> Submit &amp; See Score
-              </button>
-            )}
-            {submitted && (
-              <button
-                type="button"
-                onClick={exitSession}
-                className="flex items-center gap-2 rounded-lg bg-teal px-5 py-2 text-sm font-semibold text-white hover:bg-teal-dark"
-              >
-                <RotateCcw size={16} /> Back to practice list
-              </button>
-            )}
-          </div>
-
-          <button
-            type="button"
-            disabled={currentIdx >= sessionQuestions.length - 1}
-            onClick={() => setCurrentIdx((i) => Math.min(sessionQuestions.length - 1, i + 1))}
-            className="flex items-center gap-1 rounded-lg border border-border-light bg-card-light px-4 py-2 text-sm text-ink disabled:opacity-40"
-          >
-            Next <ChevronRight size={16} />
-          </button>
-        </div>
-
-        {/* Mini question navigator */}
-        {showReview && (
-          <div className="flex flex-wrap gap-1.5 pt-2">
-            {sessionQuestions.map((sq, i) => {
-              const ans = answers[sq.id];
-              const correct = ans === sq.correctIndex;
-              return (
-                <button
-                  key={sq.id}
-                  type="button"
-                  onClick={() => setCurrentIdx(i)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium ${
-                    i === currentIdx
-                      ? "ring-2 ring-teal ring-offset-1"
-                      : ""
-                  } ${
-                    ans === undefined
-                      ? "bg-border-light text-ink-muted"
-                      : correct
-                        ? "bg-teal text-white"
-                        : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <CbtExamWorkspace
+        set={activeSet}
+        questions={sessionQuestions}
+        answers={answers}
+        flagged={flagged}
+        currentIdx={currentIdx}
+        timeLeft={timeLeft}
+        submitted={submitted}
+        score={score}
+        profile={profile}
+        onSelectAnswer={selectAnswer}
+        onToggleFlag={toggleFlag}
+        onNavigate={setCurrentIdx}
+        onSubmit={finishPractice}
+        onExit={exitSession}
+        onClearAnswer={clearAnswer}
+      />
     );
   }
 
-  // ─── Practice list UI ─────────────────────────────────────────────────────
+  // ─── Practice list ───────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold text-ink">Practice / CBT</h1>
         <p className="text-sm text-ink-muted">
-          Organised by course code, faculty, department and level. Pick a set and start practising.
+          Organised by course code, faculty, department and level. Pick a set and
+          start practising or run a timed CBT.
         </p>
       </div>
 
-      {!isPro(profile) && (
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-ink">My generated quizzes</h2>
+        {myLoading && <p className="text-sm text-ink-muted">Loading…</p>}
+        {!myLoading && myQuizzes.length === 0 && (
+          <p className="rounded-xl border border-dashed border-border-light bg-card-light px-4 py-6 text-center text-sm text-ink-muted">
+            Quizzes you generate from Reading Hub materials appear here. You can
+            retake them anytime.
+          </p>
+        )}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {myQuizzes.map((quiz) => (
+            <div
+              key={quiz.id}
+              className="rounded-xl border border-border-light bg-card-light p-4"
+            >
+              <div className="text-xs font-bold text-teal">
+                {quiz.courseCode || "QUIZ"}
+              </div>
+              <div className="mt-1 line-clamp-2 text-sm font-semibold text-ink">
+                {quiz.materialTitle || quiz.courseTitle || "Generated quiz"}
+              </div>
+              <div className="mt-1 text-xs text-ink-muted">
+                {quiz.questionCount || quiz.questionIds?.length || "—"} Qs
+                {quiz.difficulty ? ` · ${quiz.difficulty}` : ""}
+                {quiz.score != null ? ` · Last ${quiz.score}%` : ""}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => openMyQuiz(quiz)}
+                  className="flex-1 rounded-lg bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
+                >
+                  Open
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openMyQuiz(quiz, { reset: true })}
+                  className="rounded-lg border border-border-light px-3 py-2 text-xs font-medium text-ink hover:bg-surface-light"
+                >
+                  Reset & redo
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {!pro && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal/25 bg-gradient-to-r from-teal-soft to-white p-4">
           <div>
-            <p className="text-sm font-semibold text-ink">Free plan · max {FREE_LIMITS.practiceQuestions} questions per set</p>
-            <p className="text-xs text-ink-muted">Timed quizzes and full banks unlock with Pro.</p>
+            <p className="text-sm font-semibold text-ink">
+              Free plan · max {FREE_LIMITS.practiceQuestions} questions per set
+            </p>
+            <p className="text-xs text-ink-muted">
+              Timed quizzes and full banks unlock with Pro.
+            </p>
           </div>
           <Link
             to="/dashboard/upgrade"
@@ -394,7 +459,11 @@ export default function StudentPractice() {
             ))}
           </select>
 
-          <select value={level} onChange={(e) => setLevel(e.target.value)} className={fieldClass}>
+          <select
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+            className={fieldClass}
+          >
             <option value="">All levels</option>
             {LEVELS.map((lvl) => (
               <option key={lvl} value={lvl}>
@@ -410,14 +479,15 @@ export default function StudentPractice() {
           >
             {DIFFICULTIES.map((d) => (
               <option key={d} value={d}>
-                {d === "all" ? "All difficulties" : d.charAt(0).toUpperCase() + d.slice(1)}
+                {d === "all"
+                  ? "All difficulties"
+                  : d.charAt(0).toUpperCase() + d.slice(1)}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Results */}
       {loading && (
         <div className="rounded-2xl border border-dashed border-border-light bg-card-light p-10 text-center text-sm text-ink-muted">
           Loading practice sets…
@@ -427,9 +497,12 @@ export default function StudentPractice() {
       {!loading && filteredSets.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border-light bg-card-light p-10 text-center">
           <ClipboardCheck size={32} className="mx-auto mb-3 text-ink-muted" />
-          <p className="text-sm font-medium text-ink">No practice sets match your filters</p>
+          <p className="text-sm font-medium text-ink">
+            No practice sets match your filters
+          </p>
           <p className="mt-1 text-sm text-ink-muted">
-            Try clearing filters, or ask an admin to add questions with proper course codes.
+            Try clearing filters, or ask an admin to add questions with proper
+            course codes.
           </p>
         </div>
       )}
@@ -445,7 +518,9 @@ export default function StudentPractice() {
                 <span className="inline-block rounded-md bg-teal-soft px-2 py-0.5 text-xs font-bold tracking-wide text-teal">
                   {set.courseCode}
                 </span>
-                <h3 className="mt-1.5 text-sm font-semibold text-ink">{set.courseTitle}</h3>
+                <h3 className="mt-1.5 text-sm font-semibold text-ink">
+                  {set.courseTitle}
+                </h3>
               </div>
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-soft text-teal">
                 <BookOpen size={16} />
@@ -458,9 +533,14 @@ export default function StudentPractice() {
               {set.level && <div>{set.level}</div>}
               <div className="flex items-center gap-1.5 pt-1">
                 <Layers size={12} />
-                {set.questionCount} question{set.questionCount !== 1 ? "s" : ""}
+                {set.questionCount} question
+                {set.questionCount !== 1 ? "s" : ""}
                 {set.topics.length > 0 && (
-                  <span className="text-ink-muted"> · {set.topics.length} topic{set.topics.length !== 1 ? "s" : ""}</span>
+                  <span>
+                    {" "}
+                    · {set.topics.length} topic
+                    {set.topics.length !== 1 ? "s" : ""}
+                  </span>
                 )}
               </div>
             </div>
@@ -483,13 +563,22 @@ export default function StudentPractice() {
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={() => startPractice(set)}
-              className="mt-auto flex w-full items-center justify-center gap-2 rounded-lg bg-teal px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark"
-            >
-              <Play size={15} /> Start Practice
-            </button>
+            <div className="mt-auto flex gap-2">
+              <button
+                type="button"
+                onClick={() => startPractice(set)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-teal px-3 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark"
+              >
+                <Play size={15} /> Practice
+              </button>
+              <button
+                type="button"
+                onClick={() => startPractice(set, { timed: true })}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-teal/40 bg-teal-soft px-3 py-2.5 text-sm font-semibold text-teal hover:bg-teal/15"
+              >
+                <Timer size={15} /> Timed CBT
+              </button>
+            </div>
           </div>
         ))}
       </div>

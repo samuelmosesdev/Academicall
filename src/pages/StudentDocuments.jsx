@@ -1,11 +1,18 @@
 import { useMemo, useState } from "react";
-import { FileText, Search, ExternalLink, BookOpen, ChevronRight } from "lucide-react";
+import {
+  FileText,
+  Search,
+  BookOpen,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useStudentDocuments } from "../hooks/useStudentDocuments";
 import { useCbtData } from "../hooks/useCbtData";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 import { Link } from "react-router-dom";
 import { FREE_LIMITS, isPro } from "../lib/subscription";
+import StudentGenerateQuizModal from "../components/StudentGenerateQuizModal";
 
 export default function StudentDocuments() {
   const { profile } = useAuth();
@@ -18,6 +25,7 @@ export default function StudentDocuments() {
   const [department, setDepartment] = useState(profile?.department || "");
   const [courseCode, setCourseCode] = useState("");
   const [level, setLevel] = useState(profile?.level || "");
+  const [quizMaterial, setQuizMaterial] = useState(null);
 
   const departments = useMemo(() => departmentsFor(faculty), [faculty]);
 
@@ -26,7 +34,9 @@ export default function StudentDocuments() {
     if (faculty) list = list.filter((c) => c.faculty === faculty);
     if (department) list = list.filter((c) => c.department === department);
     if (level) list = list.filter((c) => !c.level || c.level === level);
-    return [...list].sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
+    return [...list].sort((a, b) =>
+      String(a.code || "").localeCompare(String(b.code || ""))
+    );
   }, [courses, faculty, department, level]);
 
   const suggestions = useMemo(() => {
@@ -34,7 +44,9 @@ export default function StudentDocuments() {
     if (!q) return [];
     return documents
       .filter((d) =>
-        [d.title, d.courseCode, d.courseTitle].filter(Boolean).some((f) => f.toLowerCase().includes(q))
+        [d.title, d.courseCode, d.courseTitle]
+          .filter(Boolean)
+          .some((f) => f.toLowerCase().includes(q))
       )
       .slice(0, 5);
   }, [documents, search]);
@@ -48,10 +60,17 @@ export default function StudentDocuments() {
           .filter(Boolean)
           .some((f) => f.toLowerCase().includes(q));
       const matchesFaculty = !faculty || !d.faculty || d.faculty === faculty;
-      const matchesDepartment = !department || !d.department || d.department === department;
+      const matchesDepartment =
+        !department || !d.department || d.department === department;
       const matchesLevel = !level || !d.level || d.level === level;
       const matchesCourse = !courseCode || d.courseCode === courseCode;
-      return matchesSearch && matchesFaculty && matchesDepartment && matchesLevel && matchesCourse;
+      return (
+        matchesSearch &&
+        matchesFaculty &&
+        matchesDepartment &&
+        matchesLevel &&
+        matchesCourse
+      );
     });
   }, [documents, search, faculty, department, level, courseCode]);
 
@@ -72,11 +91,16 @@ export default function StudentDocuments() {
       }
       map.get(key).items.push(d);
     }
-    let groups = Array.from(map.values()).sort((a, b) => a.courseCode.localeCompare(b.courseCode));
+    let groups = Array.from(map.values()).sort((a, b) =>
+      a.courseCode.localeCompare(b.courseCode)
+    );
     if (!pro) {
       groups = groups.map((g) => ({
         ...g,
-        lockedCount: Math.max(0, g.items.length - FREE_LIMITS.documentsPerCourse),
+        lockedCount: Math.max(
+          0,
+          g.items.length - FREE_LIMITS.documentsPerCourse
+        ),
         items: g.items.slice(0, FREE_LIMITS.documentsPerCourse),
       }));
     }
@@ -91,7 +115,8 @@ export default function StudentDocuments() {
       <div>
         <h1 className="text-lg font-semibold text-ink">Reading Hub</h1>
         <p className="text-sm text-ink-muted">
-          Materials grouped by course. Open a course for its dedicated page.
+          Materials grouped by course. Read in app or generate a quiz from a
+          material.
         </p>
       </div>
 
@@ -178,13 +203,19 @@ export default function StudentDocuments() {
             className={fieldClass}
           >
             <option value="">All levels</option>
-            {["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "Postgraduate", "General"].map(
-              (lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl}
-                </option>
-              )
-            )}
+            {[
+              "100 Level",
+              "200 Level",
+              "300 Level",
+              "400 Level",
+              "500 Level",
+              "Postgraduate",
+              "General",
+            ].map((lvl) => (
+              <option key={lvl} value={lvl}>
+                {lvl}
+              </option>
+            ))}
           </select>
 
           <select
@@ -202,12 +233,15 @@ export default function StudentDocuments() {
         </div>
       </div>
 
-      {loading && <div className="text-center text-sm text-ink-muted">Loading…</div>}
+      {loading && (
+        <div className="text-center text-sm text-ink-muted">Loading…</div>
+      )}
 
       {!loading && grouped.length === 0 && (
         <div className="rounded-xl border border-border-light bg-card-light px-4 py-10 text-center text-sm text-ink-muted">
           <BookOpen size={28} className="mx-auto mb-2 opacity-50" />
-          No materials match your filters. Try clearing a filter or check back later.
+          No materials match your filters. Try clearing a filter or check back
+          later.
         </div>
       )}
 
@@ -226,10 +260,15 @@ export default function StudentDocuments() {
                   <span className="rounded bg-teal/15 px-1.5 py-0.5 text-[11px] font-bold text-teal">
                     {group.courseCode}
                   </span>
-                  <span className="text-sm font-semibold text-ink">{group.courseTitle}</span>
+                  <span className="text-sm font-semibold text-ink">
+                    {group.courseTitle}
+                  </span>
                   <span className="text-xs text-ink-muted">
-                    {group.items.length} material{group.items.length !== 1 ? "s" : ""}
-                    {group.lockedCount > 0 ? ` · ${group.lockedCount} locked on Free` : ""}
+                    {group.items.length} material
+                    {group.items.length !== 1 ? "s" : ""}
+                    {group.lockedCount > 0
+                      ? ` · ${group.lockedCount} locked on Free`
+                      : ""}
                   </span>
                 </div>
                 <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-teal">
@@ -238,32 +277,48 @@ export default function StudentDocuments() {
               </div>
               {(group.faculty || group.department || group.level) && (
                 <p className="mt-0.5 text-xs text-ink-muted">
-                  {[group.faculty, group.department, group.level].filter(Boolean).join(" · ")}
+                  {[group.faculty, group.department, group.level]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               )}
             </Link>
             <div className="divide-y divide-border-light">
               {group.items.map((d) => (
-                <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between gap-3 px-4 py-3"
+                >
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal/10 text-teal">
                       <FileText size={16} />
                     </span>
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-ink">{d.title}</div>
+                      <div className="truncate text-sm font-medium text-ink">
+                        {d.title}
+                      </div>
                       <div className="text-xs text-ink-muted">
-                        {d.fileSize ? `${(d.fileSize / 1024 / 1024).toFixed(1)} MB` : "PDF"}
+                        {d.fileSize
+                          ? `${(d.fileSize / 1024 / 1024).toFixed(1)} MB`
+                          : "PDF"}
+                        {d.id ? ` · ID: ${String(d.id).slice(0, 8)}…` : ""}
                       </div>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     <Link
                       to={`/dashboard/reading-hub/doc/${d.id}`}
                       className="flex items-center gap-1.5 rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-dark"
                     >
                       Read in app
                     </Link>
-                    
+                    <button
+                      type="button"
+                      onClick={() => setQuizMaterial(d)}
+                      className="flex items-center gap-1.5 rounded-lg border border-teal/40 bg-teal/10 px-3 py-1.5 text-xs font-semibold text-teal hover:bg-teal/20"
+                    >
+                      <Sparkles size={13} /> Generate Quiz
+                    </button>
                   </div>
                 </div>
               ))}
@@ -271,6 +326,12 @@ export default function StudentDocuments() {
           </div>
         ))}
       </div>
+
+      <StudentGenerateQuizModal
+        open={!!quizMaterial}
+        onClose={() => setQuizMaterial(null)}
+        material={quizMaterial}
+      />
     </div>
   );
 }

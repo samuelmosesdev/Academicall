@@ -5,51 +5,27 @@ import { homePathFor, nextOnboardingPath } from "../lib/roles";
 import {
   GraduationCap,
   BookOpen,
-  Brain,
+  Timer,
   ArrowRight,
   CheckCircle2,
-  PlayCircle,
-  TrendingUp,
-  Shield,
+  Eye,
   Menu,
   X,
-  Quote,
+  Users,
+  Shield,
+  Megaphone,
+  Flame,
+  Calendar,
+  Star,
 } from "lucide-react";
-
-const HERO_IMG =
-  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1600&q=80";
-
-const TESTIMONIALS = [
-  {
-    name: "Esther Enefola",
-    role: "Undergraduate · University of Abuja",
-    quote:
-      "The Reading Hub and timed practice changed how I revise. I finally know what I don’t know before the exam.",
-  },
-  {
-    name: "OluwaBright",
-    role: "Student · Campus community",
-    quote:
-      "Department posts, class schedules, and materials in one place. Less WhatsApp chaos, more actual studying.",
-  },
-  {
-    name: "Akinwale Taiye",
-    role: "Course mate · Faculty of Science",
-    quote:
-      "Pro practice and the timetable keep me consistent. Academicall feels built for how we actually learn here.",
-  },
-];
 
 export default function Landing() {
   const { user, profile, loading, profileReady } = useAuth();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  // Only treat as signed-in once auth is settled — prevents "Open dashboard" after logout
+
   const signedIn = !loading && !!user && profileReady;
-  // If they're mid-signup (e.g. hit Back while entering their OTP), send them
-  // straight back to that step instead of showing "Open dashboard", which
-  // would just bounce them right back anyway and looks like a broken flow.
   const pendingPath = signedIn ? nextOnboardingPath(profile) : null;
   const appHome = signedIn ? homePathFor(profile) : "/login";
   const ctaPrimary = signedIn ? appHome : "/signup";
@@ -60,68 +36,59 @@ export default function Landing() {
   }, [pendingPath, navigate]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => setScrolled(window.scrollY > 16);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Avoid flashing the full marketing page for a split second before the
-  // redirect above kicks in.
   if (pendingPath) return null;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#f7faf6] text-[#181c1a] antialiased">
-      {/* Nav */}
-      <nav
+    <div className="min-h-screen bg-[#f9f9ff] text-[#0B192C] antialiased selection:bg-[#dae2ff] selection:text-[#001847]">
+      {/* ========== HEADER ========== */}
+      <header
         className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "border-b border-white/30 bg-white/80 shadow-sm backdrop-blur-md"
-            : "bg-white/70 backdrop-blur-md"
+            ? "border-b border-[#c5c6cd]/40 bg-white/90 shadow-sm backdrop-blur-md"
+            : "bg-white/80 backdrop-blur-md"
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:h-20 sm:px-6">
-          <Link to="/" className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#005239] text-white shadow-md">
-              <GraduationCap size={18} strokeWidth={2.4} />
-            </span>
-            <span className="text-lg font-extrabold tracking-tight text-[#005239]">
-              Academicall
-            </span>
-          </Link>
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-5 sm:h-20 sm:px-8 lg:px-12">
+          <div className="flex items-center gap-10">
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B192C] text-white shadow-sm transition group-hover:bg-[#0054cd]">
+                <GraduationCap size={20} strokeWidth={2.2} />
+              </div>
+              <span className="text-xl font-bold tracking-tight text-[#0B192C]">
+                Academicall
+              </span>
+            </Link>
 
-          <div className="hidden items-center gap-8 md:flex">
-            <a
-              href="#features"
-              className="text-sm font-semibold text-[#005239] hover:opacity-80"
-            >
-              Features
-            </a>
-            <a
-              href="#pricing"
-              className="text-sm font-medium text-[#3f4943] hover:text-[#005239]"
-            >
-              Pricing
-            </a>
-            <a
-              href="#stories"
-              className="text-sm font-medium text-[#3f4943] hover:text-[#005239]"
-            >
-              Stories
-            </a>
+            <nav className="hidden items-center gap-8 md:flex">
+              <a href="#features" className="text-sm font-semibold text-[#475569] transition hover:text-[#0054cd]">
+                Features
+              </a>
+              <a href="#pricing" className="text-sm font-semibold text-[#475569] transition hover:text-[#0054cd]">
+                Pricing
+              </a>
+              <a href="#stories" className="text-sm font-semibold text-[#475569] transition hover:text-[#0054cd]">
+                Stories
+              </a>
+            </nav>
           </div>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-4 md:flex">
             {!signedIn && (
               <Link
                 to="/login"
-                className="text-sm font-semibold text-[#005239] hover:underline"
+                className="px-3 py-2 text-sm font-semibold text-[#475569] transition hover:text-[#0B192C]"
               >
                 Sign in
               </Link>
             )}
             <Link
               to={ctaPrimary}
-              className="rounded-full bg-[#fb923c] px-5 py-2.5 text-sm font-bold tracking-wide text-white shadow-md shadow-orange-500/20 transition hover:opacity-90"
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-[#0054cd] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0040a1]"
             >
               {ctaPrimaryLabel}
             </Link>
@@ -129,7 +96,7 @@ export default function Landing() {
 
           <button
             type="button"
-            className="rounded-lg p-2 text-[#005239] md:hidden"
+            className="rounded-lg p-2 text-[#0B192C] md:hidden"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Menu"
           >
@@ -138,7 +105,7 @@ export default function Landing() {
         </div>
 
         {menuOpen && (
-          <div className="border-t border-black/5 bg-white px-4 py-4 md:hidden">
+          <div className="border-t border-[#c5c6cd]/30 bg-white px-5 py-4 md:hidden">
             <div className="flex flex-col gap-3">
               <a href="#features" onClick={() => setMenuOpen(false)} className="text-sm font-medium">
                 Features
@@ -152,376 +119,734 @@ export default function Landing() {
               <Link
                 to={ctaPrimary}
                 onClick={() => setMenuOpen(false)}
-                className="rounded-full bg-[#fb923c] px-4 py-2.5 text-center text-sm font-bold text-white"
+                className="mt-1 rounded-xl bg-[#0054cd] px-4 py-2.5 text-center text-sm font-semibold text-white"
               >
                 {ctaPrimaryLabel}
               </Link>
             </div>
           </div>
         )}
-      </nav>
+      </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden pb-20 pt-28 sm:pt-32">
-        <div className="pointer-events-none absolute inset-0 z-0">
-          <div className="absolute left-1/4 top-0 h-[480px] w-[480px] rounded-full bg-[#a6f2cf]/25 blur-[100px]" />
-          <div className="absolute bottom-0 right-1/4 h-[360px] w-[360px] rounded-full bg-[#c3e8ff]/35 blur-[100px]" />
-        </div>
+      <main className="pt-16 sm:pt-20">
+        {/* ========== HERO ========== */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-white via-[#f9f9ff] to-[#f0f3ff] px-5 py-14 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
+          {/* subtle dots */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage: "radial-gradient(#0054cd 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+            }}
+          />
+          <div className="pointer-events-none absolute left-1/2 top-10 h-[320px] w-[700px] -translate-x-1/2 rounded-full bg-[#dae2ff]/50 blur-[130px]" />
 
-        <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
-          <div className="flex max-w-xl flex-col gap-5">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/40 bg-white/60 px-3.5 py-1.5 backdrop-blur-sm">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-[#8ad6b3]" />
-              <span className="text-xs font-bold tracking-wide text-[#005239]">
-                Built for Nigerian campus life
+          <div className="relative mx-auto max-w-6xl">
+            <div className="mb-12 grid items-center gap-10 lg:grid-cols-12 lg:gap-10">
+              {/* Left copy */}
+              <div className="flex flex-col items-center text-center lg:col-span-7 lg:items-start lg:text-left">
+                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#c5c6cd]/40 bg-white px-3.5 py-1.5 shadow-sm">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                  <span className="text-xs font-semibold tracking-wide text-[#0B192C]">
+                    Built for Nigerian campus life
+                  </span>
+                </div>
+
+                <h1 className="mb-5 max-w-xl text-4xl font-normal leading-tight tracking-tight text-[#0B192C] sm:text-5xl lg:text-[58px] lg:leading-[66px]">
+                  Elevate your academic{" "}
+                  <span className="italic font-medium text-[#0054cd]">journey</span>
+                </h1>
+
+                <p className="mb-8 max-w-xl text-base leading-relaxed text-[#475569] sm:text-lg">
+                  Reading Hub, timed practice, department feeds, and class schedules — one place for
+                  focus, retention, and real campus workflow.
+                </p>
+
+                <div className="mb-5 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+                  <Link
+                    to={ctaPrimary}
+                    className="inline-flex items-center gap-2.5 rounded-xl bg-[#0054cd] px-7 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0040a1] group"
+                  >
+                    {signedIn ? "Open dashboard" : "Join students on Academicall"}
+                    <ArrowRight size={18} className="transition group-hover:translate-x-1" />
+                  </Link>
+                  <a
+                    href="#features"
+                    className="inline-flex items-center gap-2 rounded-xl border border-[#c5c6cd]/40 bg-white px-6 py-3.5 text-sm font-semibold text-[#0B192C] shadow-sm transition hover:bg-[#f0f3ff]"
+                  >
+                    <Eye size={18} className="text-[#0054cd]" />
+                    See how it works
+                  </a>
+                </div>
+
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#c5c6cd]/30 bg-white/80 px-4 py-1 text-xs font-semibold text-[#475569]">
+                  For students · Course reps · Staff
+                </div>
+              </div>
+
+              {/* Right photo card */}
+              <div className="relative w-full lg:col-span-5">
+                <div className="relative overflow-hidden rounded-3xl border-2 border-white shadow-2xl">
+                  <img
+                    src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=80"
+                    alt="Nigerian university students collaborating"
+                    className="h-[360px] w-full object-cover transition duration-500 hover:scale-105 sm:h-[420px]"
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B192C]/80 via-transparent to-transparent" />
+
+                  <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/90 px-3 py-1.5 shadow-md backdrop-blur-md">
+                    <GraduationCap size={16} className="text-[#0054cd]" />
+                    <span className="text-[11px] font-bold tracking-wide text-[#0B192C]">
+                      Over 45+ Campuses
+                    </span>
+                  </div>
+
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 rounded-2xl border border-white/20 bg-white/90 p-3.5 shadow-lg backdrop-blur-md">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                        <Users size={18} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#0B192C]">Real Study Groups</div>
+                        <div className="text-[11px] text-[#475569]">
+                          Department chats & past question drills
+                        </div>
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-lg bg-[#dae2ff]/60 px-2 py-1 text-xs font-bold text-[#0054cd]">
+                      UNILAG · OAU · UI
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ========== PRODUCT MOCKUP ========== */}
+            <div className="mx-auto w-full max-w-5xl rounded-3xl border border-[#c5c6cd]/40 bg-white p-4 shadow-xl sm:p-7">
+              {/* Course Rep banner */}
+              <div className="mb-6 flex flex-col items-start justify-between gap-3 rounded-2xl border border-amber-200/80 bg-amber-50 p-3.5 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
+                    <Megaphone size={16} />
+                  </span>
+                  <div>
+                    <span className="mr-2 rounded bg-amber-200/60 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-800">
+                      Course Rep Announcement
+                    </span>
+                    <span className="text-sm font-semibold text-amber-950">
+                      “Class moved to ETF Hall 10am”
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-end text-xs font-medium text-amber-800 sm:self-auto">
+                  <Calendar size={14} />
+                  15m ago • FOS Hall 1
+                </div>
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-12">
+                {/* Courses */}
+                <div className="flex flex-col gap-3 lg:col-span-4">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#475569]">
+                      Registered Courses
+                    </span>
+                    <span className="text-xs font-semibold text-[#0054cd]">First Semester</span>
+                  </div>
+
+                  {[
+                    {
+                      code: "GST 101",
+                      title: "Use of English & Study Skills",
+                      badge: "Material Ready",
+                      badgeCls: "bg-emerald-100 text-emerald-700",
+                      meta: "4 Handouts · 12 Practice sets",
+                    },
+                    {
+                      code: "CHM 211",
+                      title: "Basic Organic Chemistry I",
+                      badge: "Test Tomorrow",
+                      badgeCls: "bg-[#dae2ff] text-[#0054cd]",
+                      meta: "6 Handouts · 3 CBT Simulators",
+                    },
+                    {
+                      code: "MTH 101",
+                      title: "Elementary Mathematics I (Calculus)",
+                      badge: "Past Questions",
+                      badgeCls: "bg-slate-200 text-slate-700",
+                      meta: "2018–2024 Solved",
+                    },
+                  ].map((c) => (
+                    <div
+                      key={c.code}
+                      className="rounded-2xl border border-[#c5c6cd]/30 bg-[#f0f3ff] p-3.5 transition hover:border-[#0054cd]/50"
+                    >
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-sm font-bold text-[#0B192C]">{c.code}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.badgeCls}`}>
+                          {c.badge}
+                        </span>
+                      </div>
+                      <div className="text-xs font-medium text-[#475569]">{c.title}</div>
+                      <div className="mt-2.5 text-[11px] text-[#75777d]">{c.meta}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CBT Simulator */}
+                <div className="flex flex-col justify-between rounded-2xl border border-[#c5c6cd]/40 bg-[#f9f9ff] p-4 shadow-sm lg:col-span-5">
+                  <div>
+                    <div className="mb-3 flex items-center justify-between border-b border-[#c5c6cd]/20 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Timer size={18} className="text-[#0054cd]" />
+                        <span className="text-xs font-semibold text-[#0B192C]">
+                          CBT Exam Mode · MTH 101
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 rounded-lg bg-red-100 px-2.5 py-1 font-mono text-xs font-bold text-red-700">
+                        <span className="h-2 w-2 animate-ping rounded-full bg-red-600" />
+                        14:32 remaining
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-[#75777d]">
+                        Question 24 of 50
+                      </span>
+                      <p className="mt-1 text-sm font-semibold text-[#0B192C]">
+                        Evaluate lim<sub>x→0</sub> (sin(3x) / x) as applied in differential calculus:
+                      </p>
+                    </div>
+
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center gap-3 rounded-xl border border-[#c5c6cd]/30 bg-white p-2.5 text-xs">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#c5c6cd] text-[11px] font-bold">
+                          A
+                        </span>
+                        0
+                      </div>
+                      <div className="flex items-center gap-3 rounded-xl border-2 border-[#0054cd] bg-[#0054cd]/5 p-2.5 text-xs font-medium text-[#0B192C]">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0054cd] text-[11px] font-bold text-white">
+                          B
+                        </span>
+                        3 (Correct selection)
+                      </div>
+                      <div className="flex items-center gap-3 rounded-xl border border-[#c5c6cd]/30 bg-white p-2.5 text-xs">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#c5c6cd] text-[11px] font-bold">
+                          C
+                        </span>
+                        ∞
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-[#c5c6cd]/20 pt-3 text-xs">
+                    <span className="font-medium text-[#475569]">Auto-saving answers...</span>
+                    <span className="flex items-center gap-1 font-bold text-[#0054cd]">
+                      Next Question <ArrowRight size={14} />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Streak + Schedule */}
+                <div className="flex flex-col gap-3 lg:col-span-3">
+                  <div className="flex flex-col justify-between rounded-2xl bg-gradient-to-br from-[#0B192C] to-slate-900 p-4 text-white">
+                    <div>
+                      <div className="mb-3 flex items-center justify-between">
+                        <Flame size={24} className="text-amber-400" />
+                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-amber-300">
+                          12 Days Active
+                        </span>
+                      </div>
+                      <div className="text-2xl font-bold">Study consistency</div>
+                      <div className="mt-1 text-xs text-slate-300">Practice · Read · Show up</div>
+                    </div>
+                    <div className="mt-4 border-t border-white/10 pt-3">
+                      <div className="mb-1 flex justify-between text-[11px] text-slate-300">
+                        <span>Weekly Target</span>
+                        <span className="font-semibold text-white">88% done</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                        <div className="h-full rounded-full bg-[#dae2ff]" style={{ width: "88%" }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#c5c6cd]/30 bg-[#f0f3ff] p-3.5">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#0B192C]">Today’s Schedule</span>
+                      <span className="rounded bg-[#dae2ff] px-1.5 py-0.5 text-[10px] font-bold text-[#0B192C]">
+                        2 classes
+                      </span>
+                    </div>
+                    <div className="space-y-1 text-xs text-[#475569]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        10:00 AM — CHM 211 (ETF Hall)
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        02:00 PM — GST 101 CBT Drill
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========== FEATURES ========== */}
+        <section id="features" className="bg-white px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-14 max-w-3xl text-left">
+              <div className="mb-3 inline-flex items-center gap-2 rounded bg-[#dae2ff] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#0B192C]">
+                Study consistency — Practice · Read · Show up
+              </div>
+              <h2 className="text-3xl font-normal tracking-tight text-[#0B192C] sm:text-4xl lg:text-5xl">
+                Tools built for mastery
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-[#475569] sm:text-lg">
+                Digest materials, practice under time pressure, and stay connected to your department
+                — without juggling five apps.
+              </p>
+            </div>
+
+            <div className="grid gap-8 lg:grid-cols-2">
+              {/* Reading Hub */}
+              <div className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/30 bg-[#f9f9ff] p-8 transition hover:shadow-lg sm:p-10">
+                <div>
+                  <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#dae2ff] text-[#0054cd] shadow-sm">
+                    <BookOpen size={24} />
+                  </div>
+                  <h3 className="mb-3 text-2xl font-semibold text-[#0B192C] sm:text-3xl">
+                    Reading Hub
+                  </h3>
+                  <p className="mb-6 leading-relaxed text-[#475569]">
+                    Course PDFs and materials by faculty and level. Open, highlight your path through
+                    the term, and keep everything within reach.
+                  </p>
+                  <div className="mb-8 flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold text-[#0B192C]">
+                      Organised by course
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold text-[#0B192C]">
+                      Distraction-light reading
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#c5c6cd]/40 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[#c5c6cd]/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-lg bg-[#0054cd]/10 px-2.5 py-1 text-xs font-bold text-[#0054cd]">
+                        Faculty of Science
+                      </span>
+                      <span className="text-slate-300">/</span>
+                      <span className="rounded-lg bg-[#e7eeff] px-2.5 py-1 text-xs font-semibold">
+                        200 Level
+                      </span>
+                    </div>
+                    <span className="text-xs text-[#75777d]">Page 14 of 78</span>
+                  </div>
+                  <div className="rounded-xl border border-[#c5c6cd]/20 bg-[#f0f3ff] p-4">
+                    <div className="mb-1 text-xs font-bold text-[#0B192C]">
+                      Module 3: Reaction Mechanisms in Aliphatic Compounds
+                    </div>
+                    <p className="line-clamp-3 text-xs leading-relaxed text-[#475569]">
+                      Electrophilic addition occurs readily across the carbon-carbon double bond.
+                      Nucleophiles donate electron pairs to the formed carbocation intermediate...
+                    </p>
+                    <div className="mt-3 inline-flex items-center gap-2 rounded bg-amber-100/90 px-2.5 py-1 text-[11px] font-medium text-amber-900">
+                      Highlighted: Essential test concept for CHM 211 midterm
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Practice & CBT */}
+              <div className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/30 bg-[#f9f9ff] p-8 transition hover:shadow-lg sm:p-10">
+                <div>
+                  <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e7eeff] text-[#0054cd] shadow-sm">
+                    <Timer size={24} />
+                  </div>
+                  <h3 className="mb-3 text-2xl font-semibold text-[#0B192C] sm:text-3xl">
+                    Practice & CBT
+                  </h3>
+                  <p className="mb-6 leading-relaxed text-[#475569]">
+                    Timed sets that feel like the real exam. Spot weak areas early and revise with
+                    intent — not last-minute panic.
+                  </p>
+                  <div className="mb-8 flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold text-[#0B192C]">
+                      Timed simulations
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold text-[#0B192C]">
+                      Clear feedback after each set
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#c5c6cd]/40 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between border-b border-[#c5c6cd]/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span className="text-xs font-bold text-[#0B192C]">GST 101 Drill Set</span>
+                    </div>
+                    <div className="rounded border border-red-200 bg-red-50 px-2.5 py-0.5 font-mono text-xs font-bold text-red-600">
+                      ⏱ 00:08:45
+                    </div>
+                  </div>
+                  <div className="mb-3 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-xl bg-[#f0f3ff] p-2">
+                      <div className="text-[10px] font-semibold uppercase text-[#475569]">Answered</div>
+                      <div className="text-sm font-bold text-[#0B192C]">38/40</div>
+                    </div>
+                    <div className="rounded-xl bg-emerald-50 p-2 text-emerald-900">
+                      <div className="text-[10px] font-semibold uppercase">Accuracy</div>
+                      <div className="text-sm font-bold">92%</div>
+                    </div>
+                    <div className="rounded-xl bg-blue-50 p-2 text-blue-900">
+                      <div className="text-[10px] font-semibold uppercase">Weak Area</div>
+                      <div className="text-sm font-bold">Lexis</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-900">
+                    <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
+                    <div>
+                      <span className="font-bold">Option C selected correctly.</span>
+                      <div className="mt-0.5 text-[11px] text-emerald-800">
+                        Comprehensive explanation & textbook citation generated instantly.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========== CAMPUS TEAMS ========== */}
+        <section className="bg-[#f0f3ff] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-14 max-w-3xl">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#0054cd]">
+                Campus coordination made simple
               </span>
-            </div>
-
-            <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-[#181c1a] sm:text-4xl md:text-5xl lg:text-[3.5rem] lg:leading-[1.1]">
-              Elevate your{" "}
-              <span className="text-[#005239]">academic journey</span>
-            </h1>
-
-            <p className="text-base leading-relaxed text-[#3f4943] sm:text-lg">
-              Reading Hub, timed practice, department feeds, and class schedules —
-              one place for focus, retention, and real campus workflow.
-            </p>
-
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to={ctaPrimary}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#fb923c] px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 transition hover:-translate-y-0.5 hover:opacity-95"
-              >
-                {signedIn ? "Open dashboard" : "Join students on Academicall"}
-                <ArrowRight size={16} />
-              </Link>
-              <a
-                href="#features"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/50 bg-white/70 px-7 py-3.5 text-sm font-bold text-[#005239] backdrop-blur-sm transition hover:bg-white"
-              >
-                <PlayCircle size={18} />
-                See how it works
-              </a>
-            </div>
-
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6f7973]">
-              For students · Course reps · Staff
-            </p>
-          </div>
-
-          <div className="relative mt-4 h-[320px] overflow-hidden rounded-2xl shadow-2xl shadow-[#00668a]/10 sm:h-[420px] lg:mt-0 lg:h-[520px]">
-            <img
-              src={HERO_IMG}
-              alt="Students collaborating on campus"
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute bottom-5 left-5 right-5 max-w-xs rounded-xl border border-white/40 bg-white/75 p-4 shadow-lg backdrop-blur-md sm:right-auto">
-              <div className="mb-3 flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#a6f2cf]/40">
-                  <TrendingUp size={20} className="text-[#005239]" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[#005239]">Study consistency</p>
-                  <p className="text-sm font-semibold text-[#181c1a]">
-                    Practice · Read · Show up
-                  </p>
-                </div>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-[#e0e3df]">
-                <div className="h-full w-3/4 rounded-full bg-[#005239]" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="bg-[#f1f4f0] py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto mb-12 max-w-2xl text-center">
-            <h2 className="text-2xl font-bold tracking-tight text-[#181c1a] sm:text-4xl">
-              Tools built for mastery
-            </h2>
-            <p className="mt-3 text-base text-[#3f4943] sm:text-lg">
-              Digest materials, practice under time pressure, and stay connected to
-              your department — without juggling five apps.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/50 bg-white/70 p-7 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-md">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-[#c3e8ff] bg-[#c3e8ff]/40">
-                <BookOpen size={26} className="text-[#00668a]" />
-              </div>
-              <h3 className="text-xl font-semibold text-[#181c1a]">Reading Hub</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#3f4943]">
-                Course PDFs and materials by faculty and level. Open, highlight your
-                path through the term, and keep everything within reach.
+              <h2 className="mt-2 text-3xl font-normal tracking-tight text-[#0B192C] sm:text-4xl lg:text-5xl">
+                Built for campus teams
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-[#475569] sm:text-lg">
+                Course reps post schedules and materials. Staff run feeds and support. Students get
+                one calm place to show up for class and exams.
               </p>
-              <ul className="mt-5 space-y-2 text-sm text-[#181c1a]">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-[#1b6b4f]" /> Organised by course
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-[#1b6b4f]" /> Distraction-light reading
-                </li>
-              </ul>
             </div>
 
-            <div className="rounded-2xl border border-white/50 bg-white/70 p-7 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-md">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-[#a6f2cf] bg-[#a6f2cf]/35">
-                <Brain size={26} className="text-[#005239]" />
-              </div>
-              <h3 className="text-xl font-semibold text-[#181c1a]">Practice & CBT</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#3f4943]">
-                Timed sets that feel like the real exam. Spot weak areas early and
-                revise with intent — not last-minute panic.
-              </p>
-              <ul className="mt-5 space-y-2 text-sm text-[#181c1a]">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-[#1b6b4f]" /> Timed simulations
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-[#1b6b4f]" /> Clear feedback after each set
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Campus / staff band */}
-      <section className="relative overflow-hidden bg-[#00668a] py-16 text-[#f7faf6] sm:py-20">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(141,213,254,0.2),transparent_55%)]" />
-        <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-4xl">
-              Built for campus teams
-            </h2>
-            <p className="mt-4 text-base text-white/80 sm:text-lg">
-              Course reps post schedules and materials. Staff run feeds and support.
-              Students get one calm place to show up for class and exams.
-            </p>
-            <div className="mt-8 space-y-5">
-              <div className="flex gap-3">
-                <TrendingUp className="mt-0.5 shrink-0 text-[#a6f2cf]" size={22} />
-                <div>
-                  <p className="font-semibold">Department feeds & classes</p>
-                  <p className="text-sm text-white/70">
-                    Announcements and schedules where your classmates already are.
-                  </p>
+            <div className="mb-12 grid gap-8 md:grid-cols-2">
+              <div className="rounded-3xl border border-[#c5c6cd]/30 bg-white p-8 shadow-sm transition hover:shadow-md">
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#dae2ff] text-[#0054cd]">
+                  <Users size={24} />
+                </div>
+                <h3 className="mb-3 text-2xl font-semibold text-[#0B192C]">
+                  Department feeds & classes
+                </h3>
+                <p className="mb-6 leading-relaxed text-[#475569]">
+                  Announcements and schedules where your classmates already are.
+                </p>
+                <div className="flex flex-col gap-2.5 rounded-2xl border border-[#c5c6cd]/20 bg-[#f0f3ff] p-4">
+                  <div className="flex items-center gap-2.5 text-xs font-semibold text-[#0B192C]">
+                    <CheckCircle2 size={16} className="text-[#0054cd]" />
+                    Verified Course Rep Posts Only
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-[#475569]">
+                    <Calendar size={16} className="text-[#75777d]" />
+                    Timetable syncs directly with student reminders
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <Shield className="mt-0.5 shrink-0 text-[#a6f2cf]" size={22} />
-                <div>
-                  <p className="font-semibold">Staff HQ & roles</p>
-                  <p className="text-sm text-white/70">
-                    Admins and agents coordinate without scattering across chats.
-                  </p>
+
+              <div className="rounded-3xl border border-[#c5c6cd]/30 bg-white p-8 shadow-sm transition hover:shadow-md">
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e7eeff] text-[#0054cd]">
+                  <Shield size={24} />
+                </div>
+                <h3 className="mb-3 text-2xl font-semibold text-[#0B192C]">Staff HQ & roles</h3>
+                <p className="mb-6 leading-relaxed text-[#475569]">
+                  Admins and agents coordinate without scattering across chats.
+                </p>
+                <div className="flex flex-col gap-2.5 rounded-2xl border border-[#c5c6cd]/20 bg-[#f0f3ff] p-4">
+                  <div className="flex items-center gap-2.5 text-xs font-semibold text-[#0B192C]">
+                    <Shield size={16} className="text-[#0054cd]" />
+                    Moderation controls and role-based permissions
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-[#475569]">
+                    Official student helpdesk & query resolution
+                  </div>
                 </div>
               </div>
             </div>
+
             <Link
-              to={signedIn ? appHome : "/signup"}
-              className="mt-8 inline-flex rounded-full bg-[#f7faf6] px-6 py-3 text-sm font-bold text-[#00668a] transition hover:bg-white"
+              to={ctaPrimary}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#0B192C] px-7 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
             >
-              {signedIn ? "Go to app" : "Create your account"}
+              Create your account
+              <ArrowRight size={18} />
             </Link>
           </div>
-          <div className="flex h-56 items-end justify-between gap-2 rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-sm sm:h-72">
-            {[30, 50, 40, 70, 90].map((h, i) => (
-              <div
-                key={i}
-                className="w-1/6 rounded-t-md bg-[#a6f2cf]/50"
-                style={{ height: `${h}%`, opacity: 0.45 + i * 0.12 }}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Testimonials */}
-      <section id="stories" className="bg-[#f7faf6] py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="mb-10 text-center text-2xl font-bold tracking-tight sm:text-4xl">
-            Voices from campus
-          </h2>
-          <div className="grid gap-6 md:grid-cols-3">
-            {TESTIMONIALS.map((t) => (
-              <div
-                key={t.name}
-                className="relative rounded-2xl border border-[#e0e3df] bg-white p-6 shadow-sm"
-              >
-                <Quote
-                  size={28}
-                  className="absolute right-5 top-5 text-[#e0e3df]"
-                  strokeWidth={1.5}
-                />
-                <p className="relative z-10 text-base italic leading-relaxed text-[#3f4943]">
-                  “{t.quote}”
-                </p>
-                <div className="mt-6">
-                  <p className="text-sm font-bold text-[#181c1a]">{t.name}</p>
-                  <p className="text-xs text-[#6f7973]">{t.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing — aligned with product (₦) */}
-      <section id="pricing" className="bg-[#f1f4f0] py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mb-12 text-center">
-            <h2 className="text-2xl font-bold tracking-tight sm:text-4xl">
-              Simple, transparent pricing
-            </h2>
-            <p className="mt-2 text-[#3f4943]">
-              Start free. Upgrade when you want full Pro tools.
-            </p>
-          </div>
-
-          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
-            <div className="flex flex-col rounded-2xl border border-white/60 bg-white/60 p-7 backdrop-blur-sm">
-              <h3 className="text-lg font-semibold">Free</h3>
-              <p className="mt-1 text-sm text-[#3f4943]">Core campus tools</p>
-              <p className="mt-6 text-3xl font-extrabold">
-                ₦0<span className="text-base font-normal text-[#6f7973]">/mo</span>
-              </p>
-              <ul className="mt-6 flex-1 space-y-2 text-sm">
-                <li className="flex gap-2">
-                  <CheckCircle2 size={16} className="text-[#005239]" /> Department feed
-                </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 size={16} className="text-[#005239]" /> Class schedules
-                </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 size={16} className="text-[#005239]" /> Limited practice
-                </li>
-              </ul>
-              <Link
-                to="/signup"
-                className="mt-8 block rounded-full border-2 border-[#005239] py-2.5 text-center text-sm font-bold text-[#005239] hover:bg-[#005239]/5"
-              >
-                Sign up free
-              </Link>
-            </div>
-
-            <div className="relative flex flex-col rounded-2xl border-2 border-[#00668a] bg-white p-7 shadow-lg md:-translate-y-2">
-              <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00668a] px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                Most popular
+        {/* ========== TESTIMONIALS ========== */}
+        <section id="stories" className="bg-[#f9f9ff] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-14 max-w-2xl">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#0054cd]">
+                Verified experiences
               </span>
-              <h3 className="text-lg font-semibold text-[#00668a]">Student Pro</h3>
-              <p className="mt-1 text-sm text-[#3f4943]">Full mastery toolkit</p>
-              <p className="mt-6 text-3xl font-extrabold">
-                ₦1,500
-                <span className="text-base font-normal text-[#6f7973]">/mo</span>
-              </p>
-              <p className="text-xs text-[#6f7973]">
-                Also weekly ₦500 · annual ₦4,000
-              </p>
-              <ul className="mt-6 flex-1 space-y-2 text-sm">
-                <li className="flex gap-2">
-                  <CheckCircle2 size={16} className="text-[#00668a]" /> Full Reading Hub
-                </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 size={16} className="text-[#00668a]" /> Unlimited practice
-                </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 size={16} className="text-[#00668a]" /> Anonymous comments (Pro)
-                </li>
-              </ul>
-              <Link
-                to={signedIn ? "/dashboard/upgrade" : "/signup"}
-                className="mt-8 block rounded-full bg-[#fb923c] py-2.5 text-center text-sm font-bold text-white shadow-md hover:opacity-90"
-              >
-                Go Pro
-              </Link>
+              <h2 className="mt-2 text-3xl font-normal tracking-tight text-[#0B192C] sm:text-4xl lg:text-5xl">
+                Voices from campus
+              </h2>
             </div>
 
-            <div className="flex flex-col rounded-2xl border border-white/60 bg-white/60 p-7 backdrop-blur-sm">
-              <h3 className="text-lg font-semibold">Campus / staff</h3>
-              <p className="mt-1 text-sm text-[#3f4943]">Reps, agents & admin</p>
-              <p className="mt-6 text-3xl font-extrabold">Included</p>
-              <ul className="mt-6 flex-1 space-y-2 text-sm">
-                <li className="flex gap-2">
-                  <CheckCircle2 size={16} className="text-[#005239]" /> Course rep tools
-                </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 size={16} className="text-[#005239]" /> Staff HQ
-                </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 size={16} className="text-[#005239]" /> Feeds & moderation
-                </li>
-              </ul>
-              <Link
-                to="/login"
-                className="mt-8 block rounded-full border-2 border-[#005239] py-2.5 text-center text-sm font-bold text-[#005239] hover:bg-[#005239]/5"
-              >
-                Staff sign in
-              </Link>
+            <div className="grid gap-6 md:grid-cols-3">
+              {[
+                {
+                  quote:
+                    "The Reading Hub and timed practice changed how I revise. I finally know what I don’t know before the exam.",
+                  name: "Esther Enefola",
+                  role: "Undergraduate · University of Abuja",
+                },
+                {
+                  quote:
+                    "Department posts, class schedules, and materials in one place. Less WhatsApp chaos, more actual studying.",
+                  name: "OluwaBright",
+                  role: "Student · Campus community",
+                },
+                {
+                  quote:
+                    "Pro practice and the timetable keep me consistent. Academicall feels built for how we actually learn here.",
+                  name: "Akinwale Taiye",
+                  role: "Course mate · Faculty of Science",
+                },
+              ].map((t) => (
+                <div
+                  key={t.name}
+                  className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/30 bg-white p-8 shadow-sm transition hover:shadow-md"
+                >
+                  <div>
+                    <div className="mb-5 flex gap-1 text-amber-500">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={16} fill="currentColor" />
+                      ))}
+                    </div>
+                    <blockquote className="mb-6 text-lg italic leading-snug text-[#0B192C]">
+                      “{t.quote}”
+                    </blockquote>
+                  </div>
+                  <div className="border-t border-[#c5c6cd]/20 pt-4">
+                    <div className="text-sm font-bold text-[#0B192C]">{t.name}</div>
+                    <div className="text-xs text-[#475569]">{t.role}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="bg-[#2d312f] py-14 text-[#f7faf6]">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:grid-cols-2 sm:px-6 md:grid-cols-4">
-          <div className="md:col-span-1">
-            <p className="text-lg font-bold">Academicall</p>
-            <p className="mt-2 max-w-xs text-sm text-white/70">
-              Elevating campus learning with Reading Hub, practice, and department tools.
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-white/50">
-              Product
-            </p>
-            <ul className="mt-3 space-y-2 text-sm text-white/70">
-              <li>
-                <a href="#features" className="hover:text-white">
-                  Features
-                </a>
-              </li>
-              <li>
-                <a href="#pricing" className="hover:text-white">
-                  Pricing
-                </a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-white/50">
-              Account
-            </p>
-            <ul className="mt-3 space-y-2 text-sm text-white/70">
-              <li>
-                <Link to="/login" className="hover:text-white">
-                  Sign in
+        {/* ========== PRICING ========== */}
+        <section id="pricing" className="bg-[#f0f3ff] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto mb-16 max-w-3xl text-center">
+              <h2 className="text-3xl font-normal tracking-tight text-[#0B192C] sm:text-4xl lg:text-5xl">
+                Simple, transparent pricing
+              </h2>
+              <p className="mt-3 text-base text-[#475569] sm:text-lg">
+                Start free. Upgrade when you want full Pro tools.
+              </p>
+            </div>
+
+            <div className="mx-auto grid max-w-6xl items-stretch gap-8 lg:grid-cols-3">
+              {/* Free */}
+              <div className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/40 bg-white p-8 shadow-sm">
+                <div>
+                  <div className="mb-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#75777d]">
+                      Tier 1
+                    </span>
+                    <h3 className="mt-1 text-2xl font-bold text-[#0B192C]">Free</h3>
+                    <p className="text-xs font-medium text-[#475569]">Core campus tools</p>
+                  </div>
+                  <div className="mb-6 border-b border-[#c5c6cd]/20 pb-6">
+                    <span className="text-4xl font-bold text-[#0B192C]">₦0</span>
+                    <span className="text-sm font-semibold text-[#475569]">/mo</span>
+                  </div>
+                  <ul className="mb-8 space-y-3">
+                    {["Department feed", "Class schedules", "Limited practice"].map((item) => (
+                      <li key={item} className="flex items-center gap-2.5 text-sm font-medium">
+                        <CheckCircle2 size={16} className="text-[#0054cd]" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <Link
+                  to="/signup"
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-[#e7eeff] text-sm font-semibold text-[#0B192C] transition hover:bg-[#d8e3fb]"
+                >
+                  Sign up free
                 </Link>
-              </li>
-              <li>
-                <Link to="/signup" className="hover:text-white">
-                  Sign up
+              </div>
+
+              {/* Student Pro */}
+              <div className="relative flex flex-col justify-between rounded-3xl border-2 border-[#0054cd] bg-[#0B192C] p-8 text-white shadow-xl lg:-translate-y-2">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-[#0054cd] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-md">
+                  Most popular
+                </div>
+                <div>
+                  <div className="mb-4 mt-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#dae2ff]">
+                      Recommended
+                    </span>
+                    <h3 className="mt-1 text-2xl font-bold">Student Pro</h3>
+                    <p className="text-xs font-medium text-slate-300">Full mastery toolkit</p>
+                  </div>
+                  <div className="mb-2">
+                    <span className="text-4xl font-bold">₦1,500</span>
+                    <span className="text-sm font-semibold text-slate-300">/mo</span>
+                  </div>
+                  <div className="mb-6 border-b border-white/15 pb-6 text-xs font-semibold text-[#dae2ff]">
+                    Also weekly ₦500 · annual ₦4,000
+                  </div>
+                  <ul className="mb-8 space-y-3">
+                    {["Full Reading Hub", "Unlimited practice", "Anonymous comments (Pro)"].map(
+                      (item) => (
+                        <li key={item} className="flex items-center gap-2.5 text-sm font-medium">
+                          <CheckCircle2 size={16} className="text-[#dae2ff]" />
+                          {item}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+                <Link
+                  to="/signup"
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-[#0054cd] text-sm font-bold text-white shadow-md transition hover:bg-blue-600"
+                >
+                  Go Pro
                 </Link>
-              </li>
-            </ul>
+              </div>
+
+              {/* Campus / staff */}
+              <div className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/40 bg-white p-8 shadow-sm">
+                <div>
+                  <div className="mb-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#75777d]">
+                      Institutions
+                    </span>
+                    <h3 className="mt-1 text-2xl font-bold text-[#0B192C]">Campus / staff</h3>
+                    <p className="text-xs font-medium text-[#475569]">Reps, agents & admin</p>
+                  </div>
+                  <div className="mb-6 border-b border-[#c5c6cd]/20 pb-6">
+                    <span className="text-4xl font-bold text-[#0B192C]">Included</span>
+                  </div>
+                  <ul className="mb-8 space-y-3">
+                    {["Course rep tools", "Staff HQ", "Feeds & moderation"].map((item) => (
+                      <li key={item} className="flex items-center gap-2.5 text-sm font-medium">
+                        <CheckCircle2 size={16} className="text-[#0054cd]" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <Link
+                  to="/login"
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-[#e7eeff] text-sm font-semibold text-[#0B192C] transition hover:bg-[#d8e3fb]"
+                >
+                  Staff sign in
+                </Link>
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-white/50">
-              Legal
-            </p>
-            <ul className="mt-3 space-y-2 text-sm text-white/70">
-              <li>
-                <span className="opacity-80">Privacy · Terms</span>
-              </li>
-            </ul>
-            <p className="mt-6 text-xs text-white/40">
-              © {new Date().getFullYear()} Academicall
-            </p>
+        </section>
+      </main>
+
+      {/* ========== FOOTER ========== */}
+      <footer className="border-t border-[#c5c6cd]/30 bg-white">
+        <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:px-12">
+          <div className="grid gap-10 border-b border-[#c5c6cd]/20 pb-12 md:grid-cols-2 lg:grid-cols-5">
+            <div className="lg:col-span-2 lg:pr-6">
+              <div className="mb-4 flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0B192C] text-white">
+                  <GraduationCap size={18} />
+                </div>
+                <span className="text-xl font-bold text-[#0B192C]">Academicall</span>
+              </div>
+              <p className="mb-6 max-w-sm text-sm leading-relaxed text-[#475569]">
+                Elevating campus learning with Reading Hub, practice, and department tools.
+              </p>
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#f0f3ff] px-3 py-1.5 text-xs font-semibold text-[#475569]">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Active across Nigerian campuses
+              </div>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#0B192C]">
+                Product
+              </h4>
+              <ul className="space-y-2.5">
+                <li>
+                  <a href="#features" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="#pricing" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
+                    Pricing
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#0B192C]">
+                Account
+              </h4>
+              <ul className="space-y-2.5">
+                <li>
+                  <Link to="/login" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
+                    Sign in
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/signup" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
+                    Sign up
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#0B192C]">
+                Legal
+              </h4>
+              <ul className="space-y-2.5">
+                <li>
+                  <a href="#" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
+                    Privacy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
+                    Terms
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-between gap-4 pt-8 text-xs text-[#475569] sm:flex-row">
+            <span>© 2026 Academicall</span>
+            <span>Focus, retention, and real campus workflow.</span>
           </div>
         </div>
       </footer>

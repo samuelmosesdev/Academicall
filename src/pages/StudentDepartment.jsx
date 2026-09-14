@@ -42,11 +42,28 @@ const REACTIONS = [
   { type: "love", emoji: "❤️", label: "Love" },
 ];
 
+function norm(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function levelsMatch(a, b) {
+  const normalizedA = norm(a).replace(/\s*level\s*/g, "").trim();
+  const normalizedB = norm(b).replace(/\s*level\s*/g, "").trim();
+  return normalizedA === normalizedB && normalizedA !== "";
+}
+
+function deptsMatch(a, b) {
+  return norm(a) === norm(b) && norm(a) !== "";
+}
+
 function matchesStudentLevel(itemLevel, studentLevel) {
   // Strict: only same level. Legacy docs with no level are hidden (not shared across levels).
   if (!studentLevel) return false;
   if (!itemLevel) return false;
-  return String(itemLevel).trim() === String(studentLevel).trim();
+  return levelsMatch(itemLevel, studentLevel);
 }
 
 /** Count reactions by type from an array of { uid, type } */
@@ -88,29 +105,49 @@ export default function StudentDepartment() {
   const [showAnnounce, setShowAnnounce] = useState(false);
   const [toast, setToast] = useState("");
 
-  // The signed-in Course Rep sees quick-action buttons on this page.
+  const myRepDept =
+    profile?.courseRepMeta?.department ||
+    profile?.courseRepDepartment ||
+    profile?.department ||
+    "";
+  const myRepLevel =
+    profile?.courseRepMeta?.level ||
+    profile?.courseRepLevel ||
+    profile?.level ||
+    "";
+
   const isRepHere =
     profile?.role === "courseRep" &&
-    String(profile?.courseRepMeta?.department || profile?.courseRepDepartment || department) ===
-      String(department);
+    deptsMatch(myRepDept, department) &&
+    levelsMatch(myRepLevel, level);
 
-  // Is there a Course Rep for THIS department + level?
-  // Rule-safe lookup: query users in OUR department only. Every candidate doc
-  // satisfies the same-department read rule in firestore.rules, so the query
-  // can never fail with permission-denied (a role-only query does, as soon as
-  // any Course Rep exists in another department). Role + level are checked
-  // client-side, which also finds legacy reps missing the denormalized
-  // courseRepDepartment / courseRepLevel fields. Live via onSnapshot so the
-  // page unlocks the moment Admin assigns a rep — no refresh needed.
+  // Is the signed-in user, or anyone else, the Course Rep for this scope?
   useEffect(() => {
-    if (authMode === "api") {
-      let alive = true;
-      usersApi.list().then(({ users = [] }) => alive && setHasCourseRep(users.some((item) => item.role === "courseRep" && item.department === department && String(item.level || item.courseRepLevel || "").trim() === String(level).trim()))).catch(() => alive && setHasCourseRep(false));
-      return () => { alive = false; };
+    if (
+      profile?.role === "courseRep" &&
+      deptsMatch(myRepDept, department) &&
+      levelsMatch(myRepLevel, level)
+    ) {
+      setHasCourseRep(true);
+      return undefined;
     }
+
     if (!department || !level) {
       setHasCourseRep(false);
-      return;
+      return undefined;
+    }
+
+    if (authMode === "api") {
+      let alive = true;
+      usersApi
+        .courseRepStatus?.(department, level)
+        .then((res) => {
+          if (alive) setHasCourseRep(Boolean(res?.hasCourseRep));
+        })
+        .catch(() => {
+          if (alive) setHasCourseRep(false);
+        });
+      return () => { alive = false; };
     }
     const q = query(
       collection(db, "users"),
@@ -122,16 +159,24 @@ export default function StudentDepartment() {
         const found = snap.docs.some((d) => {
           const u = d.data();
           if (u.role !== "courseRep") return false;
+          const dep =
+            u.courseRepMeta?.department ||
+            u.courseRepDepartment ||
+            u.department ||
+            "";
           const lvl =
-            u.courseRepLevel || u.courseRepMeta?.level || u.level || "";
-          return String(lvl).trim() === String(level).trim();
+            u.courseRepLevel ||
+            u.courseRepMeta?.level ||
+            u.level ||
+            "";
+          return deptsMatch(dep, department) && levelsMatch(lvl, level);
         });
         setHasCourseRep(found);
       },
       () => setHasCourseRep(false)
     );
     return () => unsub();
-  }, [department, level, authMode]);
+  }, [department, level, authMode, profile?.role, myRepDept, myRepLevel]);
 
   useEffect(() => {
     if (authMode === "api") {
@@ -615,7 +660,7 @@ export default function StudentDepartment() {
     );
   }
 
-  if (hasCourseRep === false) {
+  if (hasCourseRep === false && !isRepHere) {
     return (
       <div className="mx-auto max-w-md rounded-2xl border border-border-light bg-card-light p-8 text-center shadow-sm">
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-bg-panel-alt text-ink-muted">

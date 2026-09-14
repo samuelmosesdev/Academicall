@@ -15,6 +15,7 @@ import CompleteProfile from "./pages/CompleteProfile";
 import AdminLayout from "./pages/AdminLayout";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
+import AdminUserDetail from "./pages/AdminUserDetail";
 import AdminDocuments from "./pages/AdminDocuments";
 import AdminCbtBuilder from "./pages/AdminCbtBuilder";
 import AdminCourses from "./pages/AdminCourses";
@@ -28,6 +29,10 @@ import StaffChat from "./pages/StaffChat";
 import StaffProfile from "./pages/StaffProfile";
 import AdminRequests from "./pages/AdminRequests";
 import AdminActivityLog from "./pages/AdminActivityLog";
+import AdminUserActivity from "./pages/AdminUserActivity";
+import AdminActivity from "./pages/AdminActivity";
+import AdminGovernance from "./pages/AdminGovernance";
+import AdminAuditLog from "./pages/AdminAuditLog";
 import AgentLayout from "./pages/AgentLayout";
 import AgentDashboard from "./pages/AgentDashboard";
 import AgentSettings from "./pages/AgentSettings";
@@ -97,6 +102,11 @@ export default function App() {
             >
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="users/:userId" element={<AdminUserDetail />} />
+              <Route path="users/:userId/activity" element={<AdminUserActivity />} />
+              <Route path="activity" element={<AdminActivity />} />
+              <Route path="governance" element={<AdminGovernance />} />
+              <Route path="audit-log" element={<AdminAuditLog />} />
               <Route path="agents" element={<AdminAgents />} />
               <Route path="agents/:agentId" element={<AdminAgentActivity />} />
               <Route path="documents" element={<AdminDocuments />} />
@@ -135,6 +145,14 @@ export default function App() {
                 element={
                   <ProtectedRoute requiredRole="approver">
                     <AdminUsers />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="users/:userId"
+                element={
+                  <ProtectedRoute requiredRole="approver">
+                    <AdminUserDetail />
                   </ProtectedRoute>
                 }
               />

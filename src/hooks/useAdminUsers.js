@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { collection, limit, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
@@ -14,20 +14,23 @@ export function useAdminUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const loadApi = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { users: list = [] } = await usersApi.list();
+      setUsers(list);
+    } catch (err) {
+      setError(err.message || "Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (authMode === "api") {
-      let alive = true;
-      usersApi.list().then(({ users: list = [] }) => {
-        if (!alive) return;
-        setUsers(list);
-        setLoading(false);
-        setError(null);
-      }).catch((err) => {
-        if (!alive) return;
-        setError(err.message || "Failed to load users");
-        setLoading(false);
-      });
-      return () => { alive = false; };
+      loadApi();
+      return undefined;
     }
 
     // Prefer one query for the roles we care about.
@@ -92,12 +95,12 @@ export function useAdminUsers() {
       unsub();
       fallbackUnsub?.();
     };
-  }, [authMode]);
+  }, [authMode, loadApi]);
 
-  function retry() {
-    setLoading(true);
-    setError(null);
-  }
-
-  return { users, loading, error, retry };
+  return {
+    users,
+    loading,
+    error,
+    retry: authMode === "api" ? loadApi : () => {},
+  };
 }

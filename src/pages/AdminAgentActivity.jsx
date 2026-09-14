@@ -40,7 +40,13 @@ export default function AdminAgentActivity() {
   useEffect(() => {
     if (!agentId || !allowed) return;
     if (authMode === "api") {
-      activityApi.list(agentId).then(({ activity = [] }) => { setLogs(activity); setLoading(false); }).catch(() => setLoading(false));
+      activityApi
+        .list(`agentId=${encodeURIComponent(agentId)}`)
+        .then((response) => {
+          setLogs(response.activities || response.activity || []);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
       return;
     }
     const q = query(

@@ -32,8 +32,9 @@ export default function AdminActivityLog() {
     if (!allowed) return;
     if (authMode === "api") {
       let alive = true;
-      activityApi.list().then(({ activity = [] }) => {
+      activityApi.list().then((response) => {
         if (!alive) return;
+        const activity = response.activities || response.activity || [];
         setLogs(activity.map((item) => ({
           ...item,
           actorName: item.meta?.actorName || item.userName || item.user?.name,

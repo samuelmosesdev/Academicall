@@ -72,15 +72,11 @@ export default function AssignRoleControl({ targetUser }) {
           department,
           level,
         };
-        patch.courseRepDepartment = department;
-        patch.courseRepLevel = level;
         patch.faculty = faculty || targetUser.faculty || null;
         patch.department = department;
         patch.level = level;
       } else {
         patch.courseRepMeta = null;
-        patch.courseRepDepartment = null;
-        patch.courseRepLevel = null;
       }
 
       await usersApi.update(targetUser.id, {

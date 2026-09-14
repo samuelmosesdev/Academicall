@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import {
   Search,
   Eye,
@@ -154,6 +154,7 @@ export default function AdminUsers() {
         targetUid: u.id,
         targetName: u.name || u.email,
       });
+      await retry?.();
     } catch (err) {
       setActionError(err.message || "Couldn't update status.");
     } finally {
@@ -179,6 +180,29 @@ export default function AdminUsers() {
       });
     } catch (err) {
       setActionError(err.message || "Couldn't delete user.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function forcePasswordChange(u) {
+    const ok = window.confirm(
+      `Force ${u.name || u.email} to change their password on next login?`
+    );
+    if (!ok) return;
+    setBusyId(u.id);
+    setActionError("");
+    try {
+      await usersApi.update(u.id, { mustChangePassword: true });
+      await logActivity({
+        actorUid: adminUser.uid,
+        actorName: adminProfile?.name || adminUser.email,
+        action: "user.force_password_change",
+        targetUid: u.id,
+        targetName: u.name || u.email,
+      });
+    } catch (err) {
+      setActionError(err.message || "Couldn't set force password change.");
     } finally {
       setBusyId(null);
     }
@@ -240,8 +264,6 @@ export default function AdminUsers() {
           department,
           level,
         },
-        courseRepDepartment: department,
-        courseRepLevel: level,
         faculty: repFaculty || repTarget.faculty || null,
         department,
         level,
@@ -255,6 +277,7 @@ export default function AdminUsers() {
         targetUid: repTarget.id,
         targetName: repTarget.name || repTarget.email,
         meta: {
+          from: repTarget.role || "user",
           to: "courseRep",
           faculty: repFaculty,
           department,
@@ -265,6 +288,7 @@ export default function AdminUsers() {
       setRepFaculty("");
       setRepDepartment("");
       setRepLevel("");
+      await retry?.();
     } catch (err) {
       setActionError(err.message || "Could not assign Course Rep.");
     } finally {
@@ -282,8 +306,6 @@ export default function AdminUsers() {
       await usersApi.update(u.id, {
         role: "user",
         courseRepMeta: null,
-        courseRepDepartment: null,
-        courseRepLevel: null,
         assignedBy: adminUser.uid,
         assignedAt: new Date().toISOString(),
       });
@@ -293,8 +315,9 @@ export default function AdminUsers() {
         action: "role.change",
         targetUid: u.id,
         targetName: u.name || u.email,
-        meta: { to: "user" },
+        meta: { from: u.role || "courseRep", to: "user" },
       });
+      await retry?.();
     } catch (err) {
       setActionError(err.message || "Failed to remove Course Rep.");
     } finally {
@@ -479,11 +502,18 @@ export default function AdminUsers() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-1">
+                        <Link
+                          to={`${location.pathname.startsWith("/agent") ? "/agent" : "/admin"}/users/${u.id}`}
+                          className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated hover:text-accent"
+                          title="View activity"
+                        >
+                          <Eye size={15} />
+                        </Link>
                         <button
                           type="button"
                           onClick={() => setViewing(u)}
                           className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated hover:text-text-primary"
-                          title="View"
+                          title="View profile"
                         >
                           <Eye size={15} />
                         </button>
@@ -525,6 +555,15 @@ export default function AdminUsers() {
                           onClick={() => handleResetPassword(u)}
                           className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated"
                           title="Reset password (issues a one-time temp password)"
+                        >
+                          <KeyRound size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => forcePasswordChange(u)}
+                          className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated hover:text-accent"
+                          title="Force password change on next login"
                         >
                           <KeyRound size={15} />
                         </button>

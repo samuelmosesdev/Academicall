@@ -64,6 +64,10 @@ export const usersApi = {
   remove: (id) => api(`/users/${id}`, { method: "DELETE" }),
   resetPassword: (id) => api(`/users/${id}/reset-password`, { method: "POST" }),
   createAgent: (body) => api("/users/agents", { method: "POST", body }),
+  courseRepStatus: (department, level) =>
+    api(
+      `/users/course-rep-status?department=${encodeURIComponent(department)}&level=${encodeURIComponent(level)}`
+    ),
 };
 
 export const documentsApi = {
@@ -122,8 +126,9 @@ export const enrollmentsApi = {
 };
 
 export const activityApi = {
-  list: (agentId) => api(`/activity${agentId ? `?agentId=${encodeURIComponent(agentId)}` : ""}`),
+  list: (params = "") => api(`/activity${params ? `?${params}` : ""}`),
   create: (body) => api("/activity", { method: "POST", body }),
+  revert: (id) => api(`/activity/${id}/revert`, { method: "POST" }),
 };
 
 export const questionsApi = {
@@ -178,4 +183,16 @@ export const materialSavesApi = {
   list: () => api("/material-saves"),
   create: (body) => api("/material-saves", { method: "POST", body }),
   remove: (id) => api(`/material-saves/${id}`, { method: "DELETE" }),
+};
+// Generated quizzes from materials (student practice history)
+export const quizzesApi = {
+  listMine: () => api("/quizzes/mine"),
+  listByMaterial: (materialId) =>
+    api(`/quizzes?materialId=${encodeURIComponent(materialId)}`),
+  create: (body) => api("/quizzes", { method: "POST", body }),
+  get: (id) => api(`/quizzes/${id}`),
+  update: (id, body) => api(`/quizzes/${id}`, { method: "PATCH", body }),
+  // Reuse pool: existing AI questions for a material
+  listMaterialQuestions: (materialId) =>
+    api(`/questions?materialId=${encodeURIComponent(materialId)}`),
 };
