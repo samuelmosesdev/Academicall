@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireAdmin, requireStaff, requireAdminOrAlpha } from "../middleware/auth";
+import { authenticate, requireAdmin, requireStaff, requireStaffOrCourseRep, requireAdminOrAlpha } from "../middleware/auth";
 import * as authCtrl from "../controllers/auth.controller";
 import * as usersCtrl from "../controllers/users.controller";
 import * as docsCtrl from "../controllers/documents.controller";
@@ -11,6 +11,7 @@ import * as enrollmentsCtrl from "../controllers/enrollments.controller";
 import * as activityCtrl from "../controllers/activity.controller";
 import * as featureCtrl from "../controllers/feature.controller";
 import * as paymentsCtrl from "../controllers/payments.controller";
+import * as departmentCtrl from "../controllers/department.controller";
 
 const router = Router();
 
@@ -38,23 +39,33 @@ router.get("/users/me", authenticate, authCtrl.me);
 router.patch("/users/me", authenticate, usersCtrl.updateMe);
 router.get("/users", authenticate, requireStaff, usersCtrl.listUsers);
 router.post("/users/agents", authenticate, requireAdmin, usersCtrl.createAgent);
+router.get("/users/course-rep-status", authenticate, usersCtrl.courseRepStatus);
 router.get("/users/:id", authenticate, requireStaff, usersCtrl.getUser);
 router.patch("/users/:id", authenticate, requireAdminOrAlpha, usersCtrl.adminUpdateUser);
 router.post("/users/:id/reset-password", authenticate, requireAdmin, usersCtrl.adminResetPassword);
 router.delete("/users/:id", authenticate, requireAdmin, usersCtrl.deleteUser);
 
+// Department admission
+router.post("/department/join", authenticate, departmentCtrl.joinDepartment);
+router.get("/department/me", authenticate, departmentCtrl.getMyMembership);
+router.get("/department/members", authenticate, requireStaffOrCourseRep, departmentCtrl.listMembers);
+router.post("/department/members/:id/admit", authenticate, requireStaffOrCourseRep, departmentCtrl.admitMember);
+router.post("/department/members/:id/reject", authenticate, requireStaffOrCourseRep, departmentCtrl.rejectMember);
+
 // Documents
 router.get("/documents", authenticate, docsCtrl.listDocuments);
 router.get("/documents/:id", authenticate, docsCtrl.getDocument);
-router.post("/documents", authenticate, requireStaff, docsCtrl.createDocument);
+router.post("/documents", authenticate, docsCtrl.createDocument);
+router.post("/documents/:id/approve", authenticate, requireStaff, docsCtrl.approveDocument);
 router.patch("/documents/:id", authenticate, docsCtrl.updateDocument);
 router.delete("/documents/:id", authenticate, docsCtrl.deleteDocument);
+router.post("/documents/:id/delete-request", authenticate, docsCtrl.requestDocumentDelete);
 
 // Announcements and approval requests
 router.get("/announcements", authenticate, announcementsCtrl.listAnnouncements);
 router.get("/announcements/reads", authenticate, announcementsCtrl.listAnnouncementReads);
 router.post("/announcements/:id/read", authenticate, announcementsCtrl.markAnnouncementRead);
-router.post("/announcements", authenticate, requireStaff, announcementsCtrl.createAnnouncement);
+router.post("/announcements", authenticate, requireStaffOrCourseRep, announcementsCtrl.createAnnouncement);
 router.patch("/announcements/:id", authenticate, requireStaff, announcementsCtrl.updateAnnouncement);
 router.delete("/announcements/:id", authenticate, requireStaff, announcementsCtrl.deleteAnnouncement);
 router.get("/requests", authenticate, requestsCtrl.listRequests);
@@ -85,6 +96,7 @@ router.patch("/timetable/:id", authenticate, featureCtrl.updateEvent);
 router.delete("/timetable/:id", authenticate, featureCtrl.deleteEvent);
 router.get("/class-events", authenticate, featureCtrl.listClassEvents);
 router.post("/class-events", authenticate, featureCtrl.createClassEvent);
+router.patch("/class-events/:id", authenticate, featureCtrl.updateClassEvent);
 router.delete("/class-events/:id", authenticate, featureCtrl.deleteClassEvent);
 router.get("/feed/:kind", authenticate, featureCtrl.listFeedPosts);
 router.post("/feed/:kind", authenticate, featureCtrl.createFeedPost);
@@ -100,6 +112,7 @@ router.patch("/payments/claims/:id/approve", authenticate, requireStaff, feature
 router.get("/settings/:key", authenticate, featureCtrl.getSetting);
 router.put("/settings/:key", authenticate, requireAdmin, featureCtrl.updateSetting);
 router.get("/chat", authenticate, requireStaff, featureCtrl.listChat);
+router.post("/chat/read", authenticate, requireStaff, featureCtrl.markChatRead);
 router.post("/chat", authenticate, requireStaff, featureCtrl.createChat);
 router.patch("/chat/:id", authenticate, requireStaff, featureCtrl.updateChat);
 router.patch("/courses/:id", authenticate, requireStaff, coursesCtrl.updateCourse);
@@ -109,6 +122,8 @@ router.delete("/courses/:id", authenticate, requireAdmin, coursesCtrl.deleteCour
 router.get("/notifications", authenticate, notifCtrl.listMyNotifications);
 router.get("/notifications/admin", authenticate, requireStaff, notifCtrl.listAdminNotifications);
 router.patch("/notifications/:id/read", authenticate, notifCtrl.markRead);
+router.patch("/notifications/:id/admin-read", authenticate, notifCtrl.markAdminRead);
+router.post("/notifications/admin/mark-all-read", authenticate, requireStaff, notifCtrl.markAllAdminRead);
 router.patch("/notifications/:id/archive", authenticate, notifCtrl.archiveNotification);
 router.post("/notifications", authenticate, requireStaff, notifCtrl.createNotification);
 router.post("/notifications/device-token", authenticate, notifCtrl.registerDeviceToken);

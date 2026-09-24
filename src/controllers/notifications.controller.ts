@@ -43,6 +43,30 @@ export async function markRead(req: Request, res: Response) {
   res.json({ notification: updated });
 }
 
+export async function markAdminRead(req: Request, res: Response) {
+  if (!req.user || !["admin", "alphaAgent", "agent"].includes(req.user.role)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const notification = await prisma.notification.findUnique({ where: { id: String(req.params.id) } });
+  if (!notification) return res.status(404).json({ error: "Not found" });
+  const updated = await prisma.notification.update({
+    where: { id: notification.id },
+    data: { readByAdmin: true, readAt: new Date() },
+  });
+  res.json({ notification: updated });
+}
+
+export async function markAllAdminRead(req: Request, res: Response) {
+  if (!req.user || !["admin", "alphaAgent", "agent"].includes(req.user.role)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  await prisma.notification.updateMany({
+    where: { deleted: false, readByAdmin: false },
+    data: { readByAdmin: true, readAt: new Date() },
+  });
+  res.json({ ok: true });
+}
+
 export async function archiveNotification(req: Request, res: Response) {
   if (!req.user) return res.status(401).json({ error: "Unauthenticated" });
 

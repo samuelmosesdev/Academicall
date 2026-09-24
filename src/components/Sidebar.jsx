@@ -13,6 +13,8 @@ import {
   ScrollText,
   MessageSquare,
   Mail,
+  Bell,
+  GraduationCap,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -26,7 +28,9 @@ const NAV_ITEMS = [
   { label: "Users", icon: Users, to: "/admin/users" },
   { label: "Activity", icon: ScrollText, to: "/admin/activity" },
   { label: "Governance", icon: UserCog, to: "/admin/governance" },
+  { label: "Academic catalog", icon: GraduationCap, to: "/admin/governance/academic-catalog" },
   { label: "Audit Log", icon: ScrollText, to: "/admin/audit-log" },
+  { label: "Notifications", icon: Bell, to: "/admin/notifications" },
   { label: "Agents", icon: UserCog, to: "/admin/agents" },
   { label: "Documents", icon: FileText, to: "/admin/documents" },
   { label: "Courses", icon: BookOpen, to: "/admin/courses" },

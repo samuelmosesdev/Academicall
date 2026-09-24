@@ -15,7 +15,7 @@ const EMPTY = {
 const UserDashboardDataContext = createContext(EMPTY);
 
 export function UserDashboardDataProvider({ children }) {
-  const { user, profile, loading: authLoading, authMode } = useAuth();
+  const { user, profile, loading: authLoading, authMode, refreshProfile } = useAuth();
   const [enrollments, setEnrollments] = useState([]);
   const [allEnrollments, setAllEnrollments] = useState([]);
   const [recommended, setRecommended] = useState([]);
@@ -40,23 +40,40 @@ export function UserDashboardDataProvider({ children }) {
         setAllEnrollments(list);
         setEnrollments(list.slice(0, 5));
         setRecommended(courseData.courses || []);
-        setUnreadCount((notificationData.notifications || []).filter((item) => !item.readByUser).length);
+        setUnreadCount((notificationData.notifications || []).filter((item) => item.readByUser !== true).length);
       })
       .catch(() => alive && setLoading(false))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [user, authMode]);
 
+  useEffect(() => {
+    if (authMode !== "api" || !user) return undefined;
+    const refresh = () => refreshProfile().catch(() => {});
+    window.addEventListener("student-activity-updated", refresh);
+    window.addEventListener("focus", refresh);
+    const timer = setInterval(refresh, 30000);
+    return () => {
+      window.removeEventListener("student-activity-updated", refresh);
+      window.removeEventListener("focus", refresh);
+      clearInterval(timer);
+    };
+  }, [authMode, user, refreshProfile]);
+
   const kpis = useMemo(() => {
+    const observedCourseCount = allEnrollments.length || Number(profile?.coursesEnrolledCount) || 0;
+    const questionsPracticed = Number(profile?.questionsPracticedCount ?? 0);
+    const studyStreakDays = Number(profile?.studyStreakDays ?? 0);
+    const materialsOpened = Number(profile?.materialsOpenedCount ?? 0);
     const avgProgress = allEnrollments.length
       ? Math.round(allEnrollments.reduce((sum, item) => sum + (Number(item.progressPct) || 0), 0) / allEnrollments.length)
       : 0;
     const plan = profile?.plan === "annual" || profile?.plan === "paid" || profile?.plan === "pro" ? "Pro" : "Free";
     return {
-      coursesEnrolled: allEnrollments.length || profile?.coursesEnrolledCount || 0,
-      questionsPracticed: profile?.questionsPracticedCount || 0,
-      studyStreakDays: profile?.studyStreakDays || 0,
-      materialsOpened: profile?.materialsOpenedCount || 0,
+      coursesEnrolled: observedCourseCount,
+      questionsPracticed,
+      studyStreakDays,
+      materialsOpened,
       avgProgress,
       plan,
       isPaid: plan === "Pro",

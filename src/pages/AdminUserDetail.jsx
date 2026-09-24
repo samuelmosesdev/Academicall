@@ -5,7 +5,8 @@ import { usersApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { logActivity } from "../lib/activityLog";
 import { ROLE_LABELS } from "../lib/roles";
-import { FACULTIES, departmentsFor, LEVELS } from "../data/facultyData";
+import { LEVELS } from "../data/facultyData";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 
 const fieldClass = "rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary";
 
@@ -14,6 +15,7 @@ export default function AdminUserDetail() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: adminUser, profile: adminProfile } = useAuth();
+  const { faculties, departmentsFor, programsFor } = useAcademicCatalog();
   const backPath = location.pathname.startsWith("/agent") ? "/agent/users" : "/admin/users";
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,6 +25,7 @@ export default function AdminUserDetail() {
   const [resetResult, setResetResult] = useState(null);
   const [repFaculty, setRepFaculty] = useState("");
   const [repDepartment, setRepDepartment] = useState("");
+  const [repProgram, setRepProgram] = useState("");
   const [repLevel, setRepLevel] = useState("");
 
   const load = useCallback(async () => {
@@ -34,6 +37,7 @@ export default function AdminUserDetail() {
       setUser(nextUser);
       setRepFaculty(nextUser.faculty || nextUser.courseRepMeta?.faculty || "");
       setRepDepartment(nextUser.department || nextUser.courseRepMeta?.department || "");
+      setRepProgram(nextUser.program || nextUser.courseRepMeta?.program || "");
       setRepLevel(nextUser.level || nextUser.courseRepMeta?.level || "");
     } catch (err) {
       setError(err.message || "Failed to load user.");
@@ -45,11 +49,12 @@ export default function AdminUserDetail() {
   useEffect(() => { load(); }, [load]);
 
   const repDepartments = useMemo(() => departmentsFor(repFaculty), [repFaculty]);
+  const repPrograms = useMemo(() => programsFor(repDepartment), [repDepartment]);
   const actorId = adminUser?.uid || adminUser?.id;
 
   async function makeCourseRep() {
-    if (!repDepartment.trim() || !repLevel.trim()) {
-      setActionError("Select department and level for Course Rep.");
+    if (!repDepartment.trim() || !repLevel.trim() || (repPrograms.length > 0 && !repProgram.trim())) {
+      setActionError("Select department, program, and level for Course Rep.");
       return;
     }
     setBusy(true);
@@ -59,9 +64,10 @@ export default function AdminUserDetail() {
       const level = repLevel.trim();
       const response = await usersApi.update(userId, {
         role: "courseRep",
-        courseRepMeta: { faculty: repFaculty || null, department, level },
+        courseRepMeta: { faculty: repFaculty || null, department, program: repProgram || null, level },
         faculty: repFaculty || user.faculty || null,
         department,
+        program: repProgram || null,
         level,
         assignedBy: actorId,
         assignedAt: new Date().toISOString(),
@@ -199,7 +205,7 @@ export default function AdminUserDetail() {
         <button type="button" disabled={busy} onClick={resetPassword} className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm"><KeyRound size={15} /> Reset password</button>
       </div>
       {resetResult && <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">Temp password for <strong>{resetResult.email}</strong>: <code className="font-mono font-bold">{resetResult.tempPassword}</code><p className="mt-1 text-xs text-text-muted">Shown once. Share securely.</p></div>}
-      <div className="rounded-xl border border-border-subtle bg-bg-panel p-5"><h2 className="mb-3 flex items-center gap-2 text-sm font-semibold"><GraduationCap size={16} /> Course Rep</h2>{user.role === "courseRep" ? <button type="button" disabled={busy} onClick={removeCourseRep} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Remove Course Rep role</button> : <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-3"><select value={repFaculty} onChange={(event) => { setRepFaculty(event.target.value); setRepDepartment(""); }} className={fieldClass}><option value="">Faculty</option>{FACULTIES.map((faculty) => <option key={faculty.name} value={faculty.name}>{faculty.name}</option>)}</select><select value={repDepartment} onChange={(event) => setRepDepartment(event.target.value)} className={fieldClass} disabled={!repFaculty}><option value="">Department</option>{repDepartments.map((department) => <option key={department} value={department}>{department}</option>)}</select><select value={repLevel} onChange={(event) => setRepLevel(event.target.value)} className={fieldClass}><option value="">Level</option>{LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}</select></div><button type="button" disabled={busy} onClick={makeCourseRep} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">Assign as Course Rep</button></div>}</div>
+      <div className="rounded-xl border border-border-subtle bg-bg-panel p-5"><h2 className="mb-3 flex items-center gap-2 text-sm font-semibold"><GraduationCap size={16} /> Course Rep</h2>{user.role === "courseRep" ? <button type="button" disabled={busy} onClick={removeCourseRep} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Remove Course Rep role</button> : <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><select value={repFaculty} onChange={(event) => { setRepFaculty(event.target.value); setRepDepartment(""); setRepProgram(""); }} className={fieldClass}><option value="">Faculty</option>{faculties.map((faculty) => <option key={faculty.name} value={faculty.name}>{faculty.name}</option>)}</select><select value={repDepartment} onChange={(event) => { setRepDepartment(event.target.value); setRepProgram(""); }} className={fieldClass} disabled={!repFaculty}><option value="">Department</option>{repDepartments.map((department) => <option key={department} value={department}>{department}</option>)}</select><select value={repProgram} onChange={(event) => setRepProgram(event.target.value)} className={fieldClass} disabled={!repDepartment || repPrograms.length === 0}><option value="">{repPrograms.length ? "Program" : "Program not listed"}</option>{repPrograms.map((program) => <option key={program} value={program}>{program}</option>)}</select><select value={repLevel} onChange={(event) => setRepLevel(event.target.value)} className={fieldClass}><option value="">Level</option>{LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}</select></div><button type="button" disabled={busy || (repPrograms.length > 0 && !repProgram)} onClick={makeCourseRep} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">Assign as Course Rep</button></div>}</div>
     </div>
   );
 }

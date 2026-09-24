@@ -18,7 +18,7 @@ import AiCourseImportModal from "../components/AiCourseImportModal";
 import { useAuth } from "../context/AuthContext";
 import { coursesApi } from "../lib/api";
 import { refreshCbtCourses, useCbtData } from "../hooks/useCbtData";
-import { FACULTIES, departmentsFor } from "../data/facultyData";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 import {
   downloadSampleCsv,
   parseCsv,
@@ -42,7 +42,8 @@ const emptyForm = {
 
 // ---------- Add/Edit Course modal ----------
 function CourseFormModal({ open, editingId, form, setForm, saving, error, onClose, onSubmit }) {
-  const departments = useMemo(() => departmentsFor(form.faculty), [form.faculty]);
+  const { faculties, departmentsFor } = useAcademicCatalog();
+  const departments = useMemo(() => departmentsFor(form.faculty), [departmentsFor, form.faculty]);
   if (!open) return null;
 
   return (
@@ -91,7 +92,7 @@ function CourseFormModal({ open, editingId, form, setForm, saving, error, onClos
                 required
               >
                 <option value="">Select faculty</option>
-                {FACULTIES.map((f) => (
+                {faculties.map((f) => (
                   <option key={f.name} value={f.name}>{f.name}</option>
                 ))}
               </select>
@@ -304,6 +305,7 @@ function DepartmentGroup({ department, courses, defaultOpen, onEdit, onDelete })
 export default function AdminCourses() {
   const { authMode } = useAuth();
   const { courses, loading } = useCbtData();
+  const { departmentsFor } = useAcademicCatalog();
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -366,7 +368,7 @@ export default function AdminCourses() {
   const filterDepartments = useMemo(() => {
     if (filterFaculty) return departmentsFor(filterFaculty);
     return [...new Set(courses.map((c) => c.department).filter(Boolean))].sort();
-  }, [courses, filterFaculty]);
+  }, [courses, departmentsFor, filterFaculty]);
   const levelOptions = useMemo(
     () => [...new Set([...LEVELS, ...courses.map((c) => c.level).filter(Boolean)])],
     [courses]

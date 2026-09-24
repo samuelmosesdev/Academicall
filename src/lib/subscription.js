@@ -57,7 +57,7 @@ export const DEFAULT_PLANS = [
 
 export function isPro(profile) {
   if (!profile) return false;
-  if (profile.role === "admin" || profile.role === "agent") return true;
+  if (profile.role === "admin" || profile.role === "agent" || profile.role === "alphaAgent" || profile.role === "courseRep") return true;
   const plan = (profile.plan || profile.subscription || "free").toLowerCase();
   if (plan === "pro" || plan === "paid" || plan === "premium") return true;
   if (profile.subscriptionExpiresAt?.toDate) {

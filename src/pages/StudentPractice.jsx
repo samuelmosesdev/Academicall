@@ -194,6 +194,7 @@ export default function StudentPractice() {
             lastPracticeAt: new Date().toISOString(),
           });
           await refreshProfile();
+          window.dispatchEvent(new Event("student-activity-updated"));
         } else {
           await updateDoc(doc(db, "users", user.uid), {
             questionsPracticedCount: increment(sessionQuestions.length),

@@ -331,6 +331,29 @@ async function sendVerificationCode(user: { id: string; email: string; name: str
   if (!response.ok) throw Object.assign(new Error("Email provider error"), { status: 502 });
 }
 
+async function repairApprovedLegacyProgram(userId: string) {
+  const legacy = await prisma.request.findFirst({
+    where: { requesterUid: userId, type: "profile_change", status: "approved" },
+    orderBy: { createdAt: "desc" },
+    select: { field: true, requestedValue: true, meta: true },
+  });
+  if (!legacy) return;
+  const meta = legacy.meta && typeof legacy.meta === "object" && !Array.isArray(legacy.meta)
+    ? legacy.meta as { field?: string; requestedValue?: string }
+    : {};
+  const field = legacy.field || meta.field;
+  const value = legacy.requestedValue || meta.requestedValue;
+  if (field !== "program" || !value) return;
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { program: true, faculty: true } });
+  if (!user || user.program === value) return;
+  const setting = await prisma.setting.findUnique({ where: { key: "academicCatalog" } });
+  const catalog = setting?.value as { faculties?: Array<{ name?: string; departments?: Array<{ name?: string; programs?: string[] }> }> } | null;
+  const faculty = catalog?.faculties?.find((item) => item.name === user.faculty);
+  const department = faculty?.departments?.find((item) => item.programs?.includes(value))?.name;
+  await prisma.user.update({ where: { id: userId }, data: { program: value, ...(department ? { department } : {}) } });
+}
+
 export async function sendVerification(req: Request, res: Response) {
   if (!req.user) return res.status(401).json({ error: "Unauthenticated" });
   try {
@@ -371,12 +394,19 @@ export async function me(req: Request, res: Response) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    await repairApprovedLegacyProgram(userId);
+    await prisma.user.updateMany({
+      where: { id: userId, role: "courseRep", plan: { not: "pro" } },
+      data: { plan: "pro" },
+    });
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
         email: true,
         name: true,
+        nickname: true,
         role: true,
         plan: true,
         uniqueId: true,
@@ -385,12 +415,24 @@ export async function me(req: Request, res: Response) {
         emailVerified: true,
         profileComplete: true,
         department: true,
+        program: true,
         faculty: true,
         level: true,
         matricNumber: true,
         phone: true,
         photoUrl: true,
+        avatarUrl: true,
+        coursesEnrolledCount: true,
+        questionsPracticedCount: true,
+        studyStreakDays: true,
+        materialsOpenedCount: true,
+        lastActiveDate: true,
+        lastActiveAt: true,
         mustChangePassword: true,
+        courseRepMeta: true,
+        allowAnonymousComments: true,
+        showDepartment: true,
+        showPhone: true,
       },
     });
 

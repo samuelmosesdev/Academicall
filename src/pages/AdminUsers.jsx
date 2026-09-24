@@ -21,7 +21,8 @@ import {
   EmptyState,
   ErrorState,
 } from "../components/ui";
-import { FACULTIES, departmentsFor, LEVELS } from "../data/facultyData";
+import { LEVELS } from "../data/facultyData";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 import { useAuth } from "../context/AuthContext";
 import { logActivity } from "../lib/activityLog";
 import { ROLE_LABELS } from "../lib/roles";
@@ -51,11 +52,13 @@ const fieldClass =
 
 export default function AdminUsers() {
   const { user: adminUser, profile: adminProfile } = useAuth();
+  const { faculties, departmentsFor, programsFor } = useAcademicCatalog();
   const { users, loading, error, retry } = useAdminUsers();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("students");
   const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
+  const [program, setProgram] = useState("");
   const [level, setLevel] = useState("");
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
@@ -65,6 +68,7 @@ export default function AdminUsers() {
   const [repTarget, setRepTarget] = useState(null);
   const [repFaculty, setRepFaculty] = useState("");
   const [repDepartment, setRepDepartment] = useState("");
+  const [repProgram, setRepProgram] = useState("");
   const [repLevel, setRepLevel] = useState("");
   const [highlightedUserId, setHighlightedUserId] = useState(null);
   const rowRefs = useRef({});
@@ -95,10 +99,12 @@ export default function AdminUsers() {
   }, [highlightedUserId]);
 
   const departments = useMemo(() => departmentsFor(faculty), [faculty]);
+  const programs = useMemo(() => programsFor(department), [department]);
   const repDepartments = useMemo(
     () => departmentsFor(repFaculty),
     [repFaculty]
   );
+  const repPrograms = useMemo(() => programsFor(repDepartment), [repDepartment]);
 
   const filtered = useMemo(() => {
     const cat = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
@@ -109,6 +115,7 @@ export default function AdminUsers() {
       if (category !== "agents") {
         if (faculty && u.faculty !== faculty) return false;
         if (department && u.department !== department) return false;
+        if (program && (u.program || u.courseRepMeta?.program) !== program) return false;
         if (level && u.level !== level) return false;
       }
       if (!q) return true;
@@ -116,7 +123,7 @@ export default function AdminUsers() {
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(q));
     });
-  }, [users, category, faculty, department, level, search]);
+  }, [users, category, faculty, department, program, level, search]);
 
   const counts = useMemo(() => {
     const c = { students: 0, courseReps: 0, agents: 0, all: users.length };
@@ -236,6 +243,8 @@ export default function AdminUsers() {
     setRepTarget(u);
     setRepFaculty(u.faculty || "");
     setRepDepartment(u.department || "");
+    setRepProgram(u.program || u.courseRepMeta?.program || "");
+    setRepLevel(u.level || u.courseRepMeta?.level || "");
     setActionError("");
   }
 
@@ -251,6 +260,10 @@ export default function AdminUsers() {
       );
       return;
     }
+    if (repPrograms.length > 0 && !repProgram.trim()) {
+      setActionError("Select the program this Course Rep represents.");
+      return;
+    }
 
     setBusyId(repTarget.id);
     setActionError("");
@@ -262,10 +275,12 @@ export default function AdminUsers() {
         courseRepMeta: {
           faculty: repFaculty || null,
           department,
+          program: repProgram || null,
           level,
         },
         faculty: repFaculty || repTarget.faculty || null,
         department,
+        program: repProgram || null,
         level,
         assignedBy: adminUser.uid,
         assignedAt: new Date().toISOString(),
@@ -281,12 +296,14 @@ export default function AdminUsers() {
           to: "courseRep",
           faculty: repFaculty,
           department,
+          program: repProgram,
           level,
         },
       });
       setRepTarget(null);
       setRepFaculty("");
       setRepDepartment("");
+      setRepProgram("");
       setRepLevel("");
       await retry?.();
     } catch (err) {
@@ -367,9 +384,9 @@ export default function AdminUsers() {
         ))}
       </div>
 
-      {/* Faculty / Dept / Level filters */}
+      {/* Faculty / Dept / Program / Level filters */}
       {category !== "agents" && (
-        <div className="grid grid-cols-1 gap-3 rounded-xl border border-border-subtle bg-bg-panel p-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 rounded-xl border border-border-subtle bg-bg-panel p-4 sm:grid-cols-4">
           <div>
             <label className="mb-1 block text-xs text-text-muted">Faculty</label>
             <select
@@ -377,11 +394,12 @@ export default function AdminUsers() {
               onChange={(e) => {
                 setFaculty(e.target.value);
                 setDepartment("");
+                setProgram("");
               }}
               className={`w-full ${fieldClass}`}
             >
               <option value="">All faculties</option>
-              {FACULTIES.map((f) => (
+              {faculties.map((f) => (
                 <option key={f.name} value={f.name}>
                   {f.name}
                 </option>
@@ -394,7 +412,10 @@ export default function AdminUsers() {
             </label>
             <select
               value={department}
-              onChange={(e) => setDepartment(e.target.value)}
+              onChange={(e) => {
+                setDepartment(e.target.value);
+                setProgram("");
+              }}
               className={`w-full ${fieldClass}`}
               disabled={!faculty}
             >
@@ -402,6 +423,22 @@ export default function AdminUsers() {
               {departments.map((d) => (
                 <option key={d} value={d}>
                   {d}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Program</label>
+            <select
+              value={program}
+              onChange={(e) => setProgram(e.target.value)}
+              className={`w-full ${fieldClass}`}
+              disabled={!department}
+            >
+              <option value="">All programs</option>
+              {programs.map((item) => (
+                <option key={item} value={item}>
+                  {item}
                 </option>
               ))}
             </select>
@@ -620,11 +657,12 @@ export default function AdminUsers() {
               onChange={(e) => {
                 setRepFaculty(e.target.value);
                 setRepDepartment("");
+                setRepProgram("");
               }}
               className={`mt-1 w-full ${fieldClass}`}
             >
               <option value="">Select faculty</option>
-              {FACULTIES.map((f) => (
+              {faculties.map((f) => (
                 <option key={f.name} value={f.name}>
                   {f.name}
                 </option>
@@ -646,6 +684,19 @@ export default function AdminUsers() {
                   {d}
                 </option>
               ))}
+            </select>
+
+            <label className="mt-3 block text-xs font-medium text-text-muted">
+              Program they represent {repPrograms.length > 0 ? "*" : ""}
+            </label>
+            <select
+              value={repProgram}
+              onChange={(e) => setRepProgram(e.target.value)}
+              className={`mt-1 w-full ${fieldClass}`}
+              disabled={!repDepartment || repPrograms.length === 0}
+            >
+              <option value="">{repPrograms.length ? "Select program" : "Program not yet listed"}</option>
+              {repPrograms.map((program) => <option key={program} value={program}>{program}</option>)}
             </select>
 
             <label className="mt-3 block text-xs font-medium text-text-muted">
@@ -675,6 +726,7 @@ export default function AdminUsers() {
                   setRepTarget(null);
                   setRepFaculty("");
                   setRepDepartment("");
+                  setRepProgram("");
                   setRepLevel("");
                 }}
                 className="rounded-lg border border-border-subtle px-3 py-2 text-sm text-text-secondary"
@@ -683,7 +735,7 @@ export default function AdminUsers() {
               </button>
               <button
                 type="button"
-                disabled={busyId === repTarget.id || !repDepartment || !repLevel}
+                disabled={busyId === repTarget.id || !repDepartment || !repLevel || (repPrograms.length > 0 && !repProgram)}
                 onClick={confirmMakeRep}
                 className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"
               >

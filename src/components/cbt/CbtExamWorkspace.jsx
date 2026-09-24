@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import CbtSubmitModal from "./CbtSubmitModal";
+import ExamTools from "../ExamTools";
 
 function formatTime(sec) {
   if (sec == null || sec < 0) return "—";
@@ -112,6 +113,7 @@ export default function CbtExamWorkspace({
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#f9f9ff] text-[#111c2d]">
+      <ExamTools />
       {/* Sticky telemetry */}
       <div className="sticky top-0 z-30 border-b border-[#c5c6cd]/30 bg-white/95 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-2.5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">

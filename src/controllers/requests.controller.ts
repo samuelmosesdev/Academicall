@@ -6,7 +6,7 @@ const requestSchema = z.object({
   type: z.string().optional(), title: z.string().optional(), body: z.string().optional(),
   status: z.enum(["pending", "approved", "rejected"]).optional(), meta: z.any().optional(),
   requesterName: z.string().optional(), requesterEmail: z.string().optional(), requesterRole: z.string().optional(),
-  field: z.string().optional(), fieldLabel: z.string().optional(), requestedValue: z.string().optional(), reason: z.string().optional(),
+  field: z.string().optional(), fieldLabel: z.string().optional(), currentValue: z.string().nullable().optional(), requestedValue: z.string().optional(), reason: z.string().optional(),
   reviewedAt: z.coerce.date().nullable().optional(), reviewedBy: z.string().nullable().optional(), reviewedByName: z.string().nullable().optional(), reviewNote: z.string().nullable().optional(),
 });
 
@@ -22,6 +22,27 @@ export async function createRequest(req: Request, res: Response) {
   if (!req.user) return res.status(401).json({ error: "Unauthenticated" });
   try {
     const body = requestSchema.parse(req.body);
+    if (body.type === "profile_change") {
+      const meta = body.meta && typeof body.meta === "object" ? body.meta as Record<string, any> : {};
+      const field = body.field || meta.field;
+      const requestedValue = body.requestedValue || meta.requestedValue;
+      if (!field || !requestedValue) return res.status(400).json({ error: "field and requestedValue are required" });
+      const profileRequest = await prisma.profileChangeRequest.create({
+        data: {
+          userId: req.user.id,
+          userName: body.requesterName || meta.userName,
+          userEmail: body.requesterEmail || meta.userEmail,
+          uniqueId: meta.uniqueId ?? null,
+          field,
+          fieldLabel: body.fieldLabel || meta.fieldLabel,
+          currentValue: body.currentValue ?? meta.currentValue,
+          requestedValue,
+          reason: body.reason || meta.reason || body.body,
+          status: "pending",
+        },
+      });
+      return res.status(201).json({ request: profileChangeView(profileRequest) });
+    }
     const request = await prisma.request.create({ data: { ...body, requesterUid: req.user.id } });
     res.status(201).json({ request });
   } catch (err) {
@@ -33,6 +54,24 @@ export async function createRequest(req: Request, res: Response) {
 export async function updateRequest(req: Request, res: Response) {
   try {
     const body = requestSchema.partial().parse(req.body);
+    const current = await prisma.request.findUnique({ where: { id: String(req.params.id) } });
+    if (!current) return res.status(404).json({ error: "Request not found" });
+    if (body.status === "approved" && current.type === "profile_change") {
+      const meta = current.meta && typeof current.meta === "object" ? current.meta as Record<string, any> : {};
+      const field = current.field || meta.field;
+      const requestedValue = current.requestedValue || meta.requestedValue;
+      if (!field || !requestedValue) return res.status(400).json({ error: "Invalid profile change request" });
+      const updateData: Record<string, string> = { [field]: requestedValue };
+      if (field === "program") {
+        const user = await prisma.user.findUnique({ where: { id: current.requesterUid }, select: { faculty: true } });
+        const setting = await prisma.setting.findUnique({ where: { key: "academicCatalog" } });
+        const catalog = setting?.value as { faculties?: Array<{ name?: string; departments?: Array<{ name?: string; programs?: string[] }> }> } | null;
+        const faculty = catalog?.faculties?.find((item) => item.name === user?.faculty);
+        const department = faculty?.departments?.find((item) => item.programs?.includes(requestedValue))?.name;
+        if (department) updateData.department = department;
+      }
+      await prisma.user.update({ where: { id: current.requesterUid }, data: updateData });
+    }
     const request = await prisma.request.update({ where: { id: String(req.params.id) }, data: body });
     res.json({ request });
   } catch (err) {
@@ -80,9 +119,18 @@ export async function updateProfileChangeRequest(req: Request, res: Response) {
     if (!current) return res.status(404).json({ error: "Profile change request not found" });
     if (!["admin", "alphaAgent", "agent"].includes(req.user.role) && current.userId !== req.user.id) return res.status(403).json({ error: "Forbidden" });
     if (body.status === "approved") {
-      const allowedFields = ["name", "phone", "faculty", "department", "level", "matricNumber"];
+      const allowedFields = ["name", "phone", "faculty", "program", "department", "level", "matricNumber"];
       if (!allowedFields.includes(current.field)) return res.status(400).json({ error: "Field cannot be approved" });
-      await prisma.user.update({ where: { id: current.userId }, data: { [current.field]: current.requestedValue } });
+      const updateData: Record<string, string> = { [current.field]: current.requestedValue };
+      if (current.field === "program") {
+        const user = await prisma.user.findUnique({ where: { id: current.userId }, select: { faculty: true } });
+        const setting = await prisma.setting.findUnique({ where: { key: "academicCatalog" } });
+        const catalog = setting?.value as { faculties?: Array<{ name?: string; departments?: Array<{ name?: string; programs?: string[] }> }> } | null;
+        const faculty = catalog?.faculties?.find((item) => item.name === user?.faculty);
+        const department = faculty?.departments?.find((item) => item.programs?.includes(current.requestedValue))?.name;
+        if (department) updateData.department = department;
+      }
+      await prisma.user.update({ where: { id: current.userId }, data: updateData });
     }
     const request = await prisma.profileChangeRequest.update({ where: { id: current.id }, data: { status: body.status, reviewedAt: body.reviewedAt || (body.status ? new Date() : undefined), reviewedBy: body.reviewedBy, reviewedByName: body.reviewedByName, adminNote: body.adminNote } });
     res.json({ request: profileChangeView(request) });

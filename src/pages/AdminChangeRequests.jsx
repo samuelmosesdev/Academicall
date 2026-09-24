@@ -86,26 +86,29 @@ export default function AdminChangeRequests() {
     setBusyId(req.id);
     try {
       if (decision === "approved") {
-        const patch = {
-          [req.field]: req.requestedValue,
-          updatedAt: serverTimestamp(),
-        };
-        // If faculty changes, clear department if not also being set
-        if (req.field === "faculty") {
-          // leave department; admin can fix separately
+        if (authMode === "api") {
+          await requestsApi.updateProfileChange(req.id, {
+            status: decision,
+            reviewedBy: user.uid,
+            reviewedByName: profile?.name || user.email,
+            adminNote: (note[req.id] || "").trim() || null,
+          });
+        } else {
+          const patch = { [req.field]: req.requestedValue, updatedAt: serverTimestamp() };
+          await updateDoc(doc(db, "users", req.userId), patch);
         }
-        if (authMode === "api") await usersApi.update(req.userId, patch);
-        else await updateDoc(doc(db, "users", req.userId), patch);
       }
 
-      const review = {
-        status: decision,
-        reviewedAt: new Date().toISOString(),
-        reviewedBy: user.uid,
-        adminNote: (note[req.id] || "").trim() || null,
-      };
-      if (authMode === "api") await requestsApi.updateProfileChange(req.id, review);
-      else await updateDoc(doc(db, "profileChangeRequests", req.id), { ...review, reviewedAt: serverTimestamp() });
+      if (!(authMode === "api" && decision === "approved")) {
+        const review = {
+          status: decision,
+          reviewedAt: new Date().toISOString(),
+          reviewedBy: user.uid,
+          adminNote: (note[req.id] || "").trim() || null,
+        };
+        if (authMode === "api") await requestsApi.updateProfileChange(req.id, review);
+        else await updateDoc(doc(db, "profileChangeRequests", req.id), { ...review, reviewedAt: serverTimestamp() });
+      }
     } catch (err) {
       alert(err.message || "Could not process request.");
     } finally {

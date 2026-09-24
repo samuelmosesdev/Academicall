@@ -13,7 +13,7 @@ const fieldClass =
 
 export default function AdminDocuments() {
   const { authMode } = useAuth();
-  const { documents, loading } = useAdminDocuments();
+  const { documents, loading, retry } = useAdminDocuments();
   const { courses } = useCbtData();
   const [search, setSearch] = useState("");
   const [title, setTitle] = useState("");
@@ -153,6 +153,15 @@ export default function AdminDocuments() {
       await documentsApi.remove(docItem.id);
     } catch (err) {
       alert(err.message || "Delete failed.");
+    }
+  }
+
+  async function handleApproval(id, status) {
+    try {
+      await documentsApi.approve(id, { status });
+      await retry?.();
+    } catch (err) {
+      alert(err.message || `Could not ${status} document.`);
     }
   }
 
@@ -403,11 +412,18 @@ export default function AdminDocuments() {
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium text-text-primary">{d.title}</div>
                       <div className="text-xs text-text-muted">
-                        {d.fileSize ? `${(d.fileSize / 1024 / 1024).toFixed(1)}MB` : ""}
+                        {[d.uploadedBy?.name || d.uploadedBy?.email, d.source, d.fileSize ? `${(d.fileSize / 1024 / 1024).toFixed(1)}MB` : ""].filter(Boolean).join(" · ")}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {d.status === "pending" && (
+                      <>
+                        <button type="button" onClick={() => handleApproval(d.id, "approved")} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">Approve</button>
+                        <button type="button" onClick={() => handleApproval(d.id, "rejected")} className="rounded-lg bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">Reject</button>
+                      </>
+                    )}
+                    {d.status === "approved" && <span className="text-xs font-semibold text-emerald-600">Approved</span>}
                     <a
                       href={d.fileUrl}
                       target="_blank"

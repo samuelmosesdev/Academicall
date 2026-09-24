@@ -6,8 +6,13 @@ export default function Modal({ title, open, onClose, children, size = "md" }) {
   const titleId = useId();
   const panelRef = useRef(null);
   const previouslyFocused = useRef(null);
+  const closeRef = useRef(onClose);
   const maxWidth =
     size === "sm" ? "max-w-sm" : size === "lg" ? "max-w-2xl" : "max-w-md";
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -21,7 +26,7 @@ export default function Modal({ title, open, onClose, children, size = "md" }) {
     function onKeyDown(e) {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose?.();
+        closeRef.current?.();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -55,7 +60,7 @@ export default function Modal({ title, open, onClose, children, size = "md" }) {
       document.body.style.overflow = prevOverflow;
       previouslyFocused.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

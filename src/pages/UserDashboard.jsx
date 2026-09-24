@@ -67,7 +67,7 @@ export default function UserDashboard() {
   const [expanded, setExpanded] = useState({});
   const [anonComment, setAnonComment] = useState({});
 
-  const department = profile?.department || "";
+  const department = profile?.department || profile?.program || "";
   const level = profile?.level || "";
   const firstName =
     profile?.nickname ||

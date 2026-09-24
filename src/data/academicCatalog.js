@@ -1,0 +1,90 @@
+import { FACULTIES } from "./facultyData";
+
+const PROGRAMS_BY_DEPARTMENT_DATA = {
+  Agriculture: ["Agriculture (B.Agric)", "Agricultural Science & Education"],
+  "Agricultural Economics": ["Agriculture (B.Agric)"],
+  "Agricultural Extension and Rural Sociology": ["Agriculture (B.Agric)", "Agricultural Science & Education"],
+  "Animal Science": ["Animal Science"],
+  "Crop Protection": ["Agriculture (B.Agric)"],
+  "Crop Science": ["Agriculture (B.Agric)"],
+  "Soil Science": ["Agriculture (B.Agric)"],
+  "Crop Protection / Crop Science / Soil Science": ["Agriculture (B.Agric)"],
+  "Fisheries, Aquaculture and Wildlife": ["Fisheries, Aquaculture and Wildlife"],
+  "Fisheries and Aquaculture": ["Fisheries, Aquaculture and Wildlife"],
+  "Forestry and Wildlife Management": ["Fisheries, Aquaculture and Wildlife"],
+  "Food Science and Technology": ["Agriculture (B.Agric)"],
+  "English and Literary Studies": ["English Language", "English Literature/Literature in English"],
+  "Linguistics and African Languages": ["Linguistics"],
+  "History and Diplomatic Studies": ["History and Diplomatic Studies"],
+  "Islamic Studies": ["Islamic Studies"],
+  "Christian Religious Studies": ["Christian Religious Studies"],
+  "Arabic Studies": ["Arabic Studies"],
+  "Theatre Arts": ["Theatre Arts / Drama"],
+  Philosophy: ["Philosophy"],
+  "Arts and Social Science Education": ["Education & Arabic", "Education & Economics", "Education & English Language", "Education & English Literature", "Education & Geography", "Education & History", "Education & Islamic Studies", "Education & Social Studies"],
+  "Arts Education": ["Education & Arabic", "Education & English Language", "Education & English Literature", "Education & History", "Education & Islamic Studies"],
+  "Science and Environmental Education": ["Education & Biology", "Education & Chemistry", "Education & Integrated Science", "Education & Mathematics", "Education & Physics", "Environmental Education"],
+  "Social Science Education": ["Education & Economics", "Education & Geography", "Education & Social Studies"],
+  "Counselling and Human Development Studies": ["Guidance & Counselling"],
+  "Educational Foundations": ["Guidance & Counselling", "Primary Education Studies"],
+  "Educational Management": ["Educational Management & Planning"],
+  "Chemical Engineering": ["Chemical Engineering"],
+  "Civil Engineering": ["Civil Engineering"],
+  "Electrical/Electronic Engineering": ["Electrical/Electronic Engineering"],
+  "Electrical and Electronic Engineering": ["Electrical/Electronic Engineering"],
+  "Mechanical Engineering": ["Mechanical Engineering"],
+  "Geography and Environmental Management": ["Geography"],
+  "Estate Management and Urban & Regional Planning": ["Estate Management", "Urban & Regional Planning"],
+  "Estate Management": ["Estate Management"],
+  "Urban and Regional Planning": ["Urban & Regional Planning"],
+  Architecture: ["Architecture"],
+  "Public Law": ["Law (LL.B)"],
+  "Private and Property Law": ["Law (LL.B)"],
+  "Jurisprudence and International Law": ["Law (LL.B)"],
+  Accounting: ["Accounting"],
+  "Business Administration (Management)": ["Business Administration"],
+  "Banking and Finance": ["Banking & Finance"],
+  "Public Administration": ["Public Administration"],
+  "Biological Sciences / Biology": ["Biology (B.Sc.)"],
+  "Biological Sciences": ["Biology (B.Sc.)"],
+  Biochemistry: ["Biochemistry (B.Sc.)"],
+  Chemistry: ["Chemistry (B.Sc.)"],
+  "Computer Science": ["Computer Science (B.Sc.)"],
+  Mathematics: ["Mathematics (B.Sc.)"],
+  Physics: ["Physics (B.Sc.)"],
+  Statistics: ["Statistics (B.Sc.)"],
+  Microbiology: ["Microbiology (B.Sc.)"],
+  Economics: ["Economics"],
+  "Political Science": ["Political Science", "Political Science & International Relations"],
+  "Political Science and International Relations": ["Political Science", "Political Science & International Relations"],
+  Sociology: ["Sociology"],
+  "Library and Information Science": ["Library & Information Science"],
+  Psychology: ["Psychology"],
+  "Veterinary Medicine": ["Veterinary Medicine (DVM)"],
+  "Human Medicine (Medicine & Surgery)": ["Medicine & Surgery (MBBS)"],
+  "Community Medicine": ["Medicine & Surgery (MBBS)"],
+  "Internal Medicine": ["Medicine & Surgery (MBBS)"],
+  "Human Physiology": ["Medicine & Surgery (MBBS)"],
+  "Pharmacology & Therapeutics": ["Medicine & Surgery (MBBS)"],
+  "Pharmaceutical Sciences": ["Pharmacy"],
+  "Geography and Atmospheric Sciences": ["Geography", "Atmospheric Sciences"],
+  "Communication and Medical Studies": ["Communication and Medical Studies"],
+};
+
+export const PROGRAMS_BY_DEPARTMENT = PROGRAMS_BY_DEPARTMENT_DATA;
+
+export function programsFor(departmentName) {
+  return PROGRAMS_BY_DEPARTMENT_DATA[departmentName] || [];
+}
+
+export function defaultAcademicCatalog() {
+  return {
+    faculties: FACULTIES.map((faculty) => ({
+      name: faculty.name,
+      departments: faculty.departments.map((name) => ({
+        name,
+        programs: programsFor(name),
+      })),
+    })),
+  };
+}

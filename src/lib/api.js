@@ -1,4 +1,8 @@
-const API_BASE = (import.meta.env.VITE_API_URL || "https://y-production-2be9.up.railway.app/api/v1").replace(/\/$/, "");
+const API_BASE = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:4000/api/v1" : "/api/v1")
+).replace(/\/$/, "");
+const API_TIMEOUT_MS = 15000;
 
 function getToken() {
   return localStorage.getItem("academicall_token");
@@ -6,9 +10,12 @@ function getToken() {
 
 export async function api(endpoint, options = {}) {
   const token = getToken();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
   const config = {
     ...options,
+    signal: options.signal || controller.signal,
     headers: {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -37,7 +44,12 @@ export async function api(endpoint, options = {}) {
     return data;
   } catch (err) {
     console.error("Network / Fetch Error:", err);
+    if (err.name === "AbortError") {
+      throw new Error("The server took too long to respond. Please try again.");
+    }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -75,7 +87,10 @@ export const documentsApi = {
   get: (id) => api(`/documents/${id}`),
   create: (body) => api("/documents", { method: "POST", body }),
   update: (id, body) => api(`/documents/${id}`, { method: "PATCH", body }),
+  approve: (id, body = { status: "approved" }) =>
+    api(`/documents/${id}/approve`, { method: "POST", body }),
   remove: (id) => api(`/documents/${id}`, { method: "DELETE" }),
+  requestDelete: (id, reason) => api(`/documents/${id}/delete-request`, { method: "POST", body: { reason } }),
 };
 
 export const announcementsApi = {
@@ -110,12 +125,32 @@ export const notificationsApi = {
   list: (archived = false) => api(`/notifications${archived ? "?archived=true" : ""}`),
   listAdmin: () => api("/notifications/admin"),
   markRead: (id) => api(`/notifications/${id}/read`, { method: "PATCH" }),
+  markAdminRead: (id) => api(`/notifications/${id}/admin-read`, { method: "PATCH" }),
+  markAllAdminRead: () => api("/notifications/admin/mark-all-read", { method: "POST" }),
   archive: (id) => api(`/notifications/${id}/archive`, { method: "PATCH" }),
   update: (id, body) => api(`/notifications/${id}/archive`, { method: "PATCH", body }),
   registerDeviceToken: (body) => api("/notifications/device-token", { method: "POST", body }),
   removeDeviceToken: (body) => api("/notifications/device-token", { method: "DELETE", body }),
   registerFcmToken: (body) => api("/notifications/fcm-token", { method: "POST", body }),
   removeFcmToken: (body) => api("/notifications/fcm-token", { method: "DELETE", body }),
+};
+
+export const departmentApi = {
+  join: (body) => api("/department/join", { method: "POST", body }),
+  me: (department) =>
+    api(`/department/me${department ? `?department=${encodeURIComponent(department)}` : ""}`),
+  members: ({ department, status } = {}) => {
+    const params = new URLSearchParams();
+    if (department) params.set("department", department);
+    if (status) params.set("status", status);
+    return api(`/department/members${params.toString() ? `?${params}` : ""}`);
+  },
+  admit: (id) => api(`/department/members/${id}/admit`, { method: "POST" }),
+  reject: (id, reason) => api(`/department/members/${id}/reject`, { method: "POST", body: { reason } }),
+  requestWithdraw: (id, reason) =>
+    api(`/department/members/${id}/withdraw-request`, { method: "POST", body: { reason } }),
+  reviewWithdraw: (id, action) =>
+    api(`/department/members/${id}/withdraw-review`, { method: "POST", body: { action } }),
 };
 
 export const enrollmentsApi = {
@@ -158,6 +193,7 @@ export const settingsApi = {
 
 export const chatApi = {
   list: () => api("/chat"),
+  markRead: () => api("/chat/read", { method: "POST" }),
   create: (body) => api("/chat", { method: "POST", body }),
   update: (id, body) => api(`/chat/${id}`, { method: "PATCH", body }),
 };
@@ -165,6 +201,7 @@ export const chatApi = {
 export const classEventsApi = {
   list: () => api("/class-events"),
   create: (body) => api("/class-events", { method: "POST", body }),
+  update: (id, body) => api(`/class-events/${id}`, { method: "PATCH", body }),
   remove: (id) => api(`/class-events/${id}`, { method: "DELETE" }),
 };
 

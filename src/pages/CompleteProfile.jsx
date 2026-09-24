@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { GraduationCap, CheckCircle2, Camera } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import UniqueIdBadge from "../components/UniqueIdBadge";
-import { FACULTIES, departmentsFor } from "../data/facultyData";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 import { fileToCompressedDataUrl } from "../lib/imageUtils";
 
 const LEVELS = ["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "Postgraduate"];
@@ -11,9 +11,11 @@ const LEVELS = ["100 Level", "200 Level", "300 Level", "400 Level", "500 Level",
 export default function CompleteProfile() {
   const { profile, completeProfile } = useAuth();
   const navigate = useNavigate();
+  const { faculties, programsForFaculty, departmentForProgram } = useAcademicCatalog();
 
   const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
+  const [program, setProgram] = useState("");
   const [level, setLevel] = useState("");
   const [matricNumber, setMatricNumber] = useState("");
   const [phone, setPhone] = useState("");
@@ -24,11 +26,12 @@ export default function CompleteProfile() {
   const [busy, setBusy] = useState(false);
   const [generatedId, setGeneratedId] = useState(null);
 
-  const departmentOptions = departmentsFor(faculty);
+  const programOptions = programsForFaculty(faculty);
 
   function handleFacultyChange(value) {
     setFaculty(value);
-    setDepartment(""); // department list depends on faculty, so reset it
+    setProgram("");
+    setDepartment("");
   }
 
   async function handlePhotoChange(e) {
@@ -65,6 +68,7 @@ export default function CompleteProfile() {
       const uniqueId = await completeProfile({
         faculty: faculty.trim(),
         department: department.trim(),
+        program: program.trim(),
         level,
         matricNumber: matricNumber.trim(),
         phone: phone.trim(),
@@ -166,7 +170,7 @@ export default function CompleteProfile() {
               <option value="" disabled>
                 Select your faculty
               </option>
-              {FACULTIES.map((f) => (
+              {faculties.map((f) => (
                 <option key={f.name} value={f.name}>
                   {f.name}
                 </option>
@@ -175,23 +179,32 @@ export default function CompleteProfile() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-secondary">Department</label>
+            <label className="mb-1 block text-xs font-medium text-text-secondary">Program</label>
             <select
-              required
-              disabled={!faculty}
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
+              required={programOptions.length > 0}
+              disabled={!faculty || programOptions.length === 0}
+              value={program}
+              onChange={(e) => {
+                const nextProgram = e.target.value;
+                setProgram(nextProgram);
+                setDepartment(departmentForProgram(nextProgram, faculty));
+              }}
               className="w-full rounded-lg border border-border-subtle bg-bg-panel-alt px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <option value="" disabled>
-                {faculty ? "Select your department" : "Select a faculty first"}
-              </option>
-              {departmentOptions.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
+              <option value="">{programOptions.length ? "Select your program" : "No programs listed"}</option>
+              {programOptions.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-secondary">Department</label>
+            <input
+              required
+              readOnly
+              value={department}
+              placeholder={program ? "Derived from program" : "Select a program first"}
+              className="w-full rounded-lg border border-border-subtle bg-bg-panel-alt px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none read-only:opacity-75"
+            />
           </div>
 
           <div>

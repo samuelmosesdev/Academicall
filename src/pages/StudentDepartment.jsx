@@ -1,14 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from "react";
-import {
-  addDoc,
-  collection,
-  doc,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from "firebase/firestore";
+import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Building2,
   Calendar,
@@ -25,9 +16,12 @@ import {
   Clock,
   MapPin,
   Lock,
+  Users,
+  CheckCircle2,
+  XCircle,
+  Upload,
 } from "lucide-react";
-import { db } from "../firebase/config";
-import { classEventsApi, documentsApi, feedApi, materialSavesApi, usersApi } from "../lib/api";
+import { classEventsApi, departmentApi, documentsApi, feedApi, materialSavesApi, usersApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
@@ -81,10 +75,15 @@ function myReaction(list, uid) {
   const found = list.find((r) => r.uid === uid);
   return found?.type || null;
 }
-
 export default function StudentDepartment() {
+  const navigate = useNavigate();
   const { user, profile, authMode } = useAuth();
-  const department = profile?.department || "";
+  const department =
+    profile?.courseRepMeta?.department ||
+    profile?.department ||
+    profile?.courseRepMeta?.program ||
+    profile?.program ||
+    "";
   const faculty = profile?.faculty || "";
   const level = profile?.level || "";
 
@@ -104,9 +103,51 @@ export default function StudentDepartment() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [showAnnounce, setShowAnnounce] = useState(false);
   const [toast, setToast] = useState("");
+  const [membership, setMembership] = useState(null);
+  const [membershipLoading, setMembershipLoading] = useState(true);
+  const [membershipBusy, setMembershipBusy] = useState(false);
+  const [membershipMessage, setMembershipMessage] = useState("");
+
+  useEffect(() => {
+    if (authMode !== "api" || !department) {
+      setMembershipLoading(false);
+      return undefined;
+    }
+    let alive = true;
+    setMembershipLoading(true);
+    departmentApi.me(department)
+      .then((response) => {
+        if (!alive) return;
+        setMembership(response.membership || null);
+        setMembershipLoading(false);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setMembership(null);
+        setMembershipLoading(false);
+      });
+    return () => { alive = false; setMembershipLoading(false); };
+  }, [authMode, department]);
+
+  async function requestMembership() {
+    setMembershipBusy(true);
+    setMembershipMessage("");
+    try {
+      const response = await departmentApi.join({ department, faculty, level });
+      setMembership(response.membership || null);
+      setMembershipMessage(response.message || "Request sent.");
+    } catch (err) {
+      setMembershipMessage(err.message || "Could not send join request.");
+    } finally {
+      setMembershipBusy(false);
+    }
+  }
 
   const myRepDept =
     profile?.courseRepMeta?.department ||
+    profile?.department ||
+    profile?.courseRepMeta?.program ||
+    profile?.program ||
     profile?.courseRepDepartment ||
     profile?.department ||
     "";
@@ -123,6 +164,11 @@ export default function StudentDepartment() {
 
   // Is the signed-in user, or anyone else, the Course Rep for this scope?
   useEffect(() => {
+    if (authMode !== "api") {
+      setHasCourseRep(null);
+      return undefined;
+    }
+
     if (
       profile?.role === "courseRep" &&
       deptsMatch(myRepDept, department) &&
@@ -137,196 +183,85 @@ export default function StudentDepartment() {
       return undefined;
     }
 
-    if (authMode === "api") {
-      let alive = true;
-      usersApi
-        .courseRepStatus?.(department, level)
-        .then((res) => {
-          if (alive) setHasCourseRep(Boolean(res?.hasCourseRep));
-        })
-        .catch(() => {
-          if (alive) setHasCourseRep(false);
-        });
-      return () => { alive = false; };
-    }
-    const q = query(
-      collection(db, "users"),
-      where("department", "==", department)
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const found = snap.docs.some((d) => {
-          const u = d.data();
-          if (u.role !== "courseRep") return false;
-          const dep =
-            u.courseRepMeta?.department ||
-            u.courseRepDepartment ||
-            u.department ||
-            "";
-          const lvl =
-            u.courseRepLevel ||
-            u.courseRepMeta?.level ||
-            u.level ||
-            "";
-          return deptsMatch(dep, department) && levelsMatch(lvl, level);
-        });
-        setHasCourseRep(found);
-      },
-      () => setHasCourseRep(false)
-    );
-    return () => unsub();
+    let alive = true;
+    usersApi
+      .courseRepStatus?.(department, level)
+      .then((res) => {
+        if (alive) setHasCourseRep(Boolean(res?.hasCourseRep));
+      })
+      .catch(() => {
+        if (alive) setHasCourseRep(false);
+      });
+    return () => { alive = false; };
   }, [department, level, authMode, profile?.role, myRepDept, myRepLevel]);
 
   useEffect(() => {
-    if (authMode === "api") {
-      let alive = true;
-      classEventsApi.list().then(({ events = [] }) => alive && setClasses(events.filter((event) => event.department === department && matchesStudentLevel(event.level, level)))).catch(() => alive && setClasses([])).finally(() => alive && setLoading(false));
-      return () => { alive = false; };
-    }
-    if (!department || !level) {
+    if (authMode !== "api") {
       setLoading(false);
       setClasses([]);
-      return;
+      return undefined;
     }
-    const q = query(
-      collection(db, "classEvents"),
-      where("department", "==", department)
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((c) => matchesStudentLevel(c.level, level));
-        list.sort((a, b) => {
-          const ta = a.startsAt?.toDate?.() || a.startsAt || 0;
-          const tb = b.startsAt?.toDate?.() || b.startsAt || 0;
-          return new Date(ta) - new Date(tb);
-        });
-        setClasses(list);
-      },
-      () => setClasses([])
-    );
-    return () => unsub();
+
+    let alive = true;
+    classEventsApi.list()
+      .then(({ events = [] }) => alive && setClasses(events.filter((event) => event.department === department && matchesStudentLevel(event.level, level))))
+      .catch(() => alive && setClasses([]))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
   }, [department, level, authMode]);
 
   useEffect(() => {
-    if (authMode === "api") {
-      let alive = true;
-      if (!department || !level) return undefined;
-      documentsApi.list().then(({ documents = [] }) => alive && setMaterials(documents.filter((item) => item.department === department && item.source === "courseRep" && matchesStudentLevel(item.level, level)))).catch(() => alive && setMaterials([]));
-      return () => { alive = false; };
+    if (authMode !== "api") {
+      setMaterials([]);
+      return undefined;
     }
-    if (!department || !level) return;
-    const q = query(
-      collection(db, "documents"),
-      where("department", "==", department),
-      where("source", "==", "courseRep")
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((m) => matchesStudentLevel(m.level, level));
-        list.sort((a, b) => {
-          const ta = a.createdAt?.toDate?.() || a.createdAt || 0;
-          const tb = b.createdAt?.toDate?.() || b.createdAt || 0;
-          return new Date(tb) - new Date(ta);
-        });
-        setMaterials(list);
-        setLoading(false);
-      },
-      () => {
-        setMaterials([]);
-        setLoading(false);
-      }
-    );
-    return () => unsub();
+
+    let alive = true;
+    if (!department || !level) return undefined;
+    documentsApi.list()
+      .then(({ documents = [] }) => alive && setMaterials(documents.filter((item) => item.department === department && item.source === "courseRep" && matchesStudentLevel(item.level, level))))
+      .catch(() => alive && setMaterials([]));
+    return () => { alive = false; };
   }, [department, level, authMode]);
 
   useEffect(() => {
-    if (authMode === "api") {
-      let alive = true;
-      if (!department || !level) return undefined;
-      feedApi.list("course", `department=${encodeURIComponent(department)}`).then(({ posts = [] }) => alive && setPosts(posts.filter((item) => matchesStudentLevel(item.level, level)))).catch(() => alive && setPosts([]));
-      return () => { alive = false; };
+    if (authMode !== "api") {
+      setPosts([]);
+      return undefined;
     }
-    if (!department || !level) return;
-    const q = query(
-      collection(db, "coursePosts"),
-      where("department", "==", department)
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((p) => matchesStudentLevel(p.level, level));
-        list.sort((a, b) => {
-          if (a.pinned && !b.pinned) return -1;
-          if (!a.pinned && b.pinned) return 1;
-          const ta = a.createdAt?.toDate?.() || a.createdAt || 0;
-          const tb = b.createdAt?.toDate?.() || b.createdAt || 0;
-          return new Date(tb) - new Date(ta);
-        });
-        setPosts(list);
-      },
-      () => setPosts([])
-    );
-    return () => unsub();
+
+    let alive = true;
+    if (!department || !level) return undefined;
+    feedApi.list("course", `department=${encodeURIComponent(department)}`)
+      .then(({ posts = [] }) => alive && setPosts(posts.filter((item) => matchesStudentLevel(item.level, level))))
+      .catch(() => alive && setPosts([]));
+    return () => { alive = false; };
   }, [department, level, authMode]);
 
   useEffect(() => {
-    if (!user) return;
-    if (authMode === "api") {
-      let alive = true;
-      materialSavesApi.list().then(({ saves = [] }) => alive && setSavedIds(new Set(saves.map((item) => item.materialId)))).catch(() => alive && setSavedIds(new Set()));
-      return () => { alive = false; };
+    if (!user || authMode !== "api") {
+      setSavedIds(new Set());
+      return undefined;
     }
-    const q = query(
-      collection(db, "materialSaves"),
-      where("userId", "==", user.uid)
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      const ids = new Set();
-      snap.docs.forEach((d) => {
-        const mid = d.data().materialId;
-        if (mid) ids.add(mid);
-      });
-      setSavedIds(ids);
-    });
-    return () => unsub();
+
+    let alive = true;
+    materialSavesApi.list()
+      .then(({ saves = [] }) => alive && setSavedIds(new Set(saves.map((item) => item.materialId))))
+      .catch(() => alive && setSavedIds(new Set()));
+    return () => { alive = false; };
   }, [user, authMode]);
 
   async function saveMaterial(mat) {
-    if (!user || savedIds.has(mat.id)) return;
+    if (!user || authMode !== "api" || savedIds.has(mat.id)) return;
     setSaveBusy((p) => ({ ...p, [mat.id]: true }));
     try {
-      if (authMode === "api") {
-        await materialSavesApi.create({
-          materialId: mat.id,
-          title: mat.title || "Untitled",
-          url: mat.fileUrl || mat.url || null,
-          meta: { ...mat, department: mat.department || department, faculty: mat.faculty || faculty, courseCode: mat.courseCode || "GENERAL" },
-        });
-        setSavedIds((current) => new Set(current).add(mat.id));
-        return;
-      }
-      await addDoc(collection(db, "materialSaves"), {
-        userId: user.uid,
+      await materialSavesApi.create({
         materialId: mat.id,
         title: mat.title || "Untitled",
-        description: mat.description || null,
-        fileUrl: mat.fileUrl || mat.url || null,
-        courseCode: (mat.courseCode || "GENERAL").toUpperCase(),
-        courseTitle: mat.courseTitle || null,
-        department: mat.department || department,
-        faculty: mat.faculty || faculty,
-        savedAt: serverTimestamp(),
-        source: "courseRep",
+        url: mat.fileUrl || mat.url || null,
+        meta: { ...mat, department: mat.department || department, faculty: mat.faculty || faculty, courseCode: mat.courseCode || "GENERAL" },
       });
+      setSavedIds((current) => new Set(current).add(mat.id));
     } catch (e) {
       alert(e.message || "Could not save material.");
     } finally {
@@ -336,7 +271,7 @@ export default function StudentDepartment() {
 
   async function addComment(postId) {
     const text = (commentText[postId] || "").trim();
-    if (!text || !user) return;
+    if (!text || !user || authMode !== "api") return;
     setCommentBusy((p) => ({ ...p, [postId]: true }));
     try {
       const post = posts.find((p) => p.id === postId);
@@ -353,8 +288,7 @@ export default function StudentDepartment() {
         createdAt: new Date().toISOString(),
         reactions: [],
       });
-      if (authMode === "api") await feedApi.update("course", postId, { comments });
-      else await updateDoc(doc(db, "coursePosts", postId), { comments });
+      await feedApi.update("course", postId, { comments });
       setCommentText((p) => ({ ...p, [postId]: "" }));
       setExpandedComments((p) => ({ ...p, [postId]: true }));
     } catch (e) {
@@ -366,7 +300,7 @@ export default function StudentDepartment() {
 
   async function addClassComment(classId) {
     const text = (classCommentText[classId] || "").trim();
-    if (!text || !user) return;
+    if (!text || !user || authMode !== "api") return;
     setClassCommentBusy((p) => ({ ...p, [classId]: true }));
     try {
       const ev = classes.find((c) => c.id === classId);
@@ -383,7 +317,7 @@ export default function StudentDepartment() {
         createdAt: new Date().toISOString(),
         reactions: [],
       });
-      await updateDoc(doc(db, "classEvents", classId), { comments });
+      await classEventsApi.update(classId, { comments });
       setClassCommentText((p) => ({ ...p, [classId]: "" }));
       setExpandedClassComments((p) => ({ ...p, [classId]: true }));
     } catch (e) {
@@ -398,7 +332,7 @@ export default function StudentDepartment() {
    * One reaction per user — clicking the same type removes it; clicking another switches.
    */
   async function togglePostReaction(collectionName, docId, reactionType) {
-    if (!user) return;
+    if (!user || authMode !== "api") return;
     try {
       const list =
         collectionName === "coursePosts"
@@ -427,8 +361,8 @@ export default function StudentDepartment() {
           name: profile?.name || user.email || "Student",
         });
       }
-      if (authMode === "api") await feedApi.update("course", docId, { reactions });
-      else await updateDoc(doc(db, collectionName, docId), { reactions });
+      if (collectionName === "classEvents") await classEventsApi.update(docId, { reactions });
+      else await feedApi.update("course", docId, { reactions });
     } catch (e) {
       alert(e.message || "Could not react.");
     }
@@ -443,7 +377,7 @@ export default function StudentDepartment() {
     commentId,
     reactionType
   ) {
-    if (!user) return;
+    if (!user || authMode !== "api") return;
     try {
       const list =
         collectionName === "coursePosts"
@@ -480,8 +414,8 @@ export default function StudentDepartment() {
       }
       comment.reactions = reactions;
       comments[idx] = comment;
-      if (authMode === "api") await feedApi.update("course", docId, { comments });
-      else await updateDoc(doc(db, collectionName, docId), { comments });
+      if (collectionName === "classEvents") await classEventsApi.update(docId, { comments });
+      else await feedApi.update("course", docId, { comments });
     } catch (e) {
       alert(e.message || "Could not react to comment.");
     }
@@ -660,7 +594,50 @@ export default function StudentDepartment() {
     );
   }
 
-  if (hasCourseRep === false && !isRepHere) {
+  if (authMode === "api" && membership?.status === "pending") {
+    return (
+      <div className="mx-auto max-w-md rounded-xl border border-border-light bg-card-light p-6 text-center">
+        <Clock className="mx-auto mb-3 text-amber-500" size={32} />
+        <p className="text-sm font-semibold text-ink">Waiting for admission</p>
+        <p className="mt-1 text-xs text-ink-muted">A Course Rep will review your request.</p>
+        {membershipMessage && <p className="mt-2 text-xs text-teal">{membershipMessage}</p>}
+      </div>
+    );
+  }
+
+  if (authMode === "api" && membership?.status === "rejected") {
+    return (
+      <div className="mx-auto max-w-md rounded-xl border border-border-light bg-card-light p-6 text-center">
+        <XCircle className="mx-auto mb-3 text-rose-400" size={32} />
+        <p className="text-sm font-semibold text-ink">Membership request rejected</p>
+        {membership.reviewReason && <p className="mt-2 text-xs text-rose-600">Reason: {membership.reviewReason}</p>}
+        <button type="button" onClick={requestMembership} disabled={membershipBusy} className="mt-4 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Request again</button>
+        {membershipMessage && <p className="mt-2 text-xs text-teal">{membershipMessage}</p>}
+      </div>
+    );
+  }
+
+  if (authMode === "api" && membershipLoading) {
+    return (
+      <div className="mx-auto max-w-md rounded-xl border border-border-light bg-card-light p-6 text-center">
+        <Loader2 className="mx-auto mb-3 animate-spin text-teal" size={28} />
+        <p className="text-sm text-ink-muted">Loading your department membership…</p>
+      </div>
+    );
+  }
+
+  if (authMode === "api" && !membership && !isRepHere) {
+    return (
+      <div className="mx-auto max-w-md rounded-xl border border-border-light bg-card-light p-6 text-center">
+        <Users className="mx-auto mb-3 text-ink-muted" size={32} />
+        <p className="text-sm text-ink-muted">You are not yet a member of this department group.</p>
+        <button type="button" onClick={requestMembership} disabled={membershipBusy} className="mt-4 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{membershipBusy ? "Sending…" : "Request to join"}</button>
+        {membershipMessage && <p className="mt-2 text-xs text-teal">{membershipMessage}</p>}
+      </div>
+    );
+  }
+
+  if (hasCourseRep === false && !isRepHere && membership?.status !== "active") {
     return (
       <div className="mx-auto max-w-md rounded-2xl border border-border-light bg-card-light p-8 text-center shadow-sm">
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-bg-panel-alt text-ink-muted">
@@ -744,7 +721,7 @@ export default function StudentDepartment() {
           <h3 className="mb-3 px-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
             Rep Quick Actions
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <button
               type="button"
               onClick={() => setShowAnnounce(true)}
@@ -767,6 +744,18 @@ export default function StudentDepartment() {
               </span>
               <span className="text-[11px] font-bold uppercase tracking-wide text-ink">
                 Schedule
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/course-rep")}
+              className="card-stitch flex flex-col items-center justify-center gap-2 rounded-2xl p-4 transition hover:bg-white/80 active:scale-[0.98] dark:hover:bg-bg-elevated"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-500/10 text-violet-500">
+                <Upload size={20} />
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-ink">
+                Upload
               </span>
             </button>
             <button
@@ -1177,6 +1166,7 @@ export default function StudentDepartment() {
         faculty={faculty}
         user={user}
         authorName={profile?.name || user?.email}
+        authMode={authMode}
       />
       <CreateAnnouncementModal
         open={showAnnounce}
@@ -1189,6 +1179,7 @@ export default function StudentDepartment() {
         faculty={faculty}
         user={user}
         authorName={profile?.name || user?.email}
+        authMode={authMode}
       />
     </div>
   );

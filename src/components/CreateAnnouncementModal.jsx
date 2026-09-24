@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Megaphone, Loader2, Pin } from "lucide-react";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import Modal from "./Modal";
 import { announcementsApi } from "../lib/api";
+import { db } from "../firebase/config";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -19,6 +21,7 @@ export default function CreateAnnouncementModal({
   faculty,
   user,
   authorName,
+  authMode,
 }) {
   const [title, setTitle] = useState("");
   const [courseCode, setCourseCode] = useState("");
@@ -49,7 +52,7 @@ export default function CreateAnnouncementModal({
     }
     setBusy(true);
     try {
-      await announcementsApi.create({
+      const announcement = {
         title: title.trim(),
         body: body.trim(),
         courseCode: courseCode.trim().toUpperCase() || null,
@@ -58,7 +61,27 @@ export default function CreateAnnouncementModal({
         faculty: faculty || null,
         department,
         level: level || null,
-      });
+      };
+      if (authMode === "api") {
+        await announcementsApi.create(announcement);
+      } else {
+        await addDoc(collection(db, "announcements"), {
+          ...announcement,
+          published: true,
+          createdBy: user?.uid || null,
+          createdByName: authorName || user?.email || "Course Rep",
+          createdAt: serverTimestamp(),
+        });
+        await addDoc(collection(db, "coursePosts"), {
+          ...announcement,
+          authorName: authorName || user?.email || "Course Rep",
+          authorRole: user?.role || "courseRep",
+          createdBy: user?.uid || null,
+          createdAt: serverTimestamp(),
+          comments: [],
+          reactions: [],
+        });
+      }
       reset();
       onClose?.(true);
     } catch (ex) {

@@ -9,7 +9,8 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useStudentDocuments } from "../hooks/useStudentDocuments";
 import { useCbtData } from "../hooks/useCbtData";
-import { FACULTIES, departmentsFor } from "../data/facultyData";
+import { FACULTIES } from "../data/facultyData";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 import { Link } from "react-router-dom";
 import { FREE_LIMITS, isPro } from "../lib/subscription";
 import StudentGenerateQuizModal from "../components/StudentGenerateQuizModal";
@@ -18,6 +19,7 @@ export default function StudentDocuments() {
   const { profile } = useAuth();
   const { documents, loading } = useStudentDocuments();
   const { courses } = useCbtData();
+  const { departmentsFor } = useAcademicCatalog();
 
   const [search, setSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);

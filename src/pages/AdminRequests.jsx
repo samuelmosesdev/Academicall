@@ -33,8 +33,15 @@ export default function AdminRequests() {
 
   useEffect(() => {
     if (authMode === "api") {
-      requestsApi.listProfileChanges().then(({ requests: list = [] }) => setProfileReqs(list.map((item) => ({ ...item, _source: "profile", _who: "student" })))).catch(() => setProfileReqs([]));
-      return;
+      let alive = true;
+      setLoading(true);
+      requestsApi.listProfileChanges()
+        .then(({ requests: list = [] }) => {
+          if (alive) setProfileReqs(list.map((item) => ({ ...item, _source: "profile", _who: "student" })));
+        })
+        .catch(() => alive && setProfileReqs([]))
+        .finally(() => alive && setLoading(false));
+      return () => { alive = false; };
     }
     return onSnapshot(
       collection(db, "profileChangeRequests"),
@@ -55,8 +62,13 @@ export default function AdminRequests() {
 
   useEffect(() => {
     if (authMode === "api") {
-      requestsApi.list().then(({ requests: list = [] }) => setGenericReqs(list.map((item) => ({ ...item, _source: "generic", _who: item.requesterRole === "courseRep" ? "courseRep" : "student" })))).catch(() => setGenericReqs([]));
-      return;
+      let alive = true;
+      requestsApi.list()
+        .then(({ requests: list = [] }) => {
+          if (alive) setGenericReqs(list.map((item) => ({ ...item, _source: "generic", _who: item.requesterRole === "courseRep" ? "courseRep" : "student" })));
+        })
+        .catch(() => alive && setGenericReqs([]));
+      return () => { alive = false; };
     }
     return onSnapshot(
       collection(db, "requests"),
@@ -127,7 +139,11 @@ export default function AdminRequests() {
       if (authMode === "api") {
         await requestsApi.updateProfileChange(req.id, { status: decision, reviewedBy: user.uid, reviewedByName: profile?.name || user.email, adminNote: (note[req.id] || "").trim() || null });
       } else {
-        if (decision === "approved") await updateDoc(doc(db, "users", req.userId), { [req.field]: req.requestedValue, updatedAt: serverTimestamp() });
+        if (decision === "approved") {
+          const patch = { [req.field]: req.requestedValue, updatedAt: serverTimestamp() };
+          if (req.field === "program" && req.requestedDepartment) patch.department = req.requestedDepartment;
+          await updateDoc(doc(db, "users", req.userId), patch);
+        }
         await updateDoc(doc(db, "profileChangeRequests", req.id), { status: decision, reviewedAt: serverTimestamp(), reviewedBy: user.uid, reviewedByName: profile?.name || user.email, adminNote: (note[req.id] || "").trim() || null });
       }
       await notificationsApi.create({
@@ -160,6 +176,9 @@ export default function AdminRequests() {
   async function reviewGeneric(req, decision) {
     setBusyId(req.id);
     try {
+      if (decision === "approved" && req.type === "document_delete" && req.meta?.documentId) {
+        await documentsApi.remove(req.meta.documentId);
+      }
       if (decision === "approved" && req.type === "course_bulk" && req.payload?.courses) {
         for (const row of req.payload.courses) {
           await coursesApi.create({
@@ -350,7 +369,7 @@ export default function AdminRequests() {
 
               <p className="mt-2 text-sm font-medium text-text-primary">
                 {isProfile
-                  ? `${r.fieldLabel}: ${r.currentValue} → ${r.requestedValue}`
+                  ? `${r.fieldLabel || r.field}: ${r.currentValue || "Not set"} → ${r.requestedValue}`
                   : r.title || "Request"}
               </p>
 

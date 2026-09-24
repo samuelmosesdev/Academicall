@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FACULTIES, departmentsFor } from "../data/facultyData";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 
 const LEVELS = ["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "Postgraduate"];
 
@@ -7,19 +7,23 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
   const [name, setName] = useState(user.name || "");
   const [faculty, setFaculty] = useState(user.faculty || "");
   const [department, setDepartment] = useState(user.department || "");
+  const [program, setProgram] = useState(user.program || "");
   const [level, setLevel] = useState(user.level || "");
   const [phone, setPhone] = useState(user.phone || "");
 
+  const { faculties, departmentsFor, programsFor } = useAcademicCatalog();
   const departmentOptions = departmentsFor(faculty);
+  const programOptions = programsFor(department);
 
   function handleFacultyChange(value) {
     setFaculty(value);
     setDepartment("");
+    setProgram("");
   }
 
   function handleSubmit(e) {
     e.preventDefault();
-    onSave({ name: name.trim(), faculty, department, level, phone: phone.trim() });
+    onSave({ name: name.trim(), faculty, department, program, level, phone: phone.trim() });
   }
 
   const fieldClass =
@@ -35,9 +39,25 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
         <label className="mb-1 block text-xs font-medium text-text-secondary">Faculty</label>
         <select value={faculty} onChange={(e) => handleFacultyChange(e.target.value)} className={fieldClass}>
           <option value="">Select faculty</option>
-          {FACULTIES.map((f) => (
+          {faculties.map((f) => (
             <option key={f.name} value={f.name}>
               {f.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-text-secondary">Program</label>
+        <select
+          value={program}
+          disabled={!department || programOptions.length === 0}
+          onChange={(e) => setProgram(e.target.value)}
+          className={`${fieldClass} disabled:opacity-60`}
+        >
+          <option value="">{programOptions.length ? "Select program" : "Program not yet listed"}</option>
+          {programOptions.map((item) => (
+            <option key={item} value={item}>
+              {item}
             </option>
           ))}
         </select>

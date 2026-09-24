@@ -38,6 +38,8 @@ export async function authenticate(
         id: user.id,
         email: user.email,
         role: user.role,
+        department: user.department,
+        program: user.program,
       };
       return next();
     } catch {
@@ -65,4 +67,5 @@ export function requireRole(...roles: Role[]) {
 
 export const requireAdmin = requireRole("admin");
 export const requireStaff = requireRole("admin", "alphaAgent", "agent");
+export const requireStaffOrCourseRep = requireRole("admin", "alphaAgent", "agent", "courseRep");
 export const requireAdminOrAlpha = requireRole("admin", "alphaAgent");

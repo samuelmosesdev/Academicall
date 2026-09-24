@@ -28,7 +28,10 @@ export async function recordDailyActivity(user, profile) {
   if (!user?.uid) return;
   const today = todayKey();
   const storageKey = `uofa_active_${user.uid}`;
-  if (localStorage.getItem(storageKey) === today) return; // already counted today
+  if (localStorage.getItem(storageKey) === today) {
+    window.dispatchEvent(new Event("student-activity-updated"));
+    return; // already counted today
+  }
 
   const last = profile?.lastActiveDate || null;
   let nextStreak = 1;
@@ -44,6 +47,7 @@ export async function recordDailyActivity(user, profile) {
     if (localStorage.getItem("academicall_token")) {
       await usersApi.updateMe({ lastActiveDate: today, studyStreakDays: nextStreak, lastActiveAt: new Date().toISOString() });
       localStorage.setItem(storageKey, today);
+      window.dispatchEvent(new Event("student-activity-updated"));
       return;
     }
     await updateDoc(doc(db, "users", user.uid), {
@@ -64,12 +68,16 @@ export async function recordDailyActivity(user, profile) {
 export async function recordMaterialOpen(user, docId, profile = null) {
   if (!user?.uid || !docId) return;
   const sessionKey = `uofa_open_${user.uid}_${docId}`;
-  if (sessionStorage.getItem(sessionKey)) return; // once per session per doc
+  if (sessionStorage.getItem(sessionKey)) {
+    window.dispatchEvent(new Event("student-activity-updated"));
+    return; // once per session per doc
+  }
   sessionStorage.setItem(sessionKey, "1");
 
   try {
     if (localStorage.getItem("academicall_token")) {
       await usersApi.updateMe({ materialsOpenedCount: Number(profile?.materialsOpenedCount || 0) + 1 });
+      window.dispatchEvent(new Event("student-activity-updated"));
       return;
     }
     await updateDoc(doc(db, "users", user.uid), {

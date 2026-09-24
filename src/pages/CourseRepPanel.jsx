@@ -31,9 +31,7 @@ import AiCourseImportModal from "../components/AiCourseImportModal";
 import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
 import { displayLabel } from "../components/UserAvatar";
-import { classEventsApi } from "../lib/api";
-import { requestsApi } from "../lib/api";
-import { coursesApi } from "../lib/api";
+import { classEventsApi, departmentApi, requestsApi, coursesApi, documentsApi } from "../lib/api";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -55,6 +53,9 @@ export default function CourseRepPanel() {
 
   const department =
     profile?.courseRepMeta?.department ||
+    profile?.department ||
+    profile?.courseRepMeta?.program ||
+    profile?.program ||
     profile?.courseRepDepartment ||
     profile?.department ||
     "";
@@ -88,13 +89,19 @@ export default function CourseRepPanel() {
   const [myRequests, setMyRequests] = useState([]);
   const [deptCourses, setDeptCourses] = useState([]);
   const [studentCount, setStudentCount] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberTab, setMemberTab] = useState("pending");
+  const [withdrawReason, setWithdrawReason] = useState({});
 
   // Material upload state
   const [matCourseId, setMatCourseId] = useState("");
+  const [matScope, setMatScope] = useState("course");
   const [matTitle, setMatTitle] = useState("");
   const [matFile, setMatFile] = useState(null);
   const [matBusy, setMatBusy] = useState(false);
   const [matProgress, setMatProgress] = useState(0);
+  const [repMaterials, setRepMaterials] = useState([]);
 
   // AI import
   const [showAiImport, setShowAiImport] = useState(false);
@@ -102,6 +109,43 @@ export default function CourseRepPanel() {
   // Centered mobile composers (viewport modal, not page scroll position)
   const [showSchedule, setShowSchedule] = useState(false);
   const [showAnnounce, setShowAnnounce] = useState(false);
+
+  async function loadMembers() {
+    if (authMode !== "api" || !department) return;
+    setMembersLoading(true);
+    try {
+      const response = await departmentApi.members({ department, status: memberTab });
+      setMembers(response.members || []);
+    } catch {
+      setMembers([]);
+    } finally {
+      setMembersLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadMembers();
+  }, [authMode, department, memberTab]);
+
+  async function handleMemberAction(action, id) {
+    try {
+      if (action === "admit") await departmentApi.admit(id);
+      if (action === "reject") {
+        const reason = window.prompt("Why are you rejecting this admission?")?.trim();
+        if (!reason) return;
+        await departmentApi.reject(id, reason);
+      }
+      if (action === "withdraw") {
+        const reason = withdrawReason[id]?.trim();
+        if (!reason) return alert("Please enter a reason for withdrawal");
+        await departmentApi.requestWithdraw(id, reason);
+        setWithdrawReason((previous) => ({ ...previous, [id]: "" }));
+      }
+      await loadMembers();
+    } catch (error) {
+      alert(error.message || "Could not update member");
+    }
+  }
 
   // Classes created by this rep
   useEffect(() => {
@@ -197,6 +241,26 @@ export default function CourseRepPanel() {
       () => setDeptCourses([])
     );
   }, [department, authMode]);
+
+  useEffect(() => {
+    if (authMode !== "api" || !user?.uid) return undefined;
+    let alive = true;
+    documentsApi.list().then(({ documents = [] }) => {
+      if (alive) setRepMaterials(documents.filter((document) => document.uploadedById === user.uid));
+    }).catch(() => alive && setRepMaterials([]));
+    return () => { alive = false; };
+  }, [authMode, user?.uid]);
+
+  async function requestMaterialDelete(document) {
+    const reason = window.prompt(`Why should "${document.title}" be removed?`)?.trim();
+    if (!reason) return;
+    try {
+      await documentsApi.requestDelete(document.id, reason);
+      setMsg("Delete request sent to staff for approval.");
+    } catch (error) {
+      setErr(error.message || "Could not request material deletion.");
+    }
+  }
 
   // Students in same department AND level only
   useEffect(() => {
@@ -386,43 +450,49 @@ export default function CourseRepPanel() {
     e.preventDefault();
     setErr("");
     setMsg("");
-    const course = deptCourses.find((c) => c.id === matCourseId);
-    if (!course) return setErr("Select a department course.");
-    if (!matTitle.trim() || !matFile) return setErr("Title and file required.");
+
+    if (!matTitle.trim() || !matFile) {
+      return setErr("Title and file are required.");
+    }
+
+    const course = matScope === "course"
+      ? deptCourses.find((item) => item.id === matCourseId)
+      : null;
+
+    if (matScope === "course" && !course) {
+      return setErr("Select a department course.");
+    }
 
     setMatBusy(true);
     try {
       const res = await uploadDocumentToCloudinary(matFile, (p) => setMatProgress(p));
       const url = res.secure_url || res.url;
       const bytes = res.bytes || matFile.size;
-      // Create a request for admin approval (safer than direct publish)
-      await requestsApi.create({
-        type: "material",
-        status: "pending",
-        title: `Material: ${matTitle.trim()} (${course.code})`,
-        requesterUid: user.uid,
-        requesterName: profile?.name || user.email,
-        requesterEmail: user.email,
-        requesterRole: "courseRep",
-        payload: {
-          documentDraft: {
-            title: matTitle.trim(),
-            fileUrl: url,
-            fileSize: bytes || matFile.size,
-            fileName: matFile.name,
-            courseCode: course.code, // CRITICAL for student course view
-            courseTitle: course.title,
-            faculty: course.faculty || faculty,
-            department: course.department || department,
-            level: course.level || level || null,
-            source: "courseRep",
-            status: "published",
-          },
-        },
+
+      await documentsApi.create({
+        title: matTitle.trim(),
+        fileUrl: url,
+        fileSize: bytes || matFile.size,
+        fileName: matFile.name,
+        courseId: course?.id || null,
+        courseCode: course?.code || null,
+        courseTitle: course?.title || null,
+        faculty: course?.faculty || faculty || null,
+        department: department || null,
+        level: course?.level || level || null,
+        source: "courseRep",
+        status: "approved",
       });
+
       setMatTitle("");
       setMatFile(null);
-      setMsg("Material submitted for admin approval. After approve it appears under that course.");
+      setMatScope("course");
+      setMatCourseId("");
+      setMsg(
+        matScope === "course"
+          ? "Material published to the selected course."
+          : "Material published to the department group."
+      );
     } catch (ex) {
       setErr(ex.message || "Upload failed");
     } finally {
@@ -501,6 +571,20 @@ export default function CourseRepPanel() {
       )}
       {err && (
         <p className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-600">{err}</p>
+      )}
+
+      {authMode === "api" && (
+        <section className="space-y-4 rounded-2xl border border-border-light bg-card-light p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-ink">Department members</h2>
+            <div className="flex gap-2 text-xs font-semibold">
+              {[["pending", "Pending"], ["active", "Active"]].map(([id, label]) => (
+                <button key={id} type="button" onClick={() => setMemberTab(id)} className={`rounded-lg px-3 py-1.5 ${memberTab === id ? "bg-teal-soft text-teal" : "bg-surface-light text-ink-muted"}`}>{label}</button>
+              ))}
+            </div>
+          </div>
+          {membersLoading ? <p className="text-sm text-ink-muted">Loading…</p> : members.length === 0 ? <p className="text-sm text-ink-muted">No {memberTab} members.</p> : <ul className="space-y-3">{members.map((member) => <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-light bg-surface-light p-3"><div><p className="text-sm font-semibold text-ink">{member.user?.name || member.user?.email}</p><p className="text-xs text-ink-muted">{member.user?.uniqueId || ""} · {member.user?.level || member.level || ""}</p></div>{memberTab === "pending" ? <div className="flex gap-2"><button type="button" onClick={() => handleMemberAction("admit", member.id)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white">Admit</button><button type="button" onClick={() => handleMemberAction("reject", member.id)} className="rounded-lg bg-rose-100 px-3 py-1.5 text-xs font-bold text-rose-700">Reject</button></div> : <div className="flex flex-col gap-2 sm:flex-row"><input value={withdrawReason[member.id] || ""} onChange={(event) => setWithdrawReason((previous) => ({ ...previous, [member.id]: event.target.value }))} placeholder="Withdrawal reason…" className="rounded-lg border border-border-light bg-card-light px-3 py-1.5 text-xs" /><button type="button" onClick={() => handleMemberAction("withdraw", member.id)} className="rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">Request withdrawal</button></div>}</li>)}</ul>}
+        </section>
       )}
 
       {/* Department courses (read-only) */}
@@ -589,23 +673,61 @@ export default function CourseRepPanel() {
         </button>
       </form>
 
-      {/* Upload material for a department course */}
+      {/* Upload material for a course or the department group */}
       <form onSubmit={uploadMaterial} className="space-y-3 rounded-2xl border border-border-light bg-card-light p-5">
-        <h2 className="text-sm font-semibold text-ink">Upload material for a department course</h2>
-        <p className="text-xs text-ink-muted">Submit a file for admin approval. After approval it appears under the selected course.</p>
-        <select value={matCourseId} onChange={(e) => setMatCourseId(e.target.value)} className={field} required>
-          <option value="">Select course</option>
-          {deptCourses.map((c) => (
-            <option key={c.id} value={c.id}>{c.code} — {c.title}</option>
-          ))}
-        </select>
+        <h2 className="text-sm font-semibold text-ink">Upload material to a course or department group</h2>
+        <p className="text-xs text-ink-muted">Publish a file directly to a course, or post it to your department group so all students in {department || "this department"} can access it.</p>
+
+        <div className="flex flex-wrap gap-2 text-xs font-medium">
+          <button
+            type="button"
+            onClick={() => setMatScope("course")}
+            className={`rounded-lg px-3 py-1.5 ${matScope === "course" ? "bg-teal-soft text-teal" : "bg-surface-light text-ink-muted"}`}
+          >
+            Course
+          </button>
+          <button
+            type="button"
+            onClick={() => setMatScope("department")}
+            className={`rounded-lg px-3 py-1.5 ${matScope === "department" ? "bg-teal-soft text-teal" : "bg-surface-light text-ink-muted"}`}
+          >
+            Department group
+          </button>
+        </div>
+
+        {matScope === "course" ? (
+          <select value={matCourseId} onChange={(e) => setMatCourseId(e.target.value)} className={field} required>
+            <option value="">Select course</option>
+            {deptCourses.map((c) => (
+              <option key={c.id} value={c.id}>{c.code} — {c.title}</option>
+            ))}
+          </select>
+        ) : (
+          <div className="rounded-xl border border-border-light bg-surface-light px-3 py-2 text-sm text-ink">
+            Department group: <span className="font-semibold text-ink">{department || "Your department"}</span>
+            {level ? ` · ${level}` : ""}
+          </div>
+        )}
+
         <input value={matTitle} onChange={(e) => setMatTitle(e.target.value)} placeholder="Material title" className={field} required />
         <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={(e) => setMatFile(e.target.files?.[0] || null)} />
         {matProgress > 0 && matProgress < 100 && <p className="text-xs">Upload {matProgress}%</p>}
         <button type="submit" disabled={matBusy} className="inline-flex items-center gap-2 rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-          {matBusy ? "Uploading…" : "Submit material for approval"}
+          {matBusy ? "Uploading…" : matScope === "course" ? "Publish material" : "Publish to department group"}
         </button>
       </form>
+
+      {authMode === "api" && repMaterials.length > 0 && (
+        <section className="space-y-3 rounded-2xl border border-border-light bg-card-light p-5">
+          <h2 className="text-sm font-semibold text-ink">My published materials</h2>
+          {repMaterials.map((document) => (
+            <div key={document.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-light bg-surface-light px-3 py-2">
+              <div><p className="text-sm font-medium text-ink">{document.title}</p><p className="text-xs text-ink-muted">{document.course?.code || "Unassigned"} · {document.status || "approved"}</p></div>
+              <button type="button" onClick={() => requestMaterialDelete(document)} className="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600">Request delete</button>
+            </div>
+          ))}
+        </section>
+      )}
 
       {/* Schedule class */}
       <form
@@ -778,6 +900,7 @@ export default function CourseRepPanel() {
         faculty={faculty}
         user={user}
         authorName={displayLabel(profile, user?.email || "Course Rep")}
+        authMode={authMode}
       />
       <CreateAnnouncementModal
         open={showAnnounce}

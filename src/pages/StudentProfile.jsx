@@ -28,6 +28,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import ImageCropModal from "../components/ImageCropModal";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 import { fileToCompressedDataUrl } from "../lib/imageUtils";
 import { uploadImageToCloudinary } from "../lib/cloudinaryUpload";
 import UniqueIdBadge from "../components/UniqueIdBadge";
@@ -47,6 +48,7 @@ const LOCKED_FIELDS = [
   { key: "name", label: "Full name", icon: User, type: "text" },
   { key: "phone", label: "Phone number", icon: Phone, type: "tel" },
   { key: "faculty", label: "Faculty", icon: Building2, type: "faculty" },
+  { key: "program", label: "Program", icon: GraduationCap, type: "program" },
   { key: "department", label: "Department", icon: Building2, type: "department" },
   { key: "level", label: "Level", icon: GraduationCap, type: "level" },
   { key: "matricNumber", label: "Matric number", icon: Hash, type: "text" },
@@ -57,6 +59,7 @@ const fieldClass =
 
 export default function StudentProfile() {
   const { user, profile, authMode, refreshProfile } = useAuth();
+  const { programsForFaculty, departmentForProgram } = useAcademicCatalog();
 
   const [bio, setBio] = useState("");
   const [interests, setInterests] = useState("");
@@ -84,6 +87,7 @@ export default function StudentProfile() {
   const [reqValue, setReqValue] = useState("");
   const [reqFaculty, setReqFaculty] = useState("");
   const [reqDepartment, setReqDepartment] = useState("");
+  const [reqProgram, setReqProgram] = useState("");
   const [reqReason, setReqReason] = useState("");
   const [reqBusy, setReqBusy] = useState(false);
   const [reqError, setReqError] = useState("");
@@ -105,7 +109,7 @@ export default function StudentProfile() {
   useEffect(() => {
     if (authMode === "api") {
       let alive = true;
-      requestsApi.list().then(({ requests: list = [] }) => {
+      requestsApi.listProfileChanges().then(({ requests: list = [] }) => {
         if (!alive) return;
         setRequests(list.filter((item) => item.type === "profile_change").map((item) => ({
           id: item.id,
@@ -148,6 +152,10 @@ export default function StudentProfile() {
   const requestDeptOptions = useMemo(
     () => departmentsFor(reqFaculty || profile?.faculty || ""),
     [reqFaculty, profile?.faculty]
+  );
+  const requestProgramOptions = useMemo(
+    () => programsForFaculty(reqFaculty || profile?.faculty || ""),
+    [programsForFaculty, reqFaculty, profile?.faculty]
   );
 
   function handlePhotoChange(e) {
@@ -211,6 +219,7 @@ export default function StudentProfile() {
     setReqValue("");
     setReqFaculty(profile?.faculty || "");
     setReqDepartment(profile?.department || "");
+    setReqProgram(profile?.program || "");
     setReqReason("");
     setReqError("");
     setReqSuccess(false);
@@ -235,6 +244,8 @@ export default function StudentProfile() {
     let newValue = "";
     if (reqField === "faculty") {
       newValue = reqFaculty.trim();
+    } else if (reqField === "program") {
+      newValue = reqProgram.trim();
     } else if (reqField === "department") {
       newValue = reqDepartment.trim();
     } else if (reqField === "level") {
@@ -256,20 +267,15 @@ export default function StudentProfile() {
     setReqBusy(true);
     try {
       if (authMode === "api") {
-        await requestsApi.create({
-          type: "profile_change",
-          title: `Profile change: ${meta.label}`,
-          body: reqReason.trim(),
-          meta: {
-            userName: profile.name || "",
-            userEmail: profile.email || user.email || "",
-            uniqueId: profile.uniqueId || null,
-            field: reqField,
-            fieldLabel: meta.label,
-            currentValue: currentValue || "—",
-            requestedValue: newValue,
-            reason: reqReason.trim(),
-          },
+        await requestsApi.createProfileChange({
+          userName: profile.name || "",
+          userEmail: profile.email || user.email || "",
+          uniqueId: profile.uniqueId || null,
+          field: reqField,
+          fieldLabel: meta.label,
+          currentValue: currentValue || "—",
+          requestedValue: newValue,
+          reason: reqReason.trim(),
         });
         setReqSuccess(true);
         setTimeout(() => {
@@ -631,6 +637,7 @@ export default function StudentProfile() {
                     onChange={(e) => {
                       setReqFaculty(e.target.value);
                       setReqDepartment("");
+                      setReqProgram("");
                     }}
                     className={fieldClass}
                   >
@@ -641,6 +648,23 @@ export default function StudentProfile() {
                       </option>
                     ))}
                   </select>
+                </div>
+              ) : reqField === "program" ? (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-muted">New program</label>
+                  <select
+                    value={reqProgram}
+                    onChange={(e) => {
+                      const nextProgram = e.target.value;
+                      setReqProgram(nextProgram);
+                      setReqDepartment(departmentForProgram(nextProgram, reqFaculty || profile?.faculty || ""));
+                    }}
+                    className={fieldClass}
+                  >
+                    <option value="">Select program</option>
+                    {requestProgramOptions.map((program) => <option key={program} value={program}>{program}</option>)}
+                  </select>
+                  <p className="mt-1 text-[11px] text-ink-muted">The department will be updated automatically from this program.</p>
                 </div>
               ) : reqField === "department" ? (
                 <div>

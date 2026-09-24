@@ -3,21 +3,33 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { homePathFor, nextOnboardingPath } from "../lib/roles";
 import {
-  GraduationCap,
   BookOpen,
   Timer,
   ArrowRight,
   CheckCircle2,
-  Eye,
   Menu,
   X,
   Users,
   Shield,
   Megaphone,
-  Flame,
   Calendar,
-  Star,
+  Smartphone,
+  Download,
+  Building2,
+  Mail,
+  Phone,
+  MapPin,
+  Zap,
+  ChevronRight,
 } from "lucide-react";
+
+/* Brand colors from Academicall Identity Guidelines v1.0
+   Deep Blue   #14355E  (primary)
+   Bright Blue #3D6FE0  (secondary)
+   Accent Lime #D6E64A  (highlights only)
+   Ink         #101C30  (text)
+   Mist        #F3F6FB  (bg)
+*/
 
 export default function Landing() {
   const { user, profile, loading, profileReady } = useAuth();
@@ -36,7 +48,7 @@ export default function Landing() {
   }, [pendingPath, navigate]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16);
+    const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -44,51 +56,57 @@ export default function Landing() {
   if (pendingPath) return null;
 
   return (
-    <div className="min-h-screen bg-[#f9f9ff] text-[#0B192C] antialiased selection:bg-[#dae2ff] selection:text-[#001847]">
+    <div className="min-h-screen bg-[#F3F6FB] text-[#101C30] antialiased selection:bg-[#3D6FE0]/20 selection:text-[#14355E]">
       {/* ========== HEADER ========== */}
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "border-b border-[#c5c6cd]/40 bg-white/90 shadow-sm backdrop-blur-md"
-            : "bg-white/80 backdrop-blur-md"
+            ? "border-b border-[#14355E]/10 bg-white/95 shadow-sm backdrop-blur-md"
+            : "bg-white/80 backdrop-blur-sm"
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-5 sm:h-20 sm:px-8 lg:px-12">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-5 sm:h-[72px] sm:px-8 lg:px-10">
           <div className="flex items-center gap-10">
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B192C] text-white shadow-sm transition group-hover:bg-[#0054cd]">
-                <GraduationCap size={20} strokeWidth={2.2} />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-[#0B192C]">
-                Academicall
-              </span>
+            <Link to="/" className="flex items-center gap-0 group">
+              {/* Horizontal lockup on light bg */}
+              <img
+                src="/brand/logo-horizontal.png"
+                alt="Academicall"
+                className="h-8 w-auto object-contain sm:h-9"
+              />
             </Link>
 
             <nav className="hidden items-center gap-8 md:flex">
-              <a href="#features" className="text-sm font-semibold text-[#475569] transition hover:text-[#0054cd]">
-                Features
-              </a>
-              <a href="#pricing" className="text-sm font-semibold text-[#475569] transition hover:text-[#0054cd]">
-                Pricing
-              </a>
-              <a href="#stories" className="text-sm font-semibold text-[#475569] transition hover:text-[#0054cd]">
-                Stories
-              </a>
+              {["Features", "How it works", "Download"].map((item) => (
+                <a
+                  key={item}
+                  href={`#${item.toLowerCase().replace(/ /g, "-")}`}
+                  className="text-sm font-medium text-[#14355E]/70 transition hover:text-[#14355E]"
+                >
+                  {item}
+                </a>
+              ))}
+              <Link
+                to="/privacy"
+                className="text-sm font-medium text-[#14355E]/70 transition hover:text-[#14355E]"
+              >
+                Privacy
+              </Link>
             </nav>
           </div>
 
-          <div className="hidden items-center gap-4 md:flex">
+          <div className="hidden items-center gap-3 md:flex">
             {!signedIn && (
               <Link
                 to="/login"
-                className="px-3 py-2 text-sm font-semibold text-[#475569] transition hover:text-[#0B192C]"
+                className="px-3 py-2 text-sm font-semibold text-[#14355E]/80 transition hover:text-[#14355E]"
               >
                 Sign in
               </Link>
             )}
             <Link
               to={ctaPrimary}
-              className="inline-flex h-10 items-center justify-center rounded-xl bg-[#0054cd] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0040a1]"
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#3D6FE0] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#14355E]"
             >
               {ctaPrimaryLabel}
             </Link>
@@ -96,7 +114,7 @@ export default function Landing() {
 
           <button
             type="button"
-            className="rounded-lg p-2 text-[#0B192C] md:hidden"
+            className="rounded-lg p-2 text-[#14355E] md:hidden"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Menu"
           >
@@ -105,21 +123,16 @@ export default function Landing() {
         </div>
 
         {menuOpen && (
-          <div className="border-t border-[#c5c6cd]/30 bg-white px-5 py-4 md:hidden">
+          <div className="border-t border-[#14355E]/10 bg-white px-5 py-4 md:hidden">
             <div className="flex flex-col gap-3">
-              <a href="#features" onClick={() => setMenuOpen(false)} className="text-sm font-medium">
-                Features
-              </a>
-              <a href="#pricing" onClick={() => setMenuOpen(false)} className="text-sm font-medium">
-                Pricing
-              </a>
-              <a href="#stories" onClick={() => setMenuOpen(false)} className="text-sm font-medium">
-                Stories
-              </a>
+              <a href="#features" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-[#14355E]">Features</a>
+              <a href="#how-it-works" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-[#14355E]">How it works</a>
+              <a href="#download" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-[#14355E]">Download</a>
+              <Link to="/privacy" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-[#14355E]">Privacy</Link>
               <Link
                 to={ctaPrimary}
                 onClick={() => setMenuOpen(false)}
-                className="mt-1 rounded-xl bg-[#0054cd] px-4 py-2.5 text-center text-sm font-semibold text-white"
+                className="mt-1 rounded-lg bg-[#3D6FE0] px-4 py-2.5 text-center text-sm font-semibold text-white"
               >
                 {ctaPrimaryLabel}
               </Link>
@@ -128,265 +141,129 @@ export default function Landing() {
         )}
       </header>
 
-      <main className="pt-16 sm:pt-20">
+      <main className="pt-16 sm:pt-[72px]">
         {/* ========== HERO ========== */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-white via-[#f9f9ff] to-[#f0f3ff] px-5 py-14 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
-          {/* subtle dots */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.04]"
-            style={{
-              backgroundImage: "radial-gradient(#0054cd 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
-            }}
-          />
-          <div className="pointer-events-none absolute left-1/2 top-10 h-[320px] w-[700px] -translate-x-1/2 rounded-full bg-[#dae2ff]/50 blur-[130px]" />
+        <section className="relative overflow-hidden bg-white px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:px-10 lg:pb-28 lg:pt-24">
+          <div className="pointer-events-none absolute -right-32 top-0 h-[420px] w-[420px] rounded-full bg-[#3D6FE0]/08 blur-3xl" />
+          <div className="pointer-events-none absolute -left-24 bottom-10 h-[280px] w-[280px] rounded-full bg-[#D6E64A]/15 blur-3xl" />
 
-          <div className="relative mx-auto max-w-6xl">
-            <div className="mb-12 grid items-center gap-10 lg:grid-cols-12 lg:gap-10">
-              {/* Left copy */}
-              <div className="flex flex-col items-center text-center lg:col-span-7 lg:items-start lg:text-left">
-                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#c5c6cd]/40 bg-white px-3.5 py-1.5 shadow-sm">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-                  <span className="text-xs font-semibold tracking-wide text-[#0B192C]">
-                    Built for Nigerian campus life
+          <div className="relative mx-auto max-w-7xl">
+            <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
+              <div className="flex flex-col lg:col-span-6">
+                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-[#14355E]/10 bg-[#F3F6FB] px-3.5 py-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#D6E64A] opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#D6E64A]" />
+                  </span>
+                  <span className="text-xs font-semibold tracking-wide text-[#14355E]">
+                    Web & Android · Guided academic workflows
                   </span>
                 </div>
 
-                <h1 className="mb-5 max-w-xl text-4xl font-normal leading-tight tracking-tight text-[#0B192C] sm:text-5xl lg:text-[58px] lg:leading-[66px]">
-                  Elevate your academic{" "}
-                  <span className="italic font-medium text-[#0054cd]">journey</span>
+                <h1 className="mb-5 max-w-xl text-[2.2rem] font-bold leading-[1.15] tracking-tight text-[#101C30] sm:text-5xl lg:text-[3.15rem] lg:leading-[1.1]">
+                  Guided academic workflows for modern{" "}
+                  <span className="text-[#3D6FE0]">universities.</span>
                 </h1>
 
-                <p className="mb-8 max-w-xl text-base leading-relaxed text-[#475569] sm:text-lg">
-                  Reading Hub, timed practice, department feeds, and class schedules — one place for
-                  focus, retention, and real campus workflow.
+                <p className="mb-8 max-w-lg text-base leading-relaxed text-[#14355E]/75 sm:text-lg">
+                  Academicall brings clarity to university operations — connecting
+                  admissions, coursework, and administration inside one guided
+                  academic process platform.
                 </p>
 
-                <div className="mb-5 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+                <div className="mb-7 flex flex-wrap items-center gap-3">
                   <Link
                     to={ctaPrimary}
-                    className="inline-flex items-center gap-2.5 rounded-xl bg-[#0054cd] px-7 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0040a1] group"
+                    className="group inline-flex items-center gap-2 rounded-lg bg-[#3D6FE0] px-6 py-3.5 text-sm font-semibold text-white shadow-md shadow-[#3D6FE0]/25 transition hover:bg-[#14355E]"
                   >
-                    {signedIn ? "Open dashboard" : "Join students on Academicall"}
-                    <ArrowRight size={18} className="transition group-hover:translate-x-1" />
+                    {signedIn ? "Open dashboard" : "Get started"}
+                    <ArrowRight size={17} className="transition group-hover:translate-x-0.5" />
                   </Link>
                   <a
-                    href="#features"
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#c5c6cd]/40 bg-white px-6 py-3.5 text-sm font-semibold text-[#0B192C] shadow-sm transition hover:bg-[#f0f3ff]"
+                    href="#download"
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#14355E]/15 bg-white px-5 py-3.5 text-sm font-semibold text-[#14355E] shadow-sm transition hover:border-[#14355E]/25 hover:bg-[#F3F6FB]"
                   >
-                    <Eye size={18} className="text-[#0054cd]" />
-                    See how it works
+                    <Download size={17} className="text-[#3D6FE0]" />
+                    Get the Android app
                   </a>
                 </div>
 
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#c5c6cd]/30 bg-white/80 px-4 py-1 text-xs font-semibold text-[#475569]">
-                  For students · Course reps · Staff
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-[#14355E]/60">
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="text-[#3D6FE0]" />
+                    Clear steps
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="text-[#3D6FE0]" />
+                    Guided process
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="text-[#3D6FE0]" />
+                    Elevated experience
+                  </span>
                 </div>
               </div>
 
-              {/* Right photo card */}
-              <div className="relative w-full lg:col-span-5">
-                <div className="relative overflow-hidden rounded-3xl border-2 border-white shadow-2xl">
-                  <img
-                    src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=80"
-                    alt="Nigerian university students collaborating"
-                    className="h-[360px] w-full object-cover transition duration-500 hover:scale-105 sm:h-[420px]"
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B192C]/80 via-transparent to-transparent" />
+              {/* Right visual */}
+              <div className="relative lg:col-span-6">
+                <div className="relative mx-auto max-w-md lg:max-w-none">
+                  <div className="relative overflow-hidden rounded-2xl border border-[#14355E]/10 bg-[#F3F6FB] shadow-xl shadow-[#14355E]/10">
+                    {/*
+                      HERO IMAGE
+                      Path:  public/images/hero-campus.jpg
+                      Size:  1200 × 900 px
+                    */}
+                    <img
+                      src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80"
+                      alt="University students and campus"
+                      className="h-[300px] w-full object-cover sm:h-[360px] lg:h-[400px]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#14355E]/80 via-[#14355E]/20 to-transparent" />
 
-                  <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/90 px-3 py-1.5 shadow-md backdrop-blur-md">
-                    <GraduationCap size={16} className="text-[#0054cd]" />
-                    <span className="text-[11px] font-bold tracking-wide text-[#0B192C]">
-                      Over 45+ Campuses
-                    </span>
-                  </div>
-
-                  <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 rounded-2xl border border-white/20 bg-white/90 p-3.5 shadow-lg backdrop-blur-md">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                        <Users size={18} />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-[#0B192C]">Real Study Groups</div>
-                        <div className="text-[11px] text-[#475569]">
-                          Department chats & past question drills
+                    <div className="absolute bottom-0 left-0 right-0 p-5">
+                      <div className="rounded-xl border border-white/20 bg-white/95 p-4 shadow-lg backdrop-blur-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#3D6FE0]/10 text-[#3D6FE0]">
+                            <Users size={20} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-[#101C30]">
+                              Admissions · Coursework · Records
+                            </p>
+                            <p className="text-xs text-[#14355E]/65">
+                              Guided step-by-step workflows
+                            </p>
+                          </div>
+                          <div className="hidden items-center gap-1.5 rounded-md bg-[#D6E64A]/30 px-2.5 py-1 text-[11px] font-bold text-[#14355E] sm:flex">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#D6E64A]" />
+                            Live
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <span className="shrink-0 rounded-lg bg-[#dae2ff]/60 px-2 py-1 text-xs font-bold text-[#0054cd]">
-                      UNILAG · OAU · UI
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ========== PRODUCT MOCKUP ========== */}
-            <div className="mx-auto w-full max-w-5xl rounded-3xl border border-[#c5c6cd]/40 bg-white p-4 shadow-xl sm:p-7">
-              {/* Course Rep banner */}
-              <div className="mb-6 flex flex-col items-start justify-between gap-3 rounded-2xl border border-amber-200/80 bg-amber-50 p-3.5 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
-                    <Megaphone size={16} />
-                  </span>
-                  <div>
-                    <span className="mr-2 rounded bg-amber-200/60 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-800">
-                      Course Rep Announcement
-                    </span>
-                    <span className="text-sm font-semibold text-amber-950">
-                      “Class moved to ETF Hall 10am”
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 self-end text-xs font-medium text-amber-800 sm:self-auto">
-                  <Calendar size={14} />
-                  15m ago • FOS Hall 1
-                </div>
-              </div>
-
-              <div className="grid gap-5 lg:grid-cols-12">
-                {/* Courses */}
-                <div className="flex flex-col gap-3 lg:col-span-4">
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#475569]">
-                      Registered Courses
-                    </span>
-                    <span className="text-xs font-semibold text-[#0054cd]">First Semester</span>
                   </div>
 
-                  {[
-                    {
-                      code: "GST 101",
-                      title: "Use of English & Study Skills",
-                      badge: "Material Ready",
-                      badgeCls: "bg-emerald-100 text-emerald-700",
-                      meta: "4 Handouts · 12 Practice sets",
-                    },
-                    {
-                      code: "CHM 211",
-                      title: "Basic Organic Chemistry I",
-                      badge: "Test Tomorrow",
-                      badgeCls: "bg-[#dae2ff] text-[#0054cd]",
-                      meta: "6 Handouts · 3 CBT Simulators",
-                    },
-                    {
-                      code: "MTH 101",
-                      title: "Elementary Mathematics I (Calculus)",
-                      badge: "Past Questions",
-                      badgeCls: "bg-slate-200 text-slate-700",
-                      meta: "2018–2024 Solved",
-                    },
-                  ].map((c) => (
-                    <div
-                      key={c.code}
-                      className="rounded-2xl border border-[#c5c6cd]/30 bg-[#f0f3ff] p-3.5 transition hover:border-[#0054cd]/50"
-                    >
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="text-sm font-bold text-[#0B192C]">{c.code}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.badgeCls}`}>
-                          {c.badge}
-                        </span>
+                  {/* Floating accent badges */}
+                  <div className="absolute -left-2 top-10 hidden rounded-xl border border-[#14355E]/10 bg-white px-3.5 py-2.5 shadow-lg sm:block lg:-left-6">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#D6E64A] text-[#101C30]">
+                        <Zap size={16} strokeWidth={2.5} />
                       </div>
-                      <div className="text-xs font-medium text-[#475569]">{c.title}</div>
-                      <div className="mt-2.5 text-[11px] text-[#75777d]">{c.meta}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* CBT Simulator */}
-                <div className="flex flex-col justify-between rounded-2xl border border-[#c5c6cd]/40 bg-[#f9f9ff] p-4 shadow-sm lg:col-span-5">
-                  <div>
-                    <div className="mb-3 flex items-center justify-between border-b border-[#c5c6cd]/20 pb-3">
-                      <div className="flex items-center gap-2">
-                        <Timer size={18} className="text-[#0054cd]" />
-                        <span className="text-xs font-semibold text-[#0B192C]">
-                          CBT Exam Mode · MTH 101
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 rounded-lg bg-red-100 px-2.5 py-1 font-mono text-xs font-bold text-red-700">
-                        <span className="h-2 w-2 animate-ping rounded-full bg-red-600" />
-                        14:32 remaining
-                      </div>
-                    </div>
-
-                    <div className="mb-3">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-[#75777d]">
-                        Question 24 of 50
-                      </span>
-                      <p className="mt-1 text-sm font-semibold text-[#0B192C]">
-                        Evaluate lim<sub>x→0</sub> (sin(3x) / x) as applied in differential calculus:
-                      </p>
-                    </div>
-
-                    <div className="mb-4 space-y-2">
-                      <div className="flex items-center gap-3 rounded-xl border border-[#c5c6cd]/30 bg-white p-2.5 text-xs">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#c5c6cd] text-[11px] font-bold">
-                          A
-                        </span>
-                        0
-                      </div>
-                      <div className="flex items-center gap-3 rounded-xl border-2 border-[#0054cd] bg-[#0054cd]/5 p-2.5 text-xs font-medium text-[#0B192C]">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0054cd] text-[11px] font-bold text-white">
-                          B
-                        </span>
-                        3 (Correct selection)
-                      </div>
-                      <div className="flex items-center gap-3 rounded-xl border border-[#c5c6cd]/30 bg-white p-2.5 text-xs">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#c5c6cd] text-[11px] font-bold">
-                          C
-                        </span>
-                        ∞
+                      <div>
+                        <p className="text-xs font-bold text-[#101C30]">Clear next step</p>
+                        <p className="text-[11px] text-[#14355E]/65">Always guided</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-[#c5c6cd]/20 pt-3 text-xs">
-                    <span className="font-medium text-[#475569]">Auto-saving answers...</span>
-                    <span className="flex items-center gap-1 font-bold text-[#0054cd]">
-                      Next Question <ArrowRight size={14} />
-                    </span>
-                  </div>
-                </div>
-
-                {/* Streak + Schedule */}
-                <div className="flex flex-col gap-3 lg:col-span-3">
-                  <div className="flex flex-col justify-between rounded-2xl bg-gradient-to-br from-[#0B192C] to-slate-900 p-4 text-white">
-                    <div>
-                      <div className="mb-3 flex items-center justify-between">
-                        <Flame size={24} className="text-amber-400" />
-                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-amber-300">
-                          12 Days Active
-                        </span>
+                  <div className="absolute -right-2 bottom-28 hidden rounded-xl border border-[#14355E]/10 bg-white px-3.5 py-2.5 shadow-lg sm:block lg:-right-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3D6FE0] text-white">
+                        <BookOpen size={16} strokeWidth={2.5} />
                       </div>
-                      <div className="text-2xl font-bold">Study consistency</div>
-                      <div className="mt-1 text-xs text-slate-300">Practice · Read · Show up</div>
-                    </div>
-                    <div className="mt-4 border-t border-white/10 pt-3">
-                      <div className="mb-1 flex justify-between text-[11px] text-slate-300">
-                        <span>Weekly Target</span>
-                        <span className="font-semibold text-white">88% done</span>
-                      </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
-                        <div className="h-full rounded-full bg-[#dae2ff]" style={{ width: "88%" }} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-[#c5c6cd]/30 bg-[#f0f3ff] p-3.5">
-                    <div className="mb-1.5 flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#0B192C]">Today’s Schedule</span>
-                      <span className="rounded bg-[#dae2ff] px-1.5 py-0.5 text-[10px] font-bold text-[#0B192C]">
-                        2 classes
-                      </span>
-                    </div>
-                    <div className="space-y-1 text-xs text-[#475569]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        10:00 AM — CHM 211 (ETF Hall)
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                        02:00 PM — GST 101 CBT Drill
+                      <div>
+                        <p className="text-xs font-bold text-[#101C30]">One process</p>
+                        <p className="text-[11px] text-[#14355E]/65">Start to outcome</p>
                       </div>
                     </div>
                   </div>
@@ -396,129 +273,116 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ========== FEATURES ========== */}
-        <section id="features" className="bg-white px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+        {/* ========== TRUST STRIP ========== */}
+        <section className="border-y border-[#14355E]/08 bg-[#F3F6FB] px-5 py-5 sm:px-8 lg:px-10">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-3 text-sm font-medium text-[#14355E]/70">
+            <span className="inline-flex items-center gap-2">
+              <Building2 size={15} className="text-[#3D6FE0]" />
+              Surfwired Technologies · Abuja
+            </span>
+            <span className="hidden h-4 w-px bg-[#14355E]/15 sm:block" />
+            <span className="inline-flex items-center gap-2">
+              <Smartphone size={15} className="text-[#3D6FE0]" />
+              Web + Android APK ready
+            </span>
+            <span className="hidden h-4 w-px bg-[#14355E]/15 sm:block" />
+            <span className="inline-flex items-center gap-2">
+              <Shield size={15} className="text-[#3D6FE0]" />
+              Privacy & data protection first
+            </span>
+          </div>
+        </section>
+
+        {/* ========== FEATURES + FLOATING IMAGE ========== */}
+        <section id="features" className="relative bg-white px-5 py-16 sm:px-8 sm:py-20 lg:px-10 lg:py-24">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-14 max-w-3xl text-left">
-              <div className="mb-3 inline-flex items-center gap-2 rounded bg-[#dae2ff] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#0B192C]">
-                Study consistency — Practice · Read · Show up
-              </div>
-              <h2 className="text-3xl font-normal tracking-tight text-[#0B192C] sm:text-4xl lg:text-5xl">
-                Tools built for mastery
+            <div className="mb-12 max-w-2xl">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[#3D6FE0]">
+                Everything you need
+              </p>
+              <h2 className="text-3xl font-bold tracking-tight text-[#101C30] sm:text-4xl">
+                Clear. Guided. Elevated.
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-[#475569] sm:text-lg">
-                Digest materials, practice under time pressure, and stay connected to your department
-                — without juggling five apps.
+              <p className="mt-3 text-base leading-relaxed text-[#14355E]/75 sm:text-lg">
+                One platform for admissions, coursework, and records — designed so every
+                step is easy to understand and complete.
               </p>
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-2">
-              {/* Reading Hub */}
-              <div className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/30 bg-[#f9f9ff] p-8 transition hover:shadow-lg sm:p-10">
-                <div>
-                  <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#dae2ff] text-[#0054cd] shadow-sm">
-                    <BookOpen size={24} />
-                  </div>
-                  <h3 className="mb-3 text-2xl font-semibold text-[#0B192C] sm:text-3xl">
-                    Reading Hub
-                  </h3>
-                  <p className="mb-6 leading-relaxed text-[#475569]">
-                    Course PDFs and materials by faculty and level. Open, highlight your path through
-                    the term, and keep everything within reach.
-                  </p>
-                  <div className="mb-8 flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold text-[#0B192C]">
-                      Organised by course
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold text-[#0B192C]">
-                      Distraction-light reading
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[#c5c6cd]/40 bg-white p-4 shadow-sm">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[#c5c6cd]/20 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-lg bg-[#0054cd]/10 px-2.5 py-1 text-xs font-bold text-[#0054cd]">
-                        Faculty of Science
-                      </span>
-                      <span className="text-slate-300">/</span>
-                      <span className="rounded-lg bg-[#e7eeff] px-2.5 py-1 text-xs font-semibold">
-                        200 Level
-                      </span>
+            <div className="relative grid gap-10 lg:grid-cols-12 lg:gap-12">
+              <div className="grid gap-5 sm:grid-cols-2 lg:col-span-7">
+                {[
+                  {
+                    icon: BookOpen,
+                    title: "Admissions",
+                    desc: "Guided step-by-step from application to enrollment — nothing hidden, nothing overexplained.",
+                    color: "bg-[#3D6FE0]/10 text-[#3D6FE0]",
+                  },
+                  {
+                    icon: Timer,
+                    title: "Coursework",
+                    desc: "Reading materials, timed practice, and assignments organised by faculty and level.",
+                    color: "bg-[#D6E64A]/25 text-[#14355E]",
+                  },
+                  {
+                    icon: Megaphone,
+                    title: "Department feeds",
+                    desc: "Course-rep announcements, class moves and updates in one clean stream.",
+                    color: "bg-[#3D6FE0]/10 text-[#3D6FE0]",
+                  },
+                  {
+                    icon: Calendar,
+                    title: "Records & schedules",
+                    desc: "Timetables, academic records and milestones — always oriented on the next step.",
+                    color: "bg-[#D6E64A]/25 text-[#14355E]",
+                  },
+                ].map((f) => (
+                  <div
+                    key={f.title}
+                    className="rounded-2xl border border-[#14355E]/08 bg-[#F3F6FB] p-6 transition hover:border-[#3D6FE0]/25 hover:bg-white hover:shadow-md"
+                  >
+                    <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${f.color}`}>
+                      <f.icon size={22} />
                     </div>
-                    <span className="text-xs text-[#75777d]">Page 14 of 78</span>
+                    <h3 className="mb-2 text-lg font-semibold text-[#101C30]">{f.title}</h3>
+                    <p className="text-sm leading-relaxed text-[#14355E]/70">{f.desc}</p>
                   </div>
-                  <div className="rounded-xl border border-[#c5c6cd]/20 bg-[#f0f3ff] p-4">
-                    <div className="mb-1 text-xs font-bold text-[#0B192C]">
-                      Module 3: Reaction Mechanisms in Aliphatic Compounds
-                    </div>
-                    <p className="line-clamp-3 text-xs leading-relaxed text-[#475569]">
-                      Electrophilic addition occurs readily across the carbon-carbon double bond.
-                      Nucleophiles donate electron pairs to the formed carbocation intermediate...
-                    </p>
-                    <div className="mt-3 inline-flex items-center gap-2 rounded bg-amber-100/90 px-2.5 py-1 text-[11px] font-medium text-amber-900">
-                      Highlighted: Essential test concept for CHM 211 midterm
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
 
-              {/* Practice & CBT */}
-              <div className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/30 bg-[#f9f9ff] p-8 transition hover:shadow-lg sm:p-10">
-                <div>
-                  <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e7eeff] text-[#0054cd] shadow-sm">
-                    <Timer size={24} />
-                  </div>
-                  <h3 className="mb-3 text-2xl font-semibold text-[#0B192C] sm:text-3xl">
-                    Practice & CBT
-                  </h3>
-                  <p className="mb-6 leading-relaxed text-[#475569]">
-                    Timed sets that feel like the real exam. Spot weak areas early and revise with
-                    intent — not last-minute panic.
-                  </p>
-                  <div className="mb-8 flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold text-[#0B192C]">
-                      Timed simulations
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold text-[#0B192C]">
-                      Clear feedback after each set
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[#c5c6cd]/40 bg-white p-4 shadow-sm">
-                  <div className="mb-3 flex items-center justify-between border-b border-[#c5c6cd]/20 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      <span className="text-xs font-bold text-[#0B192C]">GST 101 Drill Set</span>
-                    </div>
-                    <div className="rounded border border-red-200 bg-red-50 px-2.5 py-0.5 font-mono text-xs font-bold text-red-600">
-                      ⏱ 00:08:45
-                    </div>
-                  </div>
-                  <div className="mb-3 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-xl bg-[#f0f3ff] p-2">
-                      <div className="text-[10px] font-semibold uppercase text-[#475569]">Answered</div>
-                      <div className="text-sm font-bold text-[#0B192C]">38/40</div>
-                    </div>
-                    <div className="rounded-xl bg-emerald-50 p-2 text-emerald-900">
-                      <div className="text-[10px] font-semibold uppercase">Accuracy</div>
-                      <div className="text-sm font-bold">92%</div>
-                    </div>
-                    <div className="rounded-xl bg-blue-50 p-2 text-blue-900">
-                      <div className="text-[10px] font-semibold uppercase">Weak Area</div>
-                      <div className="text-sm font-bold">Lexis</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-900">
-                    <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
-                    <div>
-                      <span className="font-bold">Option C selected correctly.</span>
-                      <div className="mt-0.5 text-[11px] text-emerald-800">
-                        Comprehensive explanation & textbook citation generated instantly.
+              {/* ========== FLOATING RECTANGLE IMAGE BOX ========== */}
+              {/*
+                Save image as: public/images/floating-preview.png
+                Size: 480 × 720 px (portrait 2:3)
+              */}
+              <div className="relative lg:col-span-5">
+                <div className="sticky top-28">
+                  <div
+                    className="relative mx-auto w-full max-w-[300px] overflow-hidden rounded-2xl border border-[#14355E]/10 bg-[#F3F6FB] shadow-xl shadow-[#14355E]/10 lg:max-w-none"
+                    style={{ animation: "floatY 7s ease-in-out infinite" }}
+                  >
+                    <div className="flex aspect-[2/3] flex-col items-center justify-center gap-4 p-8 text-center">
+                      <img
+                        src="/brand/mark-full-color.png"
+                        alt="Academicall mark"
+                        className="h-16 w-16 object-contain"
+                      />
+                      <div>
+                       <img
+                      src="images/floating-preview.png"
+                      alt="Academicall app preview"
+                      className="h-full w-full object-cover"
+                      />
                       </div>
                     </div>
+                    {/*
+                    Replace the div above with:
+                    <img
+                      src="/images/floating-preview.png"
+                      alt="Academicall app preview"
+                      className="h-full w-full object-cover"
+                    />
+                    */}
                   </div>
                 </div>
               </div>
@@ -526,330 +390,201 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ========== CAMPUS TEAMS ========== */}
-        <section className="bg-[#f0f3ff] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+        {/* ========== HOW IT WORKS ========== */}
+        <section id="how-it-works" className="border-t border-[#14355E]/08 bg-[#F3F6FB] px-5 py-16 sm:px-8 sm:py-20 lg:px-10">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-14 max-w-3xl">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#0054cd]">
-                Campus coordination made simple
-              </span>
-              <h2 className="mt-2 text-3xl font-normal tracking-tight text-[#0B192C] sm:text-4xl lg:text-5xl">
-                Built for campus teams
-              </h2>
-              <p className="mt-4 text-base leading-relaxed text-[#475569] sm:text-lg">
-                Course reps post schedules and materials. Staff run feeds and support. Students get
-                one calm place to show up for class and exams.
+            <div className="mb-12 text-center">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[#3D6FE0]">
+                Simple onboarding
               </p>
-            </div>
-
-            <div className="mb-12 grid gap-8 md:grid-cols-2">
-              <div className="rounded-3xl border border-[#c5c6cd]/30 bg-white p-8 shadow-sm transition hover:shadow-md">
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#dae2ff] text-[#0054cd]">
-                  <Users size={24} />
-                </div>
-                <h3 className="mb-3 text-2xl font-semibold text-[#0B192C]">
-                  Department feeds & classes
-                </h3>
-                <p className="mb-6 leading-relaxed text-[#475569]">
-                  Announcements and schedules where your classmates already are.
-                </p>
-                <div className="flex flex-col gap-2.5 rounded-2xl border border-[#c5c6cd]/20 bg-[#f0f3ff] p-4">
-                  <div className="flex items-center gap-2.5 text-xs font-semibold text-[#0B192C]">
-                    <CheckCircle2 size={16} className="text-[#0054cd]" />
-                    Verified Course Rep Posts Only
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-[#475569]">
-                    <Calendar size={16} className="text-[#75777d]" />
-                    Timetable syncs directly with student reminders
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-[#c5c6cd]/30 bg-white p-8 shadow-sm transition hover:shadow-md">
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e7eeff] text-[#0054cd]">
-                  <Shield size={24} />
-                </div>
-                <h3 className="mb-3 text-2xl font-semibold text-[#0B192C]">Staff HQ & roles</h3>
-                <p className="mb-6 leading-relaxed text-[#475569]">
-                  Admins and agents coordinate without scattering across chats.
-                </p>
-                <div className="flex flex-col gap-2.5 rounded-2xl border border-[#c5c6cd]/20 bg-[#f0f3ff] p-4">
-                  <div className="flex items-center gap-2.5 text-xs font-semibold text-[#0B192C]">
-                    <Shield size={16} className="text-[#0054cd]" />
-                    Moderation controls and role-based permissions
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-[#475569]">
-                    Official student helpdesk & query resolution
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Link
-              to={ctaPrimary}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#0B192C] px-7 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-            >
-              Create your account
-              <ArrowRight size={18} />
-            </Link>
-          </div>
-        </section>
-
-        {/* ========== TESTIMONIALS ========== */}
-        <section id="stories" className="bg-[#f9f9ff] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-14 max-w-2xl">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#0054cd]">
-                Verified experiences
-              </span>
-              <h2 className="mt-2 text-3xl font-normal tracking-tight text-[#0B192C] sm:text-4xl lg:text-5xl">
-                Voices from campus
+              <h2 className="text-3xl font-bold tracking-tight text-[#101C30] sm:text-4xl">
+                Up and running in minutes
               </h2>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-3">
               {[
                 {
-                  quote:
-                    "The Reading Hub and timed practice changed how I revise. I finally know what I don’t know before the exam.",
-                  name: "Esther Enefola",
-                  role: "Undergraduate · University of Abuja",
+                  step: "01",
+                  title: "Create your account",
+                  desc: "Sign up with email. Accept the privacy policy once and you're in.",
                 },
                 {
-                  quote:
-                    "Department posts, class schedules, and materials in one place. Less WhatsApp chaos, more actual studying.",
-                  name: "OluwaBright",
-                  role: "Student · Campus community",
+                  step: "02",
+                  title: "Pick campus & courses",
+                  desc: "Select faculty, level and courses so materials and feeds match you.",
                 },
                 {
-                  quote:
-                    "Pro practice and the timetable keep me consistent. Academicall feels built for how we actually learn here.",
-                  name: "Akinwale Taiye",
-                  role: "Course mate · Faculty of Science",
+                  step: "03",
+                  title: "Study on web or Android",
+                  desc: "Use the browser or install the APK. Your progress stays in sync.",
                 },
-              ].map((t) => (
+              ].map((s, i) => (
                 <div
-                  key={t.name}
-                  className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/30 bg-white p-8 shadow-sm transition hover:shadow-md"
+                  key={s.step}
+                  className="relative rounded-2xl border border-[#14355E]/08 bg-white p-7 shadow-sm"
                 >
-                  <div>
-                    <div className="mb-5 flex gap-1 text-amber-500">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={16} fill="currentColor" />
-                      ))}
-                    </div>
-                    <blockquote className="mb-6 text-lg italic leading-snug text-[#0B192C]">
-                      “{t.quote}”
-                    </blockquote>
-                  </div>
-                  <div className="border-t border-[#c5c6cd]/20 pt-4">
-                    <div className="text-sm font-bold text-[#0B192C]">{t.name}</div>
-                    <div className="text-xs text-[#475569]">{t.role}</div>
-                  </div>
+                  <span className="mb-4 inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-lg bg-[#3D6FE0] px-2.5 text-xs font-bold text-white">
+                    {s.step}
+                  </span>
+                  <h3 className="mb-2 text-lg font-semibold text-[#101C30]">{s.title}</h3>
+                  <p className="text-sm leading-relaxed text-[#14355E]/70">{s.desc}</p>
+                  {i < 2 && (
+                    <ChevronRight
+                      size={18}
+                      className="absolute right-3 top-1/2 hidden -translate-y-1/2 text-[#14355E]/20 sm:block lg:right-[-12px] lg:z-10"
+                    />
+                  )}
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ========== PRICING ========== */}
-        <section id="pricing" className="bg-[#f0f3ff] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+        {/* ========== DOWNLOAD / APK ========== */}
+        <section id="download" className="bg-white px-5 py-16 sm:px-8 sm:py-20 lg:px-10">
           <div className="mx-auto max-w-7xl">
-            <div className="mx-auto mb-16 max-w-3xl text-center">
-              <h2 className="text-3xl font-normal tracking-tight text-[#0B192C] sm:text-4xl lg:text-5xl">
-                Simple, transparent pricing
-              </h2>
-              <p className="mt-3 text-base text-[#475569] sm:text-lg">
-                Start free. Upgrade when you want full Pro tools.
-              </p>
-            </div>
+            <div className="relative overflow-hidden rounded-3xl bg-[#14355E] px-8 py-12 shadow-xl sm:px-12 sm:py-14">
+              <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#3D6FE0]/30 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-[#D6E64A]/20 blur-3xl" />
 
-            <div className="mx-auto grid max-w-6xl items-stretch gap-8 lg:grid-cols-3">
-              {/* Free */}
-              <div className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/40 bg-white p-8 shadow-sm">
+              <div className="relative grid items-center gap-10 lg:grid-cols-2">
                 <div>
-                  <div className="mb-4">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#75777d]">
-                      Tier 1
-                    </span>
-                    <h3 className="mt-1 text-2xl font-bold text-[#0B192C]">Free</h3>
-                    <p className="text-xs font-medium text-[#475569]">Core campus tools</p>
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                    <Smartphone size={14} />
+                    Android APK available now
                   </div>
-                  <div className="mb-6 border-b border-[#c5c6cd]/20 pb-6">
-                    <span className="text-4xl font-bold text-[#0B192C]">₦0</span>
-                    <span className="text-sm font-semibold text-[#475569]">/mo</span>
+                  <h2 className="mb-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                    Take Academicall with you
+                  </h2>
+                  <p className="mb-7 max-w-md text-base leading-relaxed text-white/80">
+                    Install the official Android app from Surfwired Technologies.
+                    Same account, same progress — optimised for phones and offline-friendly use.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href="#download"
+                      className="inline-flex items-center gap-2 rounded-lg bg-[#D6E64A] px-5 py-3 text-sm font-semibold text-[#101C30] shadow-md transition hover:bg-[#E2EE80]"
+                    >
+                      <Download size={18} />
+                      Download APK
+                    </a>
+                    <Link
+                      to={ctaPrimary}
+                      className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+                    >
+                      Continue on web
+                      <ArrowRight size={16} />
+                    </Link>
                   </div>
-                  <ul className="mb-8 space-y-3">
-                    {["Department feed", "Class schedules", "Limited practice"].map((item) => (
-                      <li key={item} className="flex items-center gap-2.5 text-sm font-medium">
-                        <CheckCircle2 size={16} className="text-[#0054cd]" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
-                <Link
-                  to="/signup"
-                  className="flex h-11 w-full items-center justify-center rounded-xl bg-[#e7eeff] text-sm font-semibold text-[#0B192C] transition hover:bg-[#d8e3fb]"
-                >
-                  Sign up free
-                </Link>
-              </div>
-
-              {/* Student Pro */}
-              <div className="relative flex flex-col justify-between rounded-3xl border-2 border-[#0054cd] bg-[#0B192C] p-8 text-white shadow-xl lg:-translate-y-2">
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-[#0054cd] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-md">
-                  Most popular
+                <div className="flex justify-center lg:justify-end">
+                  <div className="flex h-40 w-40 items-center justify-center rounded-3xl border border-white/15 bg-white/10 backdrop-blur-sm">
+                    {/* Reversed / white mark on dark */}
+                    <img
+                      src="/brand/mark-full-color.png"
+                      alt="Academicall"
+                      className="h-24 w-24 object-contain"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <div className="mb-4 mt-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#dae2ff]">
-                      Recommended
-                    </span>
-                    <h3 className="mt-1 text-2xl font-bold">Student Pro</h3>
-                    <p className="text-xs font-medium text-slate-300">Full mastery toolkit</p>
-                  </div>
-                  <div className="mb-2">
-                    <span className="text-4xl font-bold">₦1,500</span>
-                    <span className="text-sm font-semibold text-slate-300">/mo</span>
-                  </div>
-                  <div className="mb-6 border-b border-white/15 pb-6 text-xs font-semibold text-[#dae2ff]">
-                    Also weekly ₦500 · annual ₦4,000
-                  </div>
-                  <ul className="mb-8 space-y-3">
-                    {["Full Reading Hub", "Unlimited practice", "Anonymous comments (Pro)"].map(
-                      (item) => (
-                        <li key={item} className="flex items-center gap-2.5 text-sm font-medium">
-                          <CheckCircle2 size={16} className="text-[#dae2ff]" />
-                          {item}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </div>
-                <Link
-                  to="/signup"
-                  className="flex h-11 w-full items-center justify-center rounded-xl bg-[#0054cd] text-sm font-bold text-white shadow-md transition hover:bg-blue-600"
-                >
-                  Go Pro
-                </Link>
-              </div>
-
-              {/* Campus / staff */}
-              <div className="flex flex-col justify-between rounded-3xl border border-[#c5c6cd]/40 bg-white p-8 shadow-sm">
-                <div>
-                  <div className="mb-4">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#75777d]">
-                      Institutions
-                    </span>
-                    <h3 className="mt-1 text-2xl font-bold text-[#0B192C]">Campus / staff</h3>
-                    <p className="text-xs font-medium text-[#475569]">Reps, agents & admin</p>
-                  </div>
-                  <div className="mb-6 border-b border-[#c5c6cd]/20 pb-6">
-                    <span className="text-4xl font-bold text-[#0B192C]">Included</span>
-                  </div>
-                  <ul className="mb-8 space-y-3">
-                    {["Course rep tools", "Staff HQ", "Feeds & moderation"].map((item) => (
-                      <li key={item} className="flex items-center gap-2.5 text-sm font-medium">
-                        <CheckCircle2 size={16} className="text-[#0054cd]" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <Link
-                  to="/login"
-                  className="flex h-11 w-full items-center justify-center rounded-xl bg-[#e7eeff] text-sm font-semibold text-[#0B192C] transition hover:bg-[#d8e3fb]"
-                >
-                  Staff sign in
-                </Link>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ========== FINAL CTA ========== */}
+        <section className="border-t border-[#14355E]/08 bg-[#F3F6FB] px-5 py-14 sm:px-8 lg:px-10">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="mb-3 text-2xl font-bold tracking-tight text-[#101C30] sm:text-3xl">
+              Ready to bring clarity to your campus?
+            </h2>
+            <p className="mb-7 text-[#14355E]/70">
+              Join institutions using Academicall for guided academic workflows.
+            </p>
+            <Link
+              to={ctaPrimary}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#3D6FE0] px-7 py-3.5 text-sm font-semibold text-white shadow-md shadow-[#3D6FE0]/25 transition hover:bg-[#14355E]"
+            >
+              {signedIn ? "Open dashboard" : "Get started free"}
+              <ArrowRight size={17} />
+            </Link>
           </div>
         </section>
       </main>
 
       {/* ========== FOOTER ========== */}
-      <footer className="border-t border-[#c5c6cd]/30 bg-white">
-        <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:px-12">
-          <div className="grid gap-10 border-b border-[#c5c6cd]/20 pb-12 md:grid-cols-2 lg:grid-cols-5">
-            <div className="lg:col-span-2 lg:pr-6">
-              <div className="mb-4 flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0B192C] text-white">
-                  <GraduationCap size={18} />
-                </div>
-                <span className="text-xl font-bold text-[#0B192C]">Academicall</span>
+      <footer className="border-t border-[#14355E]/08 bg-white px-5 py-12 sm:px-8 lg:px-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <div className="mb-4">
+                <img
+                  src="/brand/logo-horizontal.png"
+                  alt="Academicall"
+                  className="h-8 w-auto object-contain"
+                />
               </div>
-              <p className="mb-6 max-w-sm text-sm leading-relaxed text-[#475569]">
-                Elevating campus learning with Reading Hub, practice, and department tools.
+              <p className="mb-4 text-sm leading-relaxed text-[#14355E]/70">
+                Guided academic workflows for modern universities — clear, dependable,
+                and elevated.
               </p>
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#f0f3ff] px-3 py-1.5 text-xs font-semibold text-[#475569]">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Active across Nigerian campuses
+              <p className="mb-1 text-xs font-medium text-[#14355E]/50">Surfwired Technologies</p>
+              <div className="space-y-1.5 text-sm text-[#14355E]/70">
+                <p className="flex items-center gap-2">
+                  <MapPin size={14} className="text-[#3D6FE0]" />
+                  Abuja, Nigeria
+                </p>
+                <p className="flex items-center gap-2">
+                  <Phone size={14} className="text-[#3D6FE0]" />
+                  <a href="tel:+2348152243717" className="hover:text-[#14355E]">0815 224 3717</a>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Mail size={14} className="text-[#3D6FE0]" />
+                  <a href="mailto:info@surfwired.com" className="hover:text-[#14355E]">info@surfwired.com</a>
+                </p>
               </div>
             </div>
 
             <div>
-              <h4 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#0B192C]">
-                Product
-              </h4>
-              <ul className="space-y-2.5">
-                <li>
-                  <a href="#features" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
-                    Features
-                  </a>
-                </li>
-                <li>
-                  <a href="#pricing" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
-                    Pricing
-                  </a>
-                </li>
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#14355E]/45">Product</h4>
+              <ul className="space-y-2 text-sm text-[#14355E]/70">
+                <li><a href="#features" className="hover:text-[#3D6FE0]">Features</a></li>
+                <li><a href="#how-it-works" className="hover:text-[#3D6FE0]">How it works</a></li>
+                <li><a href="#download" className="hover:text-[#3D6FE0]">Download APK</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#0B192C]">
-                Account
-              </h4>
-              <ul className="space-y-2.5">
-                <li>
-                  <Link to="/login" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
-                    Sign in
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/signup" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
-                    Sign up
-                  </Link>
-                </li>
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#14355E]/45">Account</h4>
+              <ul className="space-y-2 text-sm text-[#14355E]/70">
+                <li><Link to="/login" className="hover:text-[#3D6FE0]">Sign in</Link></li>
+                <li><Link to="/signup" className="hover:text-[#3D6FE0]">Sign up</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#0B192C]">
-                Legal
-              </h4>
-              <ul className="space-y-2.5">
-                <li>
-                  <a href="#" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
-                    Privacy
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-sm text-[#475569] transition hover:text-[#0054cd]">
-                    Terms
-                  </a>
-                </li>
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#14355E]/45">Legal</h4>
+              <ul className="space-y-2 text-sm text-[#14355E]/70">
+                <li><Link to="/privacy" className="hover:text-[#3D6FE0]">Privacy Policy</Link></li>
+                <li><a href="#" className="hover:text-[#3D6FE0]">Terms of Service</a></li>
               </ul>
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-between gap-4 pt-8 text-xs text-[#475569] sm:flex-row">
-            <span>© 2026 Academicall</span>
-            <span>Focus, retention, and real campus workflow.</span>
+          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-[#14355E]/08 pt-6 text-xs text-[#14355E]/45 sm:flex-row">
+            <span>© {new Date().getFullYear()} Surfwired Technologies. All rights reserved.</span>
+            <span>Academicall · Web & Android</span>
           </div>
         </div>
       </footer>
+
+      <style>{`
+        @keyframes floatY {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-12px); }
+        }
+      `}</style>
     </div>
   );
 }

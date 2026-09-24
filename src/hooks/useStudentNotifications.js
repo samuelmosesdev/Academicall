@@ -117,6 +117,9 @@ export function useStudentNotifications() {
       if (a.audience === "level") {
         return a.level && profile?.level === a.level;
       }
+      if (a.audience === "department") {
+        return a.department && profile?.department === a.department;
+      }
       return true; // all
     });
   }, [announcements, profile]);
@@ -176,6 +179,10 @@ export function useStudentNotifications() {
     if (authMode === "api") {
       await Promise.all(systemNotifs.filter((item) => !item.readByUser).map((item) => notificationsApi.markRead(item.id)));
       setSystemNotifs((items) => items.map((item) => ({ ...item, readByUser: true })));
+      setReadMap((current) => ({
+        ...current,
+        ...Object.fromEntries(relevantAnnouncements.map((item) => [item.id, true])),
+      }));
       return;
     }
     const batch = writeBatch(db);

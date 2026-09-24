@@ -14,9 +14,11 @@ import { Bell, CheckCheck, Megaphone, UserPlus, AlertCircle } from "lucide-react
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { notificationsApi } from "../lib/api";
+import { useNotifications } from "../hooks/useNotifications";
 
 export default function AdminNotifications() {
   const { authMode } = useAuth();
+  const { refresh: refreshBadge } = useNotifications();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unread
@@ -24,7 +26,9 @@ export default function AdminNotifications() {
   useEffect(() => {
     if (authMode === "api") {
       let alive = true;
-      notificationsApi.listAdmin().then(({ notifications = [] }) => alive && setItems(notifications)).catch(() => {});
+      notificationsApi.listAdmin().then(({ notifications = [] }) => {
+        if (alive) setItems(notifications);
+      }).catch(() => {}).finally(() => alive && setLoading(false));
       return () => { alive = false; };
     }
     // Prefer admin-relevant notifications
@@ -35,7 +39,7 @@ export default function AdminNotifications() {
         const list = snap.docs
           .map((d) => ({ id: d.id, ...d.data() }))
           // Show items meant for admin (no userId, or explicit admin flags)
-          .filter((n) => n.readByAdmin === false || n.type === "announcement_published" || !n.userId);
+          .filter((n) => n.readByAdmin !== true || n.type === "announcement_published" || !n.userId);
         setItems(list);
         setLoading(false);
       },
@@ -45,23 +49,32 @@ export default function AdminNotifications() {
   }, [authMode]);
 
   const visible = useMemo(() => {
-    if (filter === "unread") return items.filter((n) => n.readByAdmin === false);
+    if (filter === "unread") return items.filter((n) => n.readByAdmin !== true);
     return items;
   }, [items, filter]);
 
-  const unreadCount = items.filter((n) => n.readByAdmin === false).length;
+  const unreadCount = items.filter((n) => n.readByAdmin !== true).length;
 
   async function markRead(id) {
-    await updateDoc(doc(db, "notifications", id), {
-      readByAdmin: true,
-      readAt: serverTimestamp(),
-    });
+    if (authMode === "api") {
+      await notificationsApi.markAdminRead(id);
+      setItems((previous) => previous.map((item) => item.id === id ? { ...item, readByAdmin: true, readAt: new Date().toISOString() } : item));
+      refreshBadge();
+      return;
+    }
+    await updateDoc(doc(db, "notifications", id), { readByAdmin: true, readAt: serverTimestamp() });
   }
 
   async function markAllRead() {
+    if (authMode === "api") {
+      await notificationsApi.markAllAdminRead();
+      setItems((previous) => previous.map((item) => ({ ...item, readByAdmin: true, readAt: new Date().toISOString() })));
+      refreshBadge();
+      return;
+    }
     const batch = writeBatch(db);
     items
-      .filter((n) => n.readByAdmin === false)
+      .filter((n) => n.readByAdmin !== true)
       .forEach((n) => {
         batch.update(doc(db, "notifications", n.id), {
           readByAdmin: true,
@@ -69,6 +82,8 @@ export default function AdminNotifications() {
         });
       });
     await batch.commit();
+      setItems((previous) => previous.map((item) => ({ ...item, readByAdmin: true })));
+      refreshBadge();
   }
 
   function iconFor(type) {
@@ -131,9 +146,9 @@ export default function AdminNotifications() {
           return (
             <button
               key={n.id}
-              onClick={() => n.readByAdmin === false && markRead(n.id)}
+              onClick={() => n.readByAdmin !== true && markRead(n.id)}
               className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-bg-panel-alt ${
-                n.readByAdmin === false ? "bg-bg-elevated/40" : ""
+                n.readByAdmin !== true ? "bg-bg-elevated/40" : ""
               }`}
             >
               <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
@@ -144,7 +159,7 @@ export default function AdminNotifications() {
                   <p className="text-sm font-medium text-text-primary">
                     {n.title || "Notification"}
                   </p>
-                  {n.readByAdmin === false && (
+                  {n.readByAdmin !== true && (
                     <span className="h-2 w-2 rounded-full bg-accent" />
                   )}
                 </div>

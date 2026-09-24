@@ -5,9 +5,50 @@ import { Prisma, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 
+function normalizeScope(value: unknown) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function levelsMatch(first: unknown, second: unknown) {
+  const a = normalizeScope(first).replace(/\s*level\s*/g, "");
+  const b = normalizeScope(second).replace(/\s*level\s*/g, "");
+  return Boolean(a && b && a === b);
+}
+
+export async function courseRepStatus(req: Request, res: Response) {
+  const department = normalizeScope(req.query.department);
+  const level = String(req.query.level || "").trim();
+  if (!department || !level) return res.json({ hasCourseRep: false });
+
+  const reps = await prisma.user.findMany({
+    where: { role: "courseRep", status: { not: "deleted" } },
+    select: { department: true, program: true, level: true, courseRepMeta: true },
+  });
+  const hasCourseRep = reps.some((rep) => {
+    const meta = rep.courseRepMeta as { department?: string; program?: string; level?: string } | null;
+    const assignedScopes = [meta?.department, rep.department, meta?.program, rep.program]
+      .filter(Boolean)
+      .map(normalizeScope);
+    const assignedLevel = meta?.level || rep.level;
+    return assignedScopes.includes(department) && levelsMatch(assignedLevel, level);
+  });
+
+  res.json({ hasCourseRep });
+}
+
 export async function listUsers(req: Request, res: Response) {
   const role = req.query.role as string | undefined;
   const search = req.query.q as string | undefined;
+
+  // Course Rep access includes Pro features. Repair older assignments that
+  // were created before this rule was enforced.
+  await prisma.user.updateMany({
+    where: { role: "courseRep", plan: { not: "pro" } },
+    data: { plan: "pro" },
+  });
 
   const users = await prisma.user.findMany({
     where: {
@@ -31,6 +72,7 @@ export async function listUsers(req: Request, res: Response) {
       plan: true,
       uniqueId: true,
       department: true,
+      program: true,
       faculty: true,
       level: true,
       status: true,
@@ -44,6 +86,10 @@ export async function listUsers(req: Request, res: Response) {
 }
 
 export async function getUser(req: Request, res: Response) {
+  await prisma.user.updateMany({
+    where: { id: String(req.params.id), role: "courseRep", plan: { not: "pro" } },
+    data: { plan: "pro" },
+  });
   const user = await prisma.user.findUnique({
     where: { id: String(req.params.id) },
     select: {
@@ -54,6 +100,8 @@ export async function getUser(req: Request, res: Response) {
       plan: true,
       uniqueId: true,
       department: true,
+      program: true,
+      courseRepMeta: true,
       photoUrl: true,
       status: true,
       profileComplete: true,
@@ -71,6 +119,7 @@ export async function getUser(req: Request, res: Response) {
 const updateProfileSchema = z.object({
   name: z.string().min(1).optional(),
   department: z.string().optional().nullable(),
+  program: z.string().optional().nullable(),
   faculty: z.string().optional().nullable(),
   level: z.string().optional().nullable(),
   matricNumber: z.string().optional().nullable(),
@@ -132,6 +181,7 @@ export async function updateMe(req: Request, res: Response) {
       data: {
         name: body.name,
         department: body.department,
+        program: body.program,
         faculty: body.faculty,
         level: body.level,
         matricNumber: body.matricNumber,
@@ -174,6 +224,7 @@ export async function updateMe(req: Request, res: Response) {
         plan: true,
         uniqueId: true,
         department: true,
+        program: true,
         photoUrl: true,
         faculty: true,
         level: true,
@@ -212,6 +263,7 @@ const adminUpdateSchema = z.object({
   status: z.enum(["active", "suspended", "deleted"]).optional(),
   name: z.string().optional(),
   department: z.string().optional(),
+  program: z.string().nullable().optional(),
   faculty: z.string().nullable().optional(),
   level: z.string().nullable().optional(),
   mustChangePassword: z.boolean().optional(),
@@ -226,11 +278,24 @@ const adminUpdateSchema = z.object({
 export async function adminUpdateUser(req: Request, res: Response) {
   try {
     const body = adminUpdateSchema.parse(req.body);
+    const current = await prisma.user.findUnique({
+      where: { id: String(req.params.id) },
+      select: { role: true, plan: true },
+    });
+    if (!current) return res.status(404).json({ error: "User not found" });
 
+    const nextRole = body.role || current.role;
+    const roleChangedToCourseRep = nextRole === "courseRep";
+    const roleRemovedFromCourseRep = current.role === "courseRep" && body.role && nextRole !== "courseRep";
     const user = await prisma.user.update({
       where: { id: String(req.params.id) },
       data: {
         ...body,
+        ...(roleChangedToCourseRep
+          ? { plan: "pro" }
+          : roleRemovedFromCourseRep
+            ? { plan: "free" }
+            : {}),
         courseRepMeta: undefined,
         ...(body.courseRepMeta !== undefined
           ? { courseRepMeta: body.courseRepMeta === null ? Prisma.JsonNull : body.courseRepMeta }
@@ -244,6 +309,7 @@ export async function adminUpdateUser(req: Request, res: Response) {
         plan: true,
         status: true,
         department: true,
+        program: true,
       },
     });
 

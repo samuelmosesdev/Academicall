@@ -57,6 +57,7 @@ model User {
   emailVerificationAttempts Int      @default(0)
   profileComplete         Boolean    @default(false)
   department              String?
+  program                 String?
   faculty                 String?
   level                   String?
   matricNumber            String?
@@ -105,6 +106,8 @@ model User {
   requests             Request[]        @relation("Requester")
   profileChangeRequests ProfileChangeRequest[]
   subscriptions       Subscription[]
+  departmentMemberships DepartmentMembership[] @relation("MembershipUser")
+  reviewedMemberships DepartmentMembership[] @relation("MembershipReviewer")
 
   @@index([role])
   @@index([department])
@@ -125,6 +128,7 @@ model Document {
   department   String?
   level        String?
   source       String? // "courseRep" | "admin" | "agent"
+  status       String   @default("approved") // approved | pending | rejected
   uploadedById String
   uploadedBy   User     @relation("UploadedBy", fields: [uploadedById], references: [id])
   courseId     String?
@@ -141,6 +145,26 @@ model Document {
   @@index([uploadedById])
   @@index([courseId])
   @@map("documents")
+}
+
+model DepartmentMembership {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  department   String
+  faculty      String?
+  level        String?
+  status       String   @default("pending") // pending | active | rejected | withdrawn
+  reviewedById String?
+  reviewedBy   User?    @relation("MembershipReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+  reviewReason String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, department])
+  @@index([department, status])
+  @@map("department_memberships")
 }
 
 model Course {
@@ -196,6 +220,7 @@ model Notification {
   body        String?
   data        Json?
   readByUser  Boolean          @default(false)
+  readByAdmin Boolean          @default(false)
   readAt      DateTime?
   archived    Boolean          @default(false)
   archivedAt  DateTime?
@@ -352,6 +377,8 @@ model ClassEvent {
   level         String?
   createdBy     String
   createdByName String?
+  comments      Json?
+  reactions     Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -14,6 +14,19 @@ const announcementSchema = z.object({
   pinned: z.boolean().optional(),
 });
 
+function normalizeScope(value: unknown) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function levelsMatch(first: unknown, second: unknown) {
+  const a = normalizeScope(first).replace(/\s*level\s*/g, "");
+  const b = normalizeScope(second).replace(/\s*level\s*/g, "");
+  return Boolean(a && b && a === b);
+}
+
 export async function listAnnouncements(req: Request, res: Response) {
   const announcements = await prisma.announcement.findMany({
     where: ["admin", "alphaAgent", "agent"].includes(req.user?.role || "") ? undefined : { published: true }, orderBy: { createdAt: "desc" }, take: 100,
@@ -25,7 +38,42 @@ export async function createAnnouncement(req: Request, res: Response) {
   if (!req.user) return res.status(401).json({ error: "Unauthenticated" });
   try {
     const body = announcementSchema.parse(req.body);
+    if (req.user.role === "courseRep") {
+      if (body.audience !== "department" || !body.department || !body.level) {
+        return res.status(403).json({ error: "Course Reps can only post to their assigned department and level" });
+      }
+
+      const rep = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { department: true, program: true, level: true, courseRepMeta: true },
+      });
+      const meta = rep?.courseRepMeta as { department?: string; program?: string; level?: string } | null;
+      const assignedScope = normalizeScope(meta?.program || meta?.department || rep?.program || rep?.department);
+      const assignedLevel = meta?.level || rep?.level;
+      if (assignedScope !== normalizeScope(body.department) || !levelsMatch(assignedLevel, body.level)) {
+        return res.status(403).json({ error: "You can only post to your assigned department and level" });
+      }
+    }
     const announcement = await prisma.announcement.create({ data: { ...body, createdBy: req.user.id } });
+    if (body.audience === "department" && body.department) {
+      await prisma.feedPost.create({
+        data: {
+          kind: "course",
+          title: body.title,
+          body: body.body || null,
+          courseCode: body.courseCode || null,
+          faculty: body.faculty || null,
+          department: body.department,
+          level: body.level || null,
+          pinned: body.pinned || false,
+          authorId: req.user.id,
+          authorName: req.user.email || "Course Rep",
+          authorRole: req.user.role,
+          comments: [],
+          reactions: [],
+        },
+      });
+    }
     res.status(201).json({ announcement });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });

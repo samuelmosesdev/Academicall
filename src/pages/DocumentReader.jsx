@@ -59,6 +59,7 @@ export default function DocumentReader() {
   const { user, profile } = useAuth();
   const pro = isPro(profile);
   const item = useDocumentRecord(docId);
+  const native = isNativeApp();
 
   // Count material opens + daily streak when reader opens
   useEffect(() => {
@@ -109,7 +110,6 @@ export default function DocumentReader() {
   const [offlineReady, setOfflineReady] = useState(false);
   const [offlineBusy, setOfflineBusy] = useState(false);
   const [offlineUrl, setOfflineUrl] = useState(null);
-  const native = isNativeApp();
 
   // Optional direct URL when opened from Materials (not in documents collection)
   const fallbackUrl = search.get("url") || "";

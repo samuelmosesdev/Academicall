@@ -4,6 +4,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Landing from "./pages/Landing";
+import Privacy from "./pages/Privacy";
 import Login from "./pages/Login";
 import LoginRedirect from "./pages/LoginRedirect";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -32,7 +33,9 @@ import AdminActivityLog from "./pages/AdminActivityLog";
 import AdminUserActivity from "./pages/AdminUserActivity";
 import AdminActivity from "./pages/AdminActivity";
 import AdminGovernance from "./pages/AdminGovernance";
+import AdminAcademicCatalog from "./pages/AdminAcademicCatalog";
 import AdminAuditLog from "./pages/AdminAuditLog";
+import AdminNotifications from "./pages/AdminNotifications";
 import AgentLayout from "./pages/AgentLayout";
 import AgentDashboard from "./pages/AgentDashboard";
 import AgentSettings from "./pages/AgentSettings";
@@ -62,6 +65,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/login" element={<Login />} />
             <Route path="/login-redirect" element={<LoginRedirect />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -106,7 +110,9 @@ export default function App() {
               <Route path="users/:userId/activity" element={<AdminUserActivity />} />
               <Route path="activity" element={<AdminActivity />} />
               <Route path="governance" element={<AdminGovernance />} />
+              <Route path="governance/academic-catalog" element={<AdminAcademicCatalog />} />
               <Route path="audit-log" element={<AdminAuditLog />} />
+              <Route path="notifications" element={<AdminNotifications />} />
               <Route path="agents" element={<AdminAgents />} />
               <Route path="agents/:agentId" element={<AdminAgentActivity />} />
               <Route path="documents" element={<AdminDocuments />} />
@@ -192,9 +198,11 @@ export default function App() {
               <Route
                 path="course-rep"
                 element={
-                  <Suspense fallback={<div className="p-4">Loading…</div>}>
-                    <CourseRepPanel />
-                  </Suspense>
+                  <ProtectedRoute requiredRole="courseRep">
+                    <Suspense fallback={<div className="p-4">Loading…</div>}>
+                      <CourseRepPanel />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route path="reference" element={<StudentReference />} />

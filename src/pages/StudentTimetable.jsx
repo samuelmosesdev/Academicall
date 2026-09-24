@@ -149,7 +149,7 @@ const emptyForm = {
 
 export default function StudentTimetable() {
   const { user, profile, authMode } = useAuth();
-  const pro = isPro(profile);
+  const pro = isPro(profile) || profile?.role === "courseRep";
   const { courses } = useCbtData();
   const [gateOpen, setGateOpen] = useState(!pro);
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date()));
@@ -228,7 +228,7 @@ export default function StudentTimetable() {
       Promise.all([timetableApi.list(), classEventsApi.list()]).then(([personalData, sharedData]) => {
         if (cancelled) return;
         personal = (personalData.events || []).map((event) => ({ ...event, source: "personal" }));
-        shared = (sharedData.events || []).filter((event) => event.department === profile?.department);
+        shared = (sharedData.events || []).filter((event) => event.department === (profile?.department || profile?.program));
         merge();
       }).catch(() => setLoading(false));
       return () => { cancelled = true; };

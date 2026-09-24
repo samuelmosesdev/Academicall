@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bell, Megaphone, CheckCheck, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Bell, Megaphone, CheckCheck } from "lucide-react";
 import { useStudentNotifications } from "../hooks/useStudentNotifications";
 import { useAuth } from "../context/AuthContext";
 import { notificationsApi } from "../lib/api";
@@ -17,6 +18,7 @@ function timeAgo(ts) {
 }
 
 export default function StudentNotifications() {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const {
     feed,
@@ -27,7 +29,6 @@ export default function StudentNotifications() {
     markAllRead,
   } = useStudentNotifications();
 
-  const [selected, setSelected] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
 
   async function handleTap(item) {
@@ -37,14 +38,13 @@ export default function StudentNotifications() {
     } else {
       await markSystemRead(item.id);
     }
-    // Open detail popup
-    setSelected(item);
+    navigate("/dashboard/department");
   }
 
   async function handleArchive(item, toArchive = true) {
     try {
       await notificationsApi.update(item.id, { archived: toArchive === true });
-    } catch (e) {
+    } catch {
       /* ignore */
     }
   }
@@ -53,7 +53,6 @@ export default function StudentNotifications() {
     if (!window.confirm("Move this notification to Trash?")) return;
     try {
       await notificationsApi.update(item.id, { deleted: true });
-      if (selected?.id === item.id) setSelected(null);
     } catch (e) {
       alert(e.message || "Could not delete");
     }
@@ -161,50 +160,6 @@ export default function StudentNotifications() {
           </button>
         ))}
       </div>
-
-      {/* ========== DETAIL POPUP when student taps a notification ========== */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-border-light bg-card-light p-6 shadow-xl">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-soft text-teal">
-                  <Megaphone size={18} />
-                </span>
-                <div>
-                  <h3 className="text-base font-semibold text-ink">
-                    {selected.title || selected.message || "Notification"}
-                  </h3>
-                  <p className="text-xs text-ink-muted">
-                    {selected.createdByName || "Admin"} · {timeAgo(selected.createdAt)}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="rounded-lg p-1 text-ink-muted hover:bg-surface-light hover:text-ink"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-muted">
-              {selected.body || selected.message || "No extra details."}
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              className="mt-6 w-full rounded-lg bg-teal py-2.5 text-sm font-semibold text-white transition hover:bg-teal-dark"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

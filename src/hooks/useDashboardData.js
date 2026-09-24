@@ -1,14 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  getCountFromServer,
-  onSnapshot,
-  query,
-  where,
-  orderBy,
-  limit,
-} from "firebase/firestore";
-import { db } from "../firebase/config";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { usersApi, documentsApi, activityApi, subscriptionsApi } from "../lib/api";
 
@@ -34,77 +24,51 @@ export function useDashboardData() {
   const [activeSubscriptions, setActiveSubscriptions] = useState(0);
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (authMode === "api") {
-      let alive = true;
-      Promise.all([usersApi.list(), documentsApi.list(), activityApi.list(), subscriptionsApi.count()]).then(([userData, documentData, activityData, subscriptionData]) => {
-        if (!alive) return;
-        setUsers(userData.users || []);
-        setAgents((userData.users || []).filter((user) => ["agent", "alphaAgent"].includes(user.role)));
-        setDocumentsCount((documentData.documents || []).length);
-        setRecentActivity(activityData.activity || []);
-        setActiveSubscriptions(subscriptionData.count || 0);
-        setLoading(false);
-      }).catch(() => alive && setLoading(false));
-      return () => { alive = false; };
+  const loadApi = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [userResult, documentResult, activityResult, subscriptionResult] =
+        await Promise.allSettled([
+          usersApi.list(),
+          documentsApi.list(),
+          activityApi.list("limit=6"),
+          subscriptionsApi.count(),
+        ]);
+
+      if (userResult.status === "rejected") throw userResult.reason;
+
+      const userData = userResult.value;
+      const documentData = documentResult.status === "fulfilled" ? documentResult.value : {};
+      const activityData = activityResult.status === "fulfilled" ? activityResult.value : {};
+      const subscriptionData = subscriptionResult.status === "fulfilled" ? subscriptionResult.value : {};
+      const userList = userData.users || [];
+      setUsers(userList);
+      setAgents(userList.filter((user) => ["agent", "alphaAgent"].includes(user.role)));
+      setDocumentsCount((documentData.documents || []).length);
+      setRecentActivity(activityData.activities || activityData.activity || []);
+      setActiveSubscriptions(subscriptionData.count || 0);
+    } catch (err) {
+      console.error("[useDashboardData] API load failed:", err);
+      setUsers([]);
+      setAgents([]);
+      setDocumentsCount(0);
+      setRecentActivity([]);
+      setActiveSubscriptions(0);
+      setError(err.message || "Failed to load dashboard data.");
+    } finally {
+      setLoading(false);
     }
-    // `users` and `agents` are streamed because the KPI cards, the free-vs-paid
-    // donut and the growth chart all derive from the documents themselves.
-    // Bounded so an admin page view can't scale linearly with the user table.
-    const unsubUsers = onSnapshot(
-      query(collection(db, "users"), limit(1000)),
-      (snap) => {
-        setUsers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      }
-    );
+  }, []);
 
-    const unsubAgents = onSnapshot(
-      query(collection(db, "agents"), limit(200)),
-      (snap) => {
-        setAgents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
-    );
-
-    const activityQuery = query(
-      collection(db, "activityLog"),
-      orderBy("createdAt", "desc"),
-      limit(6)
-    );
-    const unsubActivity = onSnapshot(activityQuery, (snap) => {
-      setRecentActivity(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-
-    return () => {
-      unsubUsers();
-      unsubAgents();
-      unsubActivity();
-    };
-  }, [authMode]);
-
-  // These two are pure counts. Streaming every document just to read snap.size
-  // billed one read per document per dashboard view; an aggregation query bills
-  // one read per 1,000 index entries instead. They aren't live any more, which
-  // is fine for headline counters.
   useEffect(() => {
-    if (authMode === "api") return;
-    let alive = true;
+    if (authMode !== "api") return undefined;
 
-    getCountFromServer(collection(db, "documents"))
-      .then((snap) => alive && setDocumentsCount(snap.data().count))
-      .catch(() => alive && setDocumentsCount(0));
-
-    getCountFromServer(
-      query(collection(db, "subscriptions"), where("status", "==", "active"))
-    )
-      .then((snap) => alive && setActiveSubscriptions(snap.data().count))
-      .catch(() => alive && setActiveSubscriptions(0));
-
-    return () => {
-      alive = false;
-    };
-  }, [authMode]);
+    loadApi();
+    return undefined;
+  }, [authMode, loadApi]);
 
   const kpis = useMemo(() => {
     const activeAgents = agents.filter((a) => a.status === "active").length;
@@ -151,5 +115,5 @@ export function useDashboardData() {
     });
   }, [users]);
 
-  return { kpis, freeVsPaid, userGrowth, recentActivity, loading };
+  return { kpis, freeVsPaid, userGrowth, recentActivity, loading, error, retry: loadApi };
 }
