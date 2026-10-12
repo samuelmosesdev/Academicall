@@ -216,6 +216,29 @@ export default function PdfReader({ src, title }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [fullscreen, goToPage, page, toggleFullscreen, zoomBy]);
 
+  const handleLoadProgress = useCallback(({ loaded, total }) => {
+    setFetching(true);
+    setProgress(total ? Math.min(100, Math.round((loaded / total) * 100)) : null);
+  }, []);
+
+  const handleLoadSuccess = useCallback((pdf) => {
+    setFetching(false);
+    setProgress(null);
+    setNumPages(pdf.numPages);
+    pdf
+      .getPage(1)
+      .then((firstPage) => {
+        const viewport = firstPage.getViewport({ scale: 1 });
+        setPageRatio(viewport.height / viewport.width);
+      })
+      .catch((error) => console.error("Could not read PDF page dimensions:", error));
+  }, []);
+
+  const handleLoadError = useCallback((error) => {
+    setFetching(false);
+    setLoadError(error);
+  }, []);
+
   function retry() {
     setLoadError(null);
     setFetching(true);
@@ -343,29 +366,10 @@ export default function PdfReader({ src, title }) {
             file={file}
             loading={null}
             error={null}
-            onLoadProgress={({ loaded, total }) => {
-              setProgress(total ? Math.min(100, Math.round((loaded / total) * 100)) : null);
-            }}
-            onLoadSuccess={(pdf) => {
-              setFetching(false);
-              setProgress(null);
-              setNumPages(pdf.numPages);
-              pdf
-                .getPage(1)
-                .then((firstPage) => {
-                  const viewport = firstPage.getViewport({ scale: 1 });
-                  setPageRatio(viewport.height / viewport.width);
-                })
-                .catch((error) => console.error("Could not read PDF page dimensions:", error));
-            }}
-            onSourceError={(error) => {
-              setFetching(false);
-              setLoadError(error);
-            }}
-            onLoadError={(error) => {
-              setFetching(false);
-              setLoadError(error);
-            }}
+            onLoadProgress={handleLoadProgress}
+            onLoadSuccess={handleLoadSuccess}
+            onSourceError={handleLoadError}
+            onLoadError={handleLoadError}
             className="flex w-max min-w-full flex-col gap-3 px-2 py-4 sm:gap-5 sm:px-6 sm:py-6"
           >
             {Array.from({ length: numPages }, (_, index) => {
