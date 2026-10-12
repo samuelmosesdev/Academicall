@@ -255,7 +255,7 @@ export default function AdminPayments() {
 
         {msg && <p className="text-sm text-accent">{msg}</p>}
 
-        <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60">
+        <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60">
           <Save size={15} />
           {saving ? "Saving…" : "Save payment settings"}
         </button>
@@ -273,7 +273,7 @@ export default function AdminPayments() {
                     {c.planName} · {c.amountLabel} · {c.email}
                   </p>
                 </div>
-                <button type="button" disabled={busyId === c.id} onClick={() => approveClaim(c)} className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-bg-app hover:bg-accent-strong">
+                <button type="button" disabled={busyId === c.id} onClick={() => approveClaim(c)} className="flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-bg-app hover:bg-accent-strong">
                   <CheckCircle2 size={13} /> Activate Pro
                 </button>
               </div>
@@ -314,7 +314,7 @@ export default function AdminPayments() {
                       <UserMinus size={13} /> Set Free
                     </button>
                   ) : (
-                    <button type="button" disabled={busyId === u.id} onClick={() => setPlan(u, "pro")} className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-bg-app hover:bg-accent-strong">
+                    <button type="button" disabled={busyId === u.id} onClick={() => setPlan(u, "pro")} className="flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-bg-app hover:bg-accent-strong">
                       <Crown size={13} /> Make Pro
                     </button>
                   )}

@@ -12,12 +12,12 @@ export default function SubscribeGateModal({ open, onClose, feature = "this feat
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-midnight/55 backdrop-blur-[3px]"
         aria-label="Close"
         onClick={onClose}
       />
       <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-border-light bg-card-light shadow-2xl">
-        <div className="bg-gradient-to-br from-[#0b3d36] via-[#0f7a6c] to-[#14b8a6] px-6 pb-10 pt-6 text-white">
+        <div className="bg-gradient-to-br from-[#0F0326] via-[#2F33B8] to-[#454ADE] px-6 pb-10 pt-6 text-white">
           <button
             type="button"
             onClick={onClose}

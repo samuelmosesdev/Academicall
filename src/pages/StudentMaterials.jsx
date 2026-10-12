@@ -235,7 +235,7 @@ export default function StudentMaterials() {
                               item.courseCode || ""
                             )}`
                       }
-                      className="inline-flex items-center gap-1 rounded-lg bg-teal px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-dark"
+                      className="inline-flex items-center gap-1 rounded-full bg-teal px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-dark"
                     >
                       Read in app
                     </Link>

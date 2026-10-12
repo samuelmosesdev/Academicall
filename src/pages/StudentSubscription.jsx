@@ -74,7 +74,7 @@ export default function StudentSubscription() {
   return (
     <div className="mx-auto max-w-4xl space-y-8 animate-fade-in">
       <div className="text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-orange-500/30">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-lemon text-midnight text-white shadow-lg shadow-orange-500/30">
           <Crown size={22} />
         </div>
         <h1 className="mt-4 text-2xl font-bold tracking-tight text-text-primary">
@@ -138,7 +138,7 @@ export default function StudentSubscription() {
         {/* Annual */}
         <div className="relative flex flex-col overflow-hidden rounded-3xl border-2 border-accent bg-bg-panel p-6 shadow-lg shadow-accent/15">
           {plans.annual?.badge && (
-            <div className="absolute right-4 top-4 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-bg-sidebar">
+            <div className="absolute right-4 top-4 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
               {plans.annual.badge}
             </div>
           )}

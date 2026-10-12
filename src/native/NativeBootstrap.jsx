@@ -7,9 +7,6 @@ import { Network } from "@capacitor/network";
 import { useNavigate } from "react-router-dom";
 
 /**
- * Mount once near the root (inside BrowserRouter), e.g. in App.jsx:
- *   <NativeBootstrap />
- *
  * Handles:
  * - Hide splash when React is ready
  * - Status bar colors
@@ -29,18 +26,18 @@ export default function NativeBootstrap() {
 
     (async () => {
       try {
-        await StatusBar.setStyle({ style: Style.Dark });
-        await StatusBar.setBackgroundColor({ color: "#0a0f1e" });
-      } catch {
-        /* web / unsupported */
+        await StatusBar.setStyle({ style: Style.Light });
+        await StatusBar.setBackgroundColor({ color: "#0F0326" });
+      } catch (err) {
+        console.warn("Native status bar setup failed:", err);
       }
 
       try {
         // Let first paint finish, then hide splash
         await new Promise((r) => setTimeout(r, 300));
         await SplashScreen.hide();
-      } catch {
-        /* ignore */
+      } catch (err) {
+        console.error("Could not hide the native splash screen:", err);
       }
 
       // Android back: go back in history, or exit on root
@@ -58,8 +55,8 @@ export default function NativeBootstrap() {
         netSub = await Network.addListener("networkStatusChange", (s) => {
           setOffline(!s.connected);
         });
-      } catch {
-        /* ignore */
+      } catch (err) {
+        console.warn("Native network monitoring is unavailable:", err);
       }
     })();
 

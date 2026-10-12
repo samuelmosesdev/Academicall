@@ -130,7 +130,7 @@ export default function QuestionFormModal({ open, onClose, initial, onSave, busy
     "w-full rounded-lg border border-border-subtle bg-bg-panel-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 px-4 py-8">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-midnight/55 backdrop-blur-[3px] px-4 py-8">
       <div className="w-full max-w-2xl rounded-2xl border border-border-subtle bg-bg-panel p-6 shadow-xl">
         <div className="mb-5 flex items-center justify-between">
           <h3 className="text-base font-semibold text-text-primary">
@@ -148,7 +148,7 @@ export default function QuestionFormModal({ open, onClose, initial, onSave, busy
                 key={t}
                 type="button"
                 onClick={() => update("type", t)}
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize transition-colors ${
+                className={`flex-1 rounded-full px-3 py-2 text-sm font-medium capitalize transition-colors ${
                   form.type === t
                     ? "bg-accent text-bg-app"
                     : "border border-border-subtle text-text-secondary hover:text-text-primary"
@@ -306,7 +306,7 @@ export default function QuestionFormModal({ open, onClose, initial, onSave, busy
             <button
               type="submit"
               disabled={busy || imageUploading}
-              className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
+              className="flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
             >
               {busy && <Loader2 size={15} className="animate-spin" />}
               {initial ? "Save changes" : "Add question"}

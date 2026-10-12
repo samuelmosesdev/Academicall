@@ -124,7 +124,7 @@ export default function StudentCourseReading() {
               <div className="flex shrink-0 items-center gap-2">
                 <Link
                   to={`/dashboard/reading-hub/doc/${d.id}`}
-                  className="flex items-center gap-1.5 rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-dark"
+                  className="flex items-center gap-1.5 rounded-full bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-dark"
                 >
                   Read in app
                 </Link>
@@ -151,7 +151,7 @@ export default function StudentCourseReading() {
             </div>
             <Link
               to="/dashboard/upgrade"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-teal px-4 py-2 text-xs font-semibold text-white hover:opacity-90"
+              className="inline-flex items-center gap-1.5 rounded-full bg-teal px-4 py-2 text-xs font-semibold text-white hover:opacity-90"
             >
               <Crown size={14} /> Go Pro
             </Link>

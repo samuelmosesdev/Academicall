@@ -6,6 +6,7 @@ import {
   LogOut,
   Sun,
   Moon,
+  Menu,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -25,7 +26,7 @@ import BackButton from "./BackButton";
 import { isAdmin, isAlpha, isStaff } from "../lib/roles";
 import { activityApi, usersApi } from "../lib/api";
 
-export default function Topbar({ search, onSearchChange }) {
+export default function Topbar({ search, onSearchChange, onMenu }) {
   const { profile, user, logout, authMode } = useAuth();
   const { unreadCount } = useNotifications();
   const { unread: staffUnread } = useStaffChatUnread();
@@ -157,11 +158,16 @@ export default function Topbar({ search, onSearchChange }) {
     profile?.role === "admin" ? "/admin/profile" : "/agent/profile";
 
   return (
-    <header className="relative flex items-center justify-between gap-3 border-b border-border-subtle bg-bg-app px-4 py-4 sm:px-6">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <BackButton />
+    <header className="topbar-paper sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 sm:px-8 lg:px-10">
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        {onMenu && (
+          <button type="button" onClick={onMenu} aria-label="Open menu" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-bg-panel text-text-secondary lg:hidden">
+            <Menu size={18} />
+          </button>
+        )}
+        <span className="hidden sm:block"><BackButton /></span>
         <div className="relative w-full max-w-md">
-          <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-panel px-3 py-2">
+          <div className="flex items-center gap-2.5 rounded-full border border-border-subtle bg-bg-panel px-4 py-2.5">
             <Search size={16} className="text-text-muted" />
             <input
               value={q}
@@ -175,19 +181,19 @@ export default function Topbar({ search, onSearchChange }) {
             />
           </div>
           {hits.length > 0 && (
-            <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-72 overflow-y-auto rounded-xl border border-border-subtle bg-bg-panel py-1 shadow-xl">
+            <div className="animate-pop absolute left-0 right-0 top-full z-40 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-border-subtle bg-bg-panel p-1.5 shadow-[var(--shadow-pop)]">
               {hits.map((h, i) => (
                 <button
                   key={`${h.type}-${h.label}-${i}`}
                   type="button"
-                  className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-bg-panel-alt"
+                  className="flex w-full flex-col items-start rounded-xl px-3 py-2 text-left hover:bg-bg-panel-alt"
                   onClick={() => {
                     setHits([]);
                     setQ("");
                     navigate(h.to);
                   }}
                 >
-                  <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                  <span className="eyebrow text-text-muted">
                     {h.type}
                   </span>
                   <span className="text-sm text-text-primary">{h.label}</span>
@@ -203,7 +209,7 @@ export default function Topbar({ search, onSearchChange }) {
         <button
           type="button"
           onClick={() => toggleTheme()}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle text-text-secondary hover:bg-bg-panel-alt"
+          className="hidden h-10 w-10 items-center justify-center rounded-full border border-border-subtle bg-bg-panel text-text-secondary hover:text-text-primary sm:flex"
           aria-label="Toggle theme"
         >
           {isDark ? <Sun size={17} /> : <Moon size={17} />}
@@ -213,13 +219,13 @@ export default function Topbar({ search, onSearchChange }) {
         <button
           type="button"
           onClick={() => navigate(staffChatPath)}
-          className="relative text-text-secondary hover:text-text-primary"
+          className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border-subtle bg-bg-panel text-text-secondary hover:text-text-primary"
           aria-label="Staff HQ messages"
           title="Staff HQ"
         >
-          <MessageSquareMore size={19} />
+          <MessageSquareMore size={17} />
           {staffUnread > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-status-danger px-0.5 text-[10px] font-semibold text-white">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[10px] font-semibold text-midnight">
               {staffUnread > 9 ? "9+" : staffUnread}
             </span>
           )}
@@ -227,15 +233,15 @@ export default function Topbar({ search, onSearchChange }) {
 
         <button
           type="button"
-          className="relative text-text-secondary hover:text-text-primary"
+          className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border-subtle bg-bg-panel text-text-secondary hover:text-text-primary"
           aria-label="Notifications"
           onClick={() =>
             navigate(profile?.role === "admin" ? "/admin" : "/agent")
           }
         >
-          <Bell size={19} />
+          <Bell size={17} />
           {unreadCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-status-danger text-[10px] font-semibold text-white">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[10px] font-semibold text-midnight">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -246,10 +252,10 @@ export default function Topbar({ search, onSearchChange }) {
             <img
               src={photo}
               alt=""
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-border-subtle"
+              className="h-10 w-10 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent ring-2 ring-border-subtle">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-midnight text-xs font-semibold text-lemon dark:bg-lemon dark:text-midnight">
               {initials}
             </div>
           )}
@@ -258,7 +264,7 @@ export default function Topbar({ search, onSearchChange }) {
         <button
           type="button"
           onClick={handleLogout}
-          className="hidden items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-text-secondary hover:bg-bg-panel-alt hover:text-status-danger sm:inline-flex"
+          className="hidden h-10 items-center gap-1.5 rounded-full px-3 text-xs text-text-secondary hover:bg-bg-panel-alt hover:text-status-danger sm:inline-flex"
         >
           <LogOut size={14} /> Log out
         </button>

@@ -2,589 +2,338 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { homePathFor, nextOnboardingPath } from "../lib/roles";
-import {
-  BookOpen,
-  Timer,
-  ArrowRight,
-  CheckCircle2,
-  Menu,
-  X,
-  Users,
-  Shield,
-  Megaphone,
-  Calendar,
-  Smartphone,
-  Download,
-  Building2,
-  Mail,
-  Phone,
-  MapPin,
-  Zap,
-  ChevronRight,
-} from "lucide-react";
+import { ArrowRight, ArrowUpRight, Menu, X, Mail, Phone, MapPin, Plus, Minus } from "lucide-react";
 
-/* Brand colors from Academicall Identity Guidelines v1.0
-   Deep Blue   #14355E  (primary)
-   Bright Blue #3D6FE0  (secondary)
-   Accent Lime #D6E64A  (highlights only)
-   Ink         #101C30  (text)
-   Mist        #F3F6FB  (bg)
+/*
+  Academicall landing — "Ink & Lemon"
+  Calm, spacious, editorial. Palette: Violet #454ADE · Aqua #44FFD1 · Midnight #0F0326 · Lemon #F8F32B
+  Always light: the landing is the shop window, independent of the app theme.
 */
+
+const IMG = {
+  hero: "/images/campus/hero-campus.webp",
+  group: "/images/campus/study-group.webp",
+  rep: "/images/campus/course-rep.webp",
+  library: "/images/campus/student-library.webp",
+  phone: "/images/campus/student-phone.webp",
+};
+
+const FAQ = [
+  ["Is Academicall free for students?", "Yes. Reading materials, your department feed, class schedules and practice tests are free. Pro adds the full timetable and unlimited AI quizzes."],
+  ["Who becomes a course rep?", "Any student can apply from their profile. An agent reviews the application and the admin approves it, so only real reps can post to a department."],
+  ["Does it work on my phone?", "Yes. Academicall works in any mobile browser. The native Android package is not available for download from this site yet."],
+  ["Which schools can use it?", "We started with the University of Abuja. Other Nigerian universities can be added department by department."],
+];
 
 export default function Landing() {
   const { user, profile, loading, profileReady } = useAuth();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState(0);
 
   const signedIn = !loading && !!user && profileReady;
   const pendingPath = signedIn ? nextOnboardingPath(profile) : null;
   const appHome = signedIn ? homePathFor(profile) : "/login";
   const ctaPrimary = signedIn ? appHome : "/signup";
-  const ctaPrimaryLabel = signedIn ? "Open dashboard" : "Get started free";
+  const ctaLabel = signedIn ? "Open dashboard" : "Get started";
 
   useEffect(() => {
     if (pendingPath) navigate(pendingPath, { replace: true });
   }, [pendingPath, navigate]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   if (pendingPath) return null;
 
+  const nav = [["Product", "#product"], ["For course reps", "#reps"], ["Questions", "#faq"], ["App", "#app"]];
+
   return (
-    <div className="min-h-screen bg-[#F3F6FB] text-[#101C30] antialiased selection:bg-[#3D6FE0]/20 selection:text-[#14355E]">
-      {/* ========== HEADER ========== */}
-      <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? "border-b border-[#14355E]/10 bg-white/95 shadow-sm backdrop-blur-md"
-            : "bg-white/80 backdrop-blur-sm"
-        }`}
-      >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-5 sm:h-[72px] sm:px-8 lg:px-10">
-          <div className="flex items-center gap-10">
-            <Link to="/" className="flex items-center gap-0 group">
-              {/* Horizontal lockup on light bg */}
-              <img
-                src="/brand/logo-horizontal.png"
-                alt="Academicall"
-                className="h-8 w-auto object-contain sm:h-9"
-              />
-            </Link>
-
-            <nav className="hidden items-center gap-8 md:flex">
-              {["Features", "How it works", "Download"].map((item) => (
-                <a
-                  key={item}
-                  href={`#${item.toLowerCase().replace(/ /g, "-")}`}
-                  className="text-sm font-medium text-[#14355E]/70 transition hover:text-[#14355E]"
-                >
-                  {item}
-                </a>
-              ))}
-              <Link
-                to="/privacy"
-                className="text-sm font-medium text-[#14355E]/70 transition hover:text-[#14355E]"
-              >
-                Privacy
-              </Link>
-            </nav>
-          </div>
-
-          <div className="hidden items-center gap-3 md:flex">
-            {!signedIn && (
-              <Link
-                to="/login"
-                className="px-3 py-2 text-sm font-semibold text-[#14355E]/80 transition hover:text-[#14355E]"
-              >
-                Sign in
-              </Link>
-            )}
-            <Link
-              to={ctaPrimary}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#3D6FE0] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#14355E]"
-            >
-              {ctaPrimaryLabel}
+    <div className="theme-light-only min-h-screen bg-paper text-midnight antialiased">
+      {/* ───────── Header ───────── */}
+      <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? "border-b border-midnight/[0.07] bg-paper/90 backdrop-blur-md" : ""}`}>
+        <div className="mx-auto grid h-[72px] max-w-[1200px] grid-cols-[1fr_auto_1fr] items-center px-6 sm:px-10">
+          <Link to="/" aria-label="Academicall home" className="justify-self-start">
+            <img src="/brand/logo-horizontal.png" alt="Academicall" className="h-[26px] w-auto" />
+          </Link>
+          <nav className="hidden items-center gap-9 md:flex">
+            {nav.map(([l, h]) => (
+              <a key={l} href={h} className="text-[0.88rem] text-midnight/65 transition hover:text-midnight">{l}</a>
+            ))}
+          </nav>
+          <div className="hidden items-center justify-self-end gap-5 md:flex">
+            {!signedIn && <Link to="/login" className="text-[0.88rem] font-medium text-midnight/80 hover:text-midnight">Sign in</Link>}
+            <Link to={ctaPrimary} className="rounded-full bg-midnight px-5 py-2.5 text-[0.86rem] font-medium text-white transition hover:bg-midnight-2">
+              {ctaLabel}
             </Link>
           </div>
-
-          <button
-            type="button"
-            className="rounded-lg p-2 text-[#14355E] md:hidden"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Menu"
-          >
+          <button type="button" aria-label="Menu" onClick={() => setMenuOpen((v) => !v)} className="col-start-3 justify-self-end rounded-full p-2 md:hidden">
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
-
         {menuOpen && (
-          <div className="border-t border-[#14355E]/10 bg-white px-5 py-4 md:hidden">
-            <div className="flex flex-col gap-3">
-              <a href="#features" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-[#14355E]">Features</a>
-              <a href="#how-it-works" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-[#14355E]">How it works</a>
-              <a href="#download" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-[#14355E]">Download</a>
-              <Link to="/privacy" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-[#14355E]">Privacy</Link>
-              <Link
-                to={ctaPrimary}
-                onClick={() => setMenuOpen(false)}
-                className="mt-1 rounded-lg bg-[#3D6FE0] px-4 py-2.5 text-center text-sm font-semibold text-white"
-              >
-                {ctaPrimaryLabel}
-              </Link>
+          <div className="mx-4 mb-3 rounded-3xl border border-midnight/[0.07] bg-white p-3 shadow-xl md:hidden">
+            {nav.map(([l, h]) => (
+              <a key={l} href={h} onClick={() => setMenuOpen(false)} className="block rounded-2xl px-4 py-3 text-[0.95rem] hover:bg-paper">{l}</a>
+            ))}
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {!signedIn && <Link to="/login" className="rounded-full border border-midnight/15 py-3 text-center text-sm font-medium">Sign in</Link>}
+              <Link to={ctaPrimary} className={`rounded-full bg-midnight py-3 text-center text-sm font-medium text-white ${signedIn ? "col-span-2" : ""}`}>{ctaLabel}</Link>
             </div>
           </div>
         )}
       </header>
 
-      <main className="pt-16 sm:pt-[72px]">
-        {/* ========== HERO ========== */}
-        <section className="relative overflow-hidden bg-white px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:px-10 lg:pb-28 lg:pt-24">
-          <div className="pointer-events-none absolute -right-32 top-0 h-[420px] w-[420px] rounded-full bg-[#3D6FE0]/08 blur-3xl" />
-          <div className="pointer-events-none absolute -left-24 bottom-10 h-[280px] w-[280px] rounded-full bg-[#D6E64A]/15 blur-3xl" />
-
-          <div className="relative mx-auto max-w-7xl">
-            <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
-              <div className="flex flex-col lg:col-span-6">
-                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-[#14355E]/10 bg-[#F3F6FB] px-3.5 py-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#D6E64A] opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#D6E64A]" />
-                  </span>
-                  <span className="text-xs font-semibold tracking-wide text-[#14355E]">
-                    Web & Android · Guided academic workflows
-                  </span>
-                </div>
-
-                <h1 className="mb-5 max-w-xl text-[2.2rem] font-bold leading-[1.15] tracking-tight text-[#101C30] sm:text-5xl lg:text-[3.15rem] lg:leading-[1.1]">
-                  Guided academic workflows for modern{" "}
-                  <span className="text-[#3D6FE0]">universities.</span>
-                </h1>
-
-                <p className="mb-8 max-w-lg text-base leading-relaxed text-[#14355E]/75 sm:text-lg">
-                  Academicall brings clarity to university operations — connecting
-                  admissions, coursework, and administration inside one guided
-                  academic process platform.
-                </p>
-
-                <div className="mb-7 flex flex-wrap items-center gap-3">
-                  <Link
-                    to={ctaPrimary}
-                    className="group inline-flex items-center gap-2 rounded-lg bg-[#3D6FE0] px-6 py-3.5 text-sm font-semibold text-white shadow-md shadow-[#3D6FE0]/25 transition hover:bg-[#14355E]"
-                  >
-                    {signedIn ? "Open dashboard" : "Get started"}
-                    <ArrowRight size={17} className="transition group-hover:translate-x-0.5" />
-                  </Link>
-                  <a
-                    href="#download"
-                    className="inline-flex items-center gap-2 rounded-lg border border-[#14355E]/15 bg-white px-5 py-3.5 text-sm font-semibold text-[#14355E] shadow-sm transition hover:border-[#14355E]/25 hover:bg-[#F3F6FB]"
-                  >
-                    <Download size={17} className="text-[#3D6FE0]" />
-                    Get the Android app
-                  </a>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-[#14355E]/60">
-                  <span className="inline-flex items-center gap-1.5">
-                    <CheckCircle2 size={14} className="text-[#3D6FE0]" />
-                    Clear steps
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <CheckCircle2 size={14} className="text-[#3D6FE0]" />
-                    Guided process
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <CheckCircle2 size={14} className="text-[#3D6FE0]" />
-                    Elevated experience
-                  </span>
-                </div>
-              </div>
-
-              {/* Right visual */}
-              <div className="relative lg:col-span-6">
-                <div className="relative mx-auto max-w-md lg:max-w-none">
-                  <div className="relative overflow-hidden rounded-2xl border border-[#14355E]/10 bg-[#F3F6FB] shadow-xl shadow-[#14355E]/10">
-                    {/*
-                      HERO IMAGE
-                      Path:  public/images/hero-campus.jpg
-                      Size:  1200 × 900 px
-                    */}
-                    <img
-                      src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80"
-                      alt="University students and campus"
-                      className="h-[300px] w-full object-cover sm:h-[360px] lg:h-[400px]"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#14355E]/80 via-[#14355E]/20 to-transparent" />
-
-                    <div className="absolute bottom-0 left-0 right-0 p-5">
-                      <div className="rounded-xl border border-white/20 bg-white/95 p-4 shadow-lg backdrop-blur-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#3D6FE0]/10 text-[#3D6FE0]">
-                            <Users size={20} />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-[#101C30]">
-                              Admissions · Coursework · Records
-                            </p>
-                            <p className="text-xs text-[#14355E]/65">
-                              Guided step-by-step workflows
-                            </p>
-                          </div>
-                          <div className="hidden items-center gap-1.5 rounded-md bg-[#D6E64A]/30 px-2.5 py-1 text-[11px] font-bold text-[#14355E] sm:flex">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#D6E64A]" />
-                            Live
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Floating accent badges */}
-                  <div className="absolute -left-2 top-10 hidden rounded-xl border border-[#14355E]/10 bg-white px-3.5 py-2.5 shadow-lg sm:block lg:-left-6">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#D6E64A] text-[#101C30]">
-                        <Zap size={16} strokeWidth={2.5} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-[#101C30]">Clear next step</p>
-                        <p className="text-[11px] text-[#14355E]/65">Always guided</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="absolute -right-2 bottom-28 hidden rounded-xl border border-[#14355E]/10 bg-white px-3.5 py-2.5 shadow-lg sm:block lg:-right-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3D6FE0] text-white">
-                        <BookOpen size={16} strokeWidth={2.5} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-[#101C30]">One process</p>
-                        <p className="text-[11px] text-[#14355E]/65">Start to outcome</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ========== TRUST STRIP ========== */}
-        <section className="border-y border-[#14355E]/08 bg-[#F3F6FB] px-5 py-5 sm:px-8 lg:px-10">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-3 text-sm font-medium text-[#14355E]/70">
-            <span className="inline-flex items-center gap-2">
-              <Building2 size={15} className="text-[#3D6FE0]" />
-              Surfwired Technologies · Abuja
-            </span>
-            <span className="hidden h-4 w-px bg-[#14355E]/15 sm:block" />
-            <span className="inline-flex items-center gap-2">
-              <Smartphone size={15} className="text-[#3D6FE0]" />
-              Web + Android APK ready
-            </span>
-            <span className="hidden h-4 w-px bg-[#14355E]/15 sm:block" />
-            <span className="inline-flex items-center gap-2">
-              <Shield size={15} className="text-[#3D6FE0]" />
-              Privacy & data protection first
-            </span>
-          </div>
-        </section>
-
-        {/* ========== FEATURES + FLOATING IMAGE ========== */}
-        <section id="features" className="relative bg-white px-5 py-16 sm:px-8 sm:py-20 lg:px-10 lg:py-24">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-12 max-w-2xl">
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[#3D6FE0]">
-                Everything you need
-              </p>
-              <h2 className="text-3xl font-bold tracking-tight text-[#101C30] sm:text-4xl">
-                Clear. Guided. Elevated.
-              </h2>
-              <p className="mt-3 text-base leading-relaxed text-[#14355E]/75 sm:text-lg">
-                One platform for admissions, coursework, and records — designed so every
-                step is easy to understand and complete.
-              </p>
-            </div>
-
-            <div className="relative grid gap-10 lg:grid-cols-12 lg:gap-12">
-              <div className="grid gap-5 sm:grid-cols-2 lg:col-span-7">
-                {[
-                  {
-                    icon: BookOpen,
-                    title: "Admissions",
-                    desc: "Guided step-by-step from application to enrollment — nothing hidden, nothing overexplained.",
-                    color: "bg-[#3D6FE0]/10 text-[#3D6FE0]",
-                  },
-                  {
-                    icon: Timer,
-                    title: "Coursework",
-                    desc: "Reading materials, timed practice, and assignments organised by faculty and level.",
-                    color: "bg-[#D6E64A]/25 text-[#14355E]",
-                  },
-                  {
-                    icon: Megaphone,
-                    title: "Department feeds",
-                    desc: "Course-rep announcements, class moves and updates in one clean stream.",
-                    color: "bg-[#3D6FE0]/10 text-[#3D6FE0]",
-                  },
-                  {
-                    icon: Calendar,
-                    title: "Records & schedules",
-                    desc: "Timetables, academic records and milestones — always oriented on the next step.",
-                    color: "bg-[#D6E64A]/25 text-[#14355E]",
-                  },
-                ].map((f) => (
-                  <div
-                    key={f.title}
-                    className="rounded-2xl border border-[#14355E]/08 bg-[#F3F6FB] p-6 transition hover:border-[#3D6FE0]/25 hover:bg-white hover:shadow-md"
-                  >
-                    <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${f.color}`}>
-                      <f.icon size={22} />
-                    </div>
-                    <h3 className="mb-2 text-lg font-semibold text-[#101C30]">{f.title}</h3>
-                    <p className="text-sm leading-relaxed text-[#14355E]/70">{f.desc}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* ========== FLOATING RECTANGLE IMAGE BOX ========== */}
-              {/*
-                Save image as: public/images/floating-preview.png
-                Size: 480 × 720 px (portrait 2:3)
-              */}
-              <div className="relative lg:col-span-5">
-                <div className="sticky top-28">
-                  <div
-                    className="relative mx-auto w-full max-w-[300px] overflow-hidden rounded-2xl border border-[#14355E]/10 bg-[#F3F6FB] shadow-xl shadow-[#14355E]/10 lg:max-w-none"
-                    style={{ animation: "floatY 7s ease-in-out infinite" }}
-                  >
-                    <div className="flex aspect-[2/3] flex-col items-center justify-center gap-4 p-8 text-center">
-                      <img
-                        src="/brand/mark-full-color.png"
-                        alt="Academicall mark"
-                        className="h-16 w-16 object-contain"
-                      />
-                      <div>
-                       <img
-                      src="images/floating-preview.png"
-                      alt="Academicall app preview"
-                      className="h-full w-full object-cover"
-                      />
-                      </div>
-                    </div>
-                    {/*
-                    Replace the div above with:
-                    <img
-                      src="/images/floating-preview.png"
-                      alt="Academicall app preview"
-                      className="h-full w-full object-cover"
-                    />
-                    */}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ========== HOW IT WORKS ========== */}
-        <section id="how-it-works" className="border-t border-[#14355E]/08 bg-[#F3F6FB] px-5 py-16 sm:px-8 sm:py-20 lg:px-10">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-12 text-center">
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[#3D6FE0]">
-                Simple onboarding
-              </p>
-              <h2 className="text-3xl font-bold tracking-tight text-[#101C30] sm:text-4xl">
-                Up and running in minutes
-              </h2>
-            </div>
-
-            <div className="grid gap-6 sm:grid-cols-3">
-              {[
-                {
-                  step: "01",
-                  title: "Create your account",
-                  desc: "Sign up with email. Accept the privacy policy once and you're in.",
-                },
-                {
-                  step: "02",
-                  title: "Pick campus & courses",
-                  desc: "Select faculty, level and courses so materials and feeds match you.",
-                },
-                {
-                  step: "03",
-                  title: "Study on web or Android",
-                  desc: "Use the browser or install the APK. Your progress stays in sync.",
-                },
-              ].map((s, i) => (
-                <div
-                  key={s.step}
-                  className="relative rounded-2xl border border-[#14355E]/08 bg-white p-7 shadow-sm"
-                >
-                  <span className="mb-4 inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-lg bg-[#3D6FE0] px-2.5 text-xs font-bold text-white">
-                    {s.step}
-                  </span>
-                  <h3 className="mb-2 text-lg font-semibold text-[#101C30]">{s.title}</h3>
-                  <p className="text-sm leading-relaxed text-[#14355E]/70">{s.desc}</p>
-                  {i < 2 && (
-                    <ChevronRight
-                      size={18}
-                      className="absolute right-3 top-1/2 hidden -translate-y-1/2 text-[#14355E]/20 sm:block lg:right-[-12px] lg:z-10"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ========== DOWNLOAD / APK ========== */}
-        <section id="download" className="bg-white px-5 py-16 sm:px-8 sm:py-20 lg:px-10">
-          <div className="mx-auto max-w-7xl">
-            <div className="relative overflow-hidden rounded-3xl bg-[#14355E] px-8 py-12 shadow-xl sm:px-12 sm:py-14">
-              <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#3D6FE0]/30 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-[#D6E64A]/20 blur-3xl" />
-
-              <div className="relative grid items-center gap-10 lg:grid-cols-2">
-                <div>
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
-                    <Smartphone size={14} />
-                    Android APK available now
-                  </div>
-                  <h2 className="mb-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                    Take Academicall with you
-                  </h2>
-                  <p className="mb-7 max-w-md text-base leading-relaxed text-white/80">
-                    Install the official Android app from Surfwired Technologies.
-                    Same account, same progress — optimised for phones and offline-friendly use.
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <a
-                      href="#download"
-                      className="inline-flex items-center gap-2 rounded-lg bg-[#D6E64A] px-5 py-3 text-sm font-semibold text-[#101C30] shadow-md transition hover:bg-[#E2EE80]"
-                    >
-                      <Download size={18} />
-                      Download APK
-                    </a>
-                    <Link
-                      to={ctaPrimary}
-                      className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
-                    >
-                      Continue on web
-                      <ArrowRight size={16} />
-                    </Link>
-                  </div>
-                </div>
-                <div className="flex justify-center lg:justify-end">
-                  <div className="flex h-40 w-40 items-center justify-center rounded-3xl border border-white/15 bg-white/10 backdrop-blur-sm">
-                    {/* Reversed / white mark on dark */}
-                    <img
-                      src="/brand/mark-full-color.png"
-                      alt="Academicall"
-                      className="h-24 w-24 object-contain"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ========== FINAL CTA ========== */}
-        <section className="border-t border-[#14355E]/08 bg-[#F3F6FB] px-5 py-14 sm:px-8 lg:px-10">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="mb-3 text-2xl font-bold tracking-tight text-[#101C30] sm:text-3xl">
-              Ready to bring clarity to your campus?
-            </h2>
-            <p className="mb-7 text-[#14355E]/70">
-              Join institutions using Academicall for guided academic workflows.
+      <main>
+        {/* ───────── Hero ───────── */}
+        <section className="px-6 pb-20 pt-36 sm:px-10 sm:pt-44">
+          <div className="mx-auto max-w-[920px] text-center">
+            <a href="#product" className="rise inline-flex items-center gap-2.5 rounded-full border border-midnight/10 bg-white py-1.5 pl-2 pr-4 text-[0.8rem] text-midnight/70 transition hover:border-midnight/25">
+              <span className="live-dot ml-2" />
+              Now live<span className="hidden sm:inline">&nbsp;for University of Abuja students</span><span className="sm:hidden">&nbsp;at UniAbuja</span> <ArrowRight size={13} />
+            </a>
+            <h1 className="rise rise-1 mt-8 font-display text-[2.9rem] font-[350] leading-[1.02] tracking-[-0.035em] sm:text-[4.6rem] lg:text-[5.4rem]">
+              Your whole semester,
+              <br />
+              <span className="serif-i text-violet">calmly</span> in one place.
+            </h1>
+            <p className="rise rise-2 mx-auto mt-7 max-w-[560px] text-[1.08rem] leading-relaxed text-midnight/65">
+              Lecture notes, class changes, practice tests and your course rep's updates — sorted by your department and level.
             </p>
-            <Link
-              to={ctaPrimary}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#3D6FE0] px-7 py-3.5 text-sm font-semibold text-white shadow-md shadow-[#3D6FE0]/25 transition hover:bg-[#14355E]"
-            >
-              {signedIn ? "Open dashboard" : "Get started free"}
-              <ArrowRight size={17} />
-            </Link>
+            <div className="rise rise-3 mt-10 flex flex-wrap items-center justify-center gap-3">
+              <Link to={ctaPrimary} className="group inline-flex items-center gap-2 rounded-full bg-midnight px-7 py-4 text-[0.95rem] font-medium text-white transition hover:bg-midnight-2">
+                {signedIn ? "Open dashboard" : "Create your free account"}
+                <ArrowRight size={17} className="transition group-hover:translate-x-0.5" />
+              </Link>
+              <a href="#product" className="inline-flex items-center gap-2 rounded-full px-6 py-4 text-[0.95rem] font-medium text-midnight/80 transition hover:text-midnight">
+                See how it works <ArrowUpRight size={16} />
+              </a>
+            </div>
           </div>
+
+          {/* Product composition */}
+          <div id="product" className="relative mx-auto mt-20 max-w-[1200px] scroll-mt-28 sm:mt-24">
+            <div className="photo-frame relative aspect-[4/5] sm:aspect-[16/8.2]">
+              <img src={IMG.hero} alt="University students walking together on campus" className="h-full w-full object-cover object-[60%_center]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-midnight/55 via-midnight/0 to-transparent" />
+              <span className="eyebrow absolute left-4 top-4 rounded-full bg-paper/90 px-3 py-2 text-midnight shadow-sm sm:left-6 sm:top-6">
+                Example app preview
+              </span>
+            </div>
+
+            <div className="relative z-10 mx-auto -mt-28 grid max-w-[1080px] gap-4 px-3 sm:-mt-32 sm:grid-cols-3 sm:px-6">
+              {/* Lemon: next class */}
+              <div className="float-card bg-lemon p-6">
+                <div className="flex items-center justify-between">
+                  <span className="eyebrow text-midnight/60">Next class</span>
+                  <span className="eyebrow rounded-full bg-midnight px-2 py-1 text-lemon">in 42 min</span>
+                </div>
+                <p className="mt-6 font-display text-[1.6rem] font-[420] leading-tight">CSC 201</p>
+                <p className="text-[0.92rem] text-midnight/70">Data Structures · LT 2 · 10:00</p>
+                <div className="ticket-rule mt-5" />
+                <p className="mt-3 text-[0.82rem] text-midnight/70">38 classmates going</p>
+              </div>
+              {/* Midnight: streak */}
+              <div className="float-card bg-midnight p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <span className="eyebrow text-white/50">Reading streak</span>
+                  <span className="eyebrow text-aqua">This week</span>
+                </div>
+                <p className="num mt-5 text-[3.2rem] font-light leading-none">7<span className="text-white/40">/7</span></p>
+                <div className="mt-5 flex gap-1.5">
+                  {[13, 8, 14, 9, 6, 11, 16].map((v, i) => (
+                    <span key={i} className="flex-1 rounded-md bg-aqua" style={{ height: v * 2.4, opacity: 0.35 + v / 26, alignSelf: "flex-end" }} />
+                  ))}
+                </div>
+              </div>
+              {/* Aqua: quiz */}
+              <div className="float-card bg-aqua-soft p-6">
+                <div className="flex items-center justify-between">
+                  <span className="eyebrow text-midnight/60">Practice quiz</span>
+                  <span className="eyebrow text-aqua-deep">Pages 4–9</span>
+                </div>
+                <p className="num mt-5 text-[3.2rem] font-light leading-none">87%</p>
+                <p className="mt-3 text-[0.9rem] text-midnight/70">13 of 15 right on Trees &amp; Graphs. Two to revisit.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── Statement ───────── */}
+        <section className="px-6 py-24 sm:px-10 sm:py-32">
+          <p className="mx-auto max-w-[900px] text-center font-display text-[1.9rem] font-[350] leading-[1.25] tracking-[-0.02em] text-midnight sm:text-[2.6rem]">
+            No more scrolling through six group chats to find out the CA moved.{" "}
+            <span className="text-midnight/40">One quiet place for your department — what to read, where to be, and how ready you are.</span>
+          </p>
+        </section>
+
+        {/* ───────── Roles ───────── */}
+        <section className="mx-auto max-w-[1200px] px-6 pb-28 sm:px-10">
+          <div className="flex flex-wrap items-end justify-between gap-6 border-b border-midnight/10 pb-8">
+            <h2 className="font-display text-[2.3rem] font-[380] leading-tight tracking-[-0.03em] sm:text-[3rem]">Made for everyone<br />on campus.</h2>
+            <p className="max-w-sm text-midnight/60">Four roles, one home. Everyone sees exactly what they need — nothing more.</p>
+          </div>
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["01", "Students", "Read, track your progress and test yourself before exams.", "bg-white"],
+              ["02", "Course reps", "Schedule classes, share materials and reach the whole level.", "bg-lemon-soft"],
+              ["03", "Agents", "Review reports and recommend new course reps.", "bg-aqua-soft"],
+              ["04", "Admins", "Approve, moderate and keep the platform healthy.", "bg-violet-soft"],
+            ].map(([n, t, d, bg]) => (
+              <div key={t} className={`${bg} flex min-h-[15rem] flex-col justify-between rounded-[1.4rem] border border-midnight/[0.06] p-7`}>
+                <span className="eyebrow text-midnight/50">Role {n}</span>
+                <div>
+                  <h3 className="font-display text-[1.7rem] font-[420] tracking-[-0.02em]">{t}</h3>
+                  <p className="mt-2 text-[0.94rem] leading-relaxed text-midnight/65">{d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ───────── Feature: students ───────── */}
+        <Feature
+          eyebrow="For students"
+          title={<>Read it. Track it. <span className="serif-i">Then test yourself.</span></>}
+          body="Every material your course rep shares lands in your Reading Hub. Read on any device, keep a daily study streak, and generate a practice quiz from what you just read."
+          points={["A Reading Hub for every course", "AI practice quizzes from your materials", "Timed CBT practice before exams"]}
+          image={IMG.group}
+          alt="Three students studying together with a laptop"
+        />
+
+        {/* ───────── Feature: course reps ───────── */}
+        <Feature
+          id="reps"
+          reverse
+          eyebrow="For course reps"
+          title={<>Reach your whole level in <span className="serif-i">one post,</span> not ten messages.</>}
+          body="Schedule a class, move a test or share new slides, and everyone in your department and level sees it at once — with a notification on their phone."
+          points={["Schedule lectures, tutorials and tests", "Share materials straight to the Reading Hub", "Approve who joins your class group"]}
+          image={IMG.rep}
+          alt="A course representative speaking to classmates in a lecture theatre"
+        />
+
+        {/* ───────── FAQ ───────── */}
+        <section id="faq" className="mx-auto max-w-[1200px] scroll-mt-24 px-6 py-28 sm:px-10">
+          <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
+            <div>
+              <span className="eyebrow text-violet">Questions</span>
+              <h2 className="mt-4 font-display text-[2.3rem] font-[380] leading-tight tracking-[-0.03em] sm:text-[3rem]">Good to know.</h2>
+              <p className="mt-4 max-w-xs text-midnight/60">
+                Anything else? Write to <a href="mailto:info@surfwired.com" className="text-midnight underline decoration-lemon decoration-[3px] underline-offset-4">info@surfwired.com</a>
+              </p>
+            </div>
+            <div className="divide-y divide-midnight/10 border-y border-midnight/10">
+              {FAQ.map(([q, a], i) => {
+                const open = openFaq === i;
+                return (
+                  <div key={q}>
+                    <button type="button" onClick={() => setOpenFaq(open ? -1 : i)} className="flex w-full items-center justify-between gap-6 py-6 text-left" aria-expanded={open}>
+                      <span className="text-[1.08rem] font-medium">{q}</span>
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition ${open ? "bg-midnight text-white" : "bg-white text-midnight ring-1 ring-midnight/10"}`}>
+                        {open ? <Minus size={15} /> : <Plus size={15} />}
+                      </span>
+                    </button>
+                    {open && <p className="animate-fade -mt-2 max-w-xl pb-6 text-[0.98rem] leading-relaxed text-midnight/65">{a}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── App band ───────── */}
+        <section id="app" className="scroll-mt-24 px-4 pb-24 sm:px-10">
+          <div className="mx-auto grid max-w-[1200px] overflow-hidden rounded-[2rem] bg-midnight text-white lg:grid-cols-2">
+            <div className="flex flex-col justify-center p-9 sm:p-16">
+              <span className="eyebrow text-aqua">Phone access</span>
+              <h2 className="mt-5 font-display text-[2.4rem] font-[350] leading-[1.08] tracking-[-0.03em] sm:text-[3.2rem]">
+                Your semester, <span className="serif-i text-lemon">wherever you are.</span>
+              </h2>
+              <p className="mt-5 max-w-md text-white/65">Use the mobile-friendly web app to check class updates, reading materials and practice. The native Android package is not published from this site yet.</p>
+              <div className="mt-9 flex flex-wrap gap-3">
+                <Link to={ctaPrimary} className="inline-flex items-center gap-2 rounded-full border border-white/20 px-6 py-3.5 text-[0.95rem] font-medium transition hover:bg-white/10">
+                  {signedIn ? "Open Academicall" : "Get started"} <ArrowUpRight size={16} />
+                </Link>
+              </div>
+            </div>
+            <div className="relative min-h-[24rem]">
+              <img src={IMG.phone} alt="A student checking his timetable on his phone" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
+              <div className="absolute bottom-6 left-6 right-6 rounded-2xl bg-white p-4 text-midnight shadow-2xl sm:left-auto sm:w-72">
+                <div className="flex items-center gap-2">
+                  <img src="/brand/mark.png" alt="" className="h-6 w-6" />
+                  <span className="eyebrow text-midnight/50">Academicall · now</span>
+                </div>
+                <p className="mt-2 text-[0.92rem] font-medium leading-snug">CSC 201 CA moved to Thursday, 9:00 · LT 1</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── Final CTA ───────── */}
+        <section className="px-6 pb-32 pt-8 text-center sm:px-10">
+          <h2 className="mx-auto max-w-3xl font-display text-[2.6rem] font-[350] leading-[1.05] tracking-[-0.035em] sm:text-[4rem]">
+            Start this semester <span className="mark-lemon">organised.</span>
+          </h2>
+          <p className="mx-auto mt-5 max-w-md text-midnight/60">Free for students. It takes about a minute.</p>
+          <Link to={ctaPrimary} className="group mt-10 inline-flex items-center gap-2 rounded-full bg-midnight px-8 py-4 font-medium text-white transition hover:bg-midnight-2">
+            {signedIn ? "Open dashboard" : "Create your free account"} <ArrowRight size={18} className="transition group-hover:translate-x-0.5" />
+          </Link>
         </section>
       </main>
 
-      {/* ========== FOOTER ========== */}
-      <footer className="border-t border-[#14355E]/08 bg-white px-5 py-12 sm:px-8 lg:px-10">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="sm:col-span-2 lg:col-span-1">
-              <div className="mb-4">
-                <img
-                  src="/brand/logo-horizontal.png"
-                  alt="Academicall"
-                  className="h-8 w-auto object-contain"
-                />
-              </div>
-              <p className="mb-4 text-sm leading-relaxed text-[#14355E]/70">
-                Guided academic workflows for modern universities — clear, dependable,
-                and elevated.
-              </p>
-              <p className="mb-1 text-xs font-medium text-[#14355E]/50">Surfwired Technologies</p>
-              <div className="space-y-1.5 text-sm text-[#14355E]/70">
-                <p className="flex items-center gap-2">
-                  <MapPin size={14} className="text-[#3D6FE0]" />
-                  Abuja, Nigeria
-                </p>
-                <p className="flex items-center gap-2">
-                  <Phone size={14} className="text-[#3D6FE0]" />
-                  <a href="tel:+2348152243717" className="hover:text-[#14355E]">0815 224 3717</a>
-                </p>
-                <p className="flex items-center gap-2">
-                  <Mail size={14} className="text-[#3D6FE0]" />
-                  <a href="mailto:info@surfwired.com" className="hover:text-[#14355E]">info@surfwired.com</a>
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#14355E]/45">Product</h4>
-              <ul className="space-y-2 text-sm text-[#14355E]/70">
-                <li><a href="#features" className="hover:text-[#3D6FE0]">Features</a></li>
-                <li><a href="#how-it-works" className="hover:text-[#3D6FE0]">How it works</a></li>
-                <li><a href="#download" className="hover:text-[#3D6FE0]">Download APK</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#14355E]/45">Account</h4>
-              <ul className="space-y-2 text-sm text-[#14355E]/70">
-                <li><Link to="/login" className="hover:text-[#3D6FE0]">Sign in</Link></li>
-                <li><Link to="/signup" className="hover:text-[#3D6FE0]">Sign up</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#14355E]/45">Legal</h4>
-              <ul className="space-y-2 text-sm text-[#14355E]/70">
-                <li><Link to="/privacy" className="hover:text-[#3D6FE0]">Privacy Policy</Link></li>
-                <li><a href="#" className="hover:text-[#3D6FE0]">Terms of Service</a></li>
-              </ul>
-            </div>
+      {/* ───────── Footer ───────── */}
+      <footer className="border-t border-midnight/10">
+        <div className="mx-auto grid max-w-[1200px] gap-10 px-6 py-16 sm:px-10 md:grid-cols-[1.5fr_1fr_1fr]">
+          <div>
+            <img src="/brand/logo-horizontal.png" alt="Academicall" className="h-6 w-auto" />
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-midnight/55">The academic home for your department. Made in Abuja by Surfwired Technologies.</p>
           </div>
-
-          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-[#14355E]/08 pt-6 text-xs text-[#14355E]/45 sm:flex-row">
-            <span>© {new Date().getFullYear()} Surfwired Technologies. All rights reserved.</span>
-            <span>Academicall · Web & Android</span>
-          </div>
+          <ul className="space-y-3 text-sm text-midnight/70">
+            <li className="flex items-center gap-2.5"><MapPin size={14} className="text-violet" /> Abuja, Nigeria</li>
+            <li className="flex items-center gap-2.5"><Phone size={14} className="text-violet" /><a href="tel:+2348152243717" className="hover:text-midnight">0815 224 3717</a></li>
+            <li className="flex items-center gap-2.5"><Mail size={14} className="text-violet" /><a href="mailto:info@surfwired.com" className="hover:text-midnight">info@surfwired.com</a></li>
+          </ul>
+          <ul className="space-y-3 text-sm text-midnight/70">
+            <li><a href="#product" className="hover:text-midnight">Product</a></li>
+            <li><a href="#reps" className="hover:text-midnight">For course reps</a></li>
+            <li><a href="#app" className="hover:text-midnight">Phone access</a></li>
+            <li><Link to="/privacy" className="hover:text-midnight">Privacy</Link></li>
+          </ul>
+        </div>
+        <div className="border-t border-midnight/[0.07] py-6 text-center text-xs text-midnight/45">
+          © {new Date().getFullYear()} Surfwired Technologies. All rights reserved.
         </div>
       </footer>
-
-      <style>{`
-        @keyframes floatY {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-12px); }
-        }
-      `}</style>
     </div>
+  );
+}
+
+function Feature({ id, eyebrow, title, body, points, image, alt, reverse }) {
+  return (
+    <section id={id} className="mx-auto max-w-[1200px] scroll-mt-24 px-6 py-20 sm:px-10 sm:py-24">
+      <div className={`grid items-center gap-12 lg:grid-cols-2 lg:gap-24 ${reverse ? "lg:[&>*:first-child]:order-2" : ""}`}>
+        <div className="photo-frame aspect-[4/3.4]">
+          <img src={image} alt={alt} loading="lazy" className="h-full w-full object-cover" />
+        </div>
+        <div>
+          <span className="eyebrow text-violet">{eyebrow}</span>
+          <h2 className="mt-5 font-display text-[2.3rem] font-[380] leading-[1.08] tracking-[-0.03em] sm:text-[3rem]">{title}</h2>
+          <p className="mt-6 max-w-lg text-[1.04rem] leading-relaxed text-midnight/65">{body}</p>
+          <ul className="mt-9 border-t border-midnight/10">
+            {points.map((p, i) => (
+              <li key={p} className="flex items-center gap-5 border-b border-midnight/10 py-4 text-[0.98rem]">
+                <span className="eyebrow w-6 text-midnight/40">0{i + 1}</span>
+                {p}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
   );
 }

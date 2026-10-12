@@ -19,9 +19,9 @@ function levelsMatch(first: unknown, second: unknown) {
 }
 
 export async function courseRepStatus(req: Request, res: Response) {
-  const department = normalizeScope(req.query.department);
+  const program = normalizeScope(req.query.program);
   const level = String(req.query.level || "").trim();
-  if (!department || !level) return res.json({ hasCourseRep: false });
+  if (!program || !level) return res.status(400).json({ error: "program and level are required", hasCourseRep: false });
 
   const reps = await prisma.user.findMany({
     where: { role: "courseRep", status: { not: "deleted" } },
@@ -29,11 +29,7 @@ export async function courseRepStatus(req: Request, res: Response) {
   });
   const hasCourseRep = reps.some((rep) => {
     const meta = rep.courseRepMeta as { department?: string; program?: string; level?: string } | null;
-    const assignedScopes = [meta?.department, rep.department, meta?.program, rep.program]
-      .filter(Boolean)
-      .map(normalizeScope);
-    const assignedLevel = meta?.level || rep.level;
-    return assignedScopes.includes(department) && levelsMatch(assignedLevel, level);
+    return normalizeScope(meta?.program) === program && levelsMatch(meta?.level, level);
   });
 
   res.json({ hasCourseRep });
@@ -118,10 +114,10 @@ export async function getUser(req: Request, res: Response) {
 
 const updateProfileSchema = z.object({
   name: z.string().min(1).optional(),
-  department: z.string().optional().nullable(),
-  program: z.string().optional().nullable(),
-  faculty: z.string().optional().nullable(),
-  level: z.string().optional().nullable(),
+  department: z.string().trim().optional().nullable(),
+  program: z.string().trim().optional().nullable(),
+  faculty: z.string().trim().optional().nullable(),
+  level: z.string().trim().optional().nullable(),
   matricNumber: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   bio: z.string().optional().nullable(),
@@ -145,7 +141,6 @@ const updateProfileSchema = z.object({
   uniqueId: z.string().optional(), // only allowed if currently null
   canImportAI: z.boolean().optional(),
   autoPublish: z.boolean().optional(),
-  courseRepMeta: z.record(z.any()).nullable().optional(),
   customCourses: z.array(z.any()).optional(),
 });
 
@@ -166,6 +161,26 @@ export async function updateMe(req: Request, res: Response) {
     const body = updateProfileSchema.parse(req.body);
     const current = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!current) return res.status(404).json({ error: "User not found" });
+
+    if (body.profileComplete && ["user", "courseRep"].includes(current.role)) {
+      const program = String(body.program ?? current.program ?? "").trim();
+      const department = String(body.department ?? current.department ?? "").trim();
+      const faculty = String(body.faculty ?? current.faculty ?? "").trim();
+      const level = String(body.level ?? current.level ?? "").trim();
+      if (!program || !department || !faculty || !level) {
+        return res.status(400).json({
+          error: "Faculty, department, program, and level are required to complete your profile.",
+        });
+      }
+    }
+
+    const identityFields = ["department", "faculty", "program", "level"] as const;
+    const changingAcademicIdentity = identityFields.some(
+      (field) => body[field] !== undefined && body[field] !== (current[field] ?? null)
+    );
+    if (changingAcademicIdentity && current.profileComplete && String(current.program || "").trim()) {
+      return res.status(403).json({ error: "Academic details can only be changed through a profile change request" });
+    }
 
     // uniqueId can only be set once
     if (body.uniqueId && current.uniqueId) {
@@ -211,9 +226,6 @@ export async function updateMe(req: Request, res: Response) {
             : {}),
           canImportAI: body.canImportAI,
           autoPublish: body.autoPublish,
-          ...(body.courseRepMeta !== undefined
-            ? { courseRepMeta: body.courseRepMeta === null ? Prisma.JsonNull : body.courseRepMeta }
-            : {}),
           customCourses: body.customCourses,
       },
       select: {
@@ -278,6 +290,26 @@ const adminUpdateSchema = z.object({
 export async function adminUpdateUser(req: Request, res: Response) {
   try {
     const body = adminUpdateSchema.parse(req.body);
+    if (body.role === "courseRep" || (body.courseRepMeta !== undefined && body.courseRepMeta !== null)) {
+      const meta = body.courseRepMeta;
+      const program = String(meta?.program || "").trim();
+      const department = String(meta?.department || "").trim();
+      const level = String(meta?.level || "").trim();
+      if (!program || !department || !level) {
+        return res.status(400).json({
+          error: "A Course Rep assignment requires an explicit program, parent department, and level.",
+        });
+      }
+      if (
+        body.program !== program ||
+        body.department !== department ||
+        body.level !== level
+      ) {
+        return res.status(400).json({
+          error: "Course Rep profile and assignment program, department, and level must match.",
+        });
+      }
+    }
     const current = await prisma.user.findUnique({
       where: { id: String(req.params.id) },
       select: { role: true, plan: true },

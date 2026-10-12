@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Menu } from "lucide-react";
 import { Outlet } from "react-router-dom";
 import UserSidebar from "../components/UserSidebar";
 import UserTopbar from "../components/UserTopbar";
@@ -27,7 +26,7 @@ function UserLayoutShell() {
 
   return (
     <div className="flex min-h-screen bg-bg-app transition-colors duration-300">
-      <div className="hidden lg:flex">
+      <div className="sticky top-0 hidden h-screen lg:flex">
         <UserSidebar onNavigate={() => setMobileNavOpen(false)} />
       </div>
 
@@ -37,34 +36,23 @@ function UserLayoutShell() {
             <UserSidebar onNavigate={() => setMobileNavOpen(false)} />
           </div>
           <div
-            className="flex-1 bg-black/40 backdrop-blur-sm"
+            className="animate-fade flex-1 bg-midnight/50 backdrop-blur-[2px]"
             onClick={() => setMobileNavOpen(false)}
           />
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile header bar */}
-        <div className="flex items-center gap-3 border-b border-border-subtle bg-bg-panel px-4 py-3 lg:hidden">
-          <button
-            onClick={() => setMobileNavOpen(true)}
-            aria-label="Open menu"
-            className="rounded-xl p-2 text-text-secondary hover:bg-bg-hover hover:text-text-primary"
-          >
-            <Menu size={20} />
-          </button>
-          <span className="text-sm font-bold text-text-primary">Academicall</span>
-        </div>
-
         <UserTopbar
           profile={profile}
           unreadCount={unreadCount}
           search={search}
           onSearchChange={setSearch}
+          onMenu={() => setMobileNavOpen(true)}
         />
 
         {/* More breathing room on mobile */}
-        <main className="animate-stitch-in flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        <main className="animate-stitch-in mx-auto w-full max-w-[1320px] flex-1 px-4 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
           <Outlet />
         </main>
       </div>

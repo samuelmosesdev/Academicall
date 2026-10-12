@@ -8,7 +8,6 @@ import {
   Wallet,
   Megaphone,
   Settings,
-  LogOut,
   ClipboardCheck,
   ScrollText,
   MessageSquare,
@@ -16,9 +15,8 @@ import {
   Bell,
   GraduationCap,
 } from "lucide-react";
-import BrandLogo from "./BrandLogo";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import SidebarFooter from "./SidebarFooter";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/admin" },
@@ -45,23 +43,15 @@ const NAV_ITEMS = [
 export default function Sidebar({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
-
   function go(to) {
     navigate(to);
     onNavigate?.();
   }
 
-  async function handleLogout() {
-    await logout();
-    navigate("/", { replace: true });
-    onNavigate?.();
-  }
-
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-border-subtle bg-bg-sidebar px-4 py-6 shadow-[var(--shadow-sidebar)]">
-      <div className="px-2 pb-8">
-        <BrandLogo size={36} textClass="text-text-primary" />
+    <aside className="sidebar-ink flex h-full w-[16.5rem] shrink-0 flex-col overflow-y-auto px-3 pb-5 pt-7">
+      <div className="px-3 pb-6">
+        <img src="/brand/logo-horizontal-reversed.png" alt="Academicall" className="h-[22px] w-auto" />
       </div>
 
       <nav className="flex-1 space-y-1">
@@ -75,27 +65,20 @@ export default function Sidebar({ onNavigate }) {
               key={label}
               type="button"
               onClick={() => go(to)}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[0.87rem] transition-colors ${
                 isActive
                   ? "nav-item-active"
                   : "text-text-secondary hover:bg-bg-panel-alt hover:text-text-primary"
               }`}
             >
-              <Icon size={17} strokeWidth={2} />
+              <Icon size={17} strokeWidth={1.7} />
               <span className="text-left leading-tight">{label}</span>
             </button>
           );
         })}
       </nav>
 
-      <button
-        type="button"
-        onClick={handleLogout}
-        className="mt-4 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-status-danger hover:bg-status-danger/10"
-      >
-        <LogOut size={17} />
-        Log out
-      </button>
+      <SidebarFooter onNavigate={onNavigate} />
     </aside>
   );
 }

@@ -328,12 +328,12 @@ export default function StudentProfile() {
     <div className="mx-auto max-w-3xl space-y-6 animate-fade-in">
       {/* Hero card */}
       <div className="overflow-hidden rounded-2xl border border-border-light bg-card-light shadow-sm">
-        <div className="h-24 bg-gradient-to-r from-teal via-teal-dark to-emerald-700 sm:h-28" />
+        <div className="h-24 bg-lemon sm:h-28" />
         <div className="relative px-5 pb-5 sm:px-6">
           <div className="-mt-12 flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-4">
               <div className="relative">
-                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-card-light bg-teal-soft text-2xl font-bold text-teal shadow-md">
+                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-card-light bg-midnight text-2xl font-semibold text-lemon shadow-md">
                   {photoDataUrl ? (
                     <img
                       src={photoDataUrl}
@@ -366,7 +366,7 @@ export default function StudentProfile() {
                 )}
               </div>
               <div className="pb-1">
-                <h1 className="text-xl font-bold text-ink">{profile.name || "Student"}</h1>
+                <h1 className="font-display text-[1.7rem] font-[420] leading-tight tracking-[-0.02em] text-ink">{profile.name || "Student"}</h1>
                 <p className="text-sm text-ink-muted">{profile.email}</p>
                 <div className="mt-1.5">
                   <UniqueIdBadge uniqueId={profile.uniqueId} />
@@ -376,7 +376,7 @@ export default function StudentProfile() {
             <button
               type="button"
               onClick={() => openRequestModal("name")}
-              className="flex items-center gap-2 rounded-xl border border-teal/30 bg-teal-soft px-4 py-2 text-sm font-semibold text-teal hover:bg-teal hover:text-white"
+              className="flex items-center gap-2 rounded-full border border-teal/30 bg-teal-soft px-4 py-2 text-sm font-semibold text-teal hover:bg-teal hover:text-white"
             >
               <FileEdit size={15} />
               Request a change
@@ -577,7 +577,7 @@ export default function StudentProfile() {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
+          className="rounded-full bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
         >
           {busy ? "Saving…" : "Save public profile"}
         </button>
@@ -585,7 +585,7 @@ export default function StudentProfile() {
 
       {/* Request change modal */}
       {showRequestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/55 backdrop-blur-[3px] p-4">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border-light bg-card-light p-5 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-base font-semibold text-ink">Request profile change</h3>

@@ -36,8 +36,8 @@ export default function AdminUserDetail() {
       const nextUser = response.user || response;
       setUser(nextUser);
       setRepFaculty(nextUser.faculty || nextUser.courseRepMeta?.faculty || "");
-      setRepDepartment(nextUser.department || nextUser.courseRepMeta?.department || "");
-      setRepProgram(nextUser.program || nextUser.courseRepMeta?.program || "");
+      setRepDepartment(nextUser.courseRepMeta?.department || nextUser.department || "");
+      setRepProgram(nextUser.courseRepMeta?.program || nextUser.program || "");
       setRepLevel(nextUser.level || nextUser.courseRepMeta?.level || "");
     } catch (err) {
       setError(err.message || "Failed to load user.");
@@ -53,8 +53,12 @@ export default function AdminUserDetail() {
   const actorId = adminUser?.uid || adminUser?.id;
 
   async function makeCourseRep() {
-    if (!repDepartment.trim() || !repLevel.trim() || (repPrograms.length > 0 && !repProgram.trim())) {
+    if (!repDepartment.trim() || !repProgram.trim() || !repLevel.trim()) {
       setActionError("Select department, program, and level for Course Rep.");
+      return;
+    }
+    if (!repPrograms.includes(repProgram.trim())) {
+      setActionError("Select a program listed under the chosen department.");
       return;
     }
     setBusy(true);
@@ -64,10 +68,10 @@ export default function AdminUserDetail() {
       const level = repLevel.trim();
       const response = await usersApi.update(userId, {
         role: "courseRep",
-        courseRepMeta: { faculty: repFaculty || null, department, program: repProgram || null, level },
+        courseRepMeta: { faculty: repFaculty || null, department, program: repProgram, level },
         faculty: repFaculty || user.faculty || null,
         department,
-        program: repProgram || null,
+        program: repProgram,
         level,
         assignedBy: actorId,
         assignedAt: new Date().toISOString(),
@@ -189,14 +193,14 @@ export default function AdminUserDetail() {
   return (
     <div className="space-y-6">
       <button type="button" onClick={() => navigate(backPath)} className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-accent"><ArrowLeft size={16} /> Back to users</button>
-      <Link to={`/admin/users/${userId}/activity`} className="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app">View activity timeline</Link>
+      <Link to={`/admin/users/${userId}/activity`} className="inline-flex items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app">View activity timeline</Link>
       <div className="rounded-xl border border-border-subtle bg-bg-panel p-5">
         <div className="flex flex-wrap items-start gap-4">
           {user.photoUrl || user.photoURL || user.avatarUrl ? <img src={user.photoUrl || user.photoURL || user.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover" /> : <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-soft text-xl font-bold text-accent">{(user.name || user.email || "?").charAt(0).toUpperCase()}</div>}
           <div className="min-w-0 flex-1"><h1 className="text-xl font-semibold text-text-primary">{user.name || user.email}</h1><p className="text-sm text-text-muted">{user.email}</p><div className="mt-2 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-accent-soft px-2.5 py-0.5 font-semibold text-accent">{ROLE_LABELS[user.role] || user.role || "Student"}</span><span className="rounded-full border border-border-subtle px-2.5 py-0.5">{user.status || "active"}</span><span className="rounded-full border border-border-subtle px-2.5 py-0.5">{user.plan || "free"}</span>{user.uniqueId && <span className="font-mono text-text-muted">{user.uniqueId}</span>}</div></div>
         </div>
         <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">{profileRows.map(([label, value]) => <div key={label}><dt className="text-xs text-text-muted">{label}</dt><dd className="font-medium text-text-primary">{value ?? "—"}</dd></div>)}</dl>
-        {user.role === "courseRep" && <div className="mt-4 rounded-lg border border-accent/30 bg-accent-soft/30 p-3 text-sm"><div className="font-semibold text-accent">Course Rep assignment</div><p className="text-text-muted">{[meta.faculty || user.faculty, meta.department || user.department, meta.level || user.level].filter(Boolean).join(" · ") || "No scope saved"}</p></div>}
+        {user.role === "courseRep" && <div className="mt-4 rounded-lg border border-accent/30 bg-accent-soft/30 p-3 text-sm"><div className="font-semibold text-accent">Course Rep assignment</div><p className="text-text-muted">{[meta.faculty || user.faculty, meta.program, meta.department || user.department, meta.level].filter(Boolean).join(" · ") || "No program assignment saved"}</p></div>}
       </div>
       {actionError && <p className="text-sm text-status-danger">{actionError}</p>}
       <div className="flex flex-wrap gap-2">
@@ -205,7 +209,7 @@ export default function AdminUserDetail() {
         <button type="button" disabled={busy} onClick={resetPassword} className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm"><KeyRound size={15} /> Reset password</button>
       </div>
       {resetResult && <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">Temp password for <strong>{resetResult.email}</strong>: <code className="font-mono font-bold">{resetResult.tempPassword}</code><p className="mt-1 text-xs text-text-muted">Shown once. Share securely.</p></div>}
-      <div className="rounded-xl border border-border-subtle bg-bg-panel p-5"><h2 className="mb-3 flex items-center gap-2 text-sm font-semibold"><GraduationCap size={16} /> Course Rep</h2>{user.role === "courseRep" ? <button type="button" disabled={busy} onClick={removeCourseRep} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Remove Course Rep role</button> : <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><select value={repFaculty} onChange={(event) => { setRepFaculty(event.target.value); setRepDepartment(""); setRepProgram(""); }} className={fieldClass}><option value="">Faculty</option>{faculties.map((faculty) => <option key={faculty.name} value={faculty.name}>{faculty.name}</option>)}</select><select value={repDepartment} onChange={(event) => { setRepDepartment(event.target.value); setRepProgram(""); }} className={fieldClass} disabled={!repFaculty}><option value="">Department</option>{repDepartments.map((department) => <option key={department} value={department}>{department}</option>)}</select><select value={repProgram} onChange={(event) => setRepProgram(event.target.value)} className={fieldClass} disabled={!repDepartment || repPrograms.length === 0}><option value="">{repPrograms.length ? "Program" : "Program not listed"}</option>{repPrograms.map((program) => <option key={program} value={program}>{program}</option>)}</select><select value={repLevel} onChange={(event) => setRepLevel(event.target.value)} className={fieldClass}><option value="">Level</option>{LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}</select></div><button type="button" disabled={busy || (repPrograms.length > 0 && !repProgram)} onClick={makeCourseRep} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">Assign as Course Rep</button></div>}</div>
+      <div className="rounded-xl border border-border-subtle bg-bg-panel p-5"><h2 className="mb-3 flex items-center gap-2 text-sm font-semibold"><GraduationCap size={16} /> Course Rep</h2>{user.role === "courseRep" ? <button type="button" disabled={busy} onClick={removeCourseRep} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Remove Course Rep role</button> : <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><select value={repFaculty} onChange={(event) => { setRepFaculty(event.target.value); setRepDepartment(""); setRepProgram(""); }} className={fieldClass}><option value="">Faculty</option>{faculties.map((faculty) => <option key={faculty.name} value={faculty.name}>{faculty.name}</option>)}</select><select value={repDepartment} onChange={(event) => { setRepDepartment(event.target.value); setRepProgram(""); }} className={fieldClass} disabled={!repFaculty}><option value="">Department</option>{repDepartments.map((department) => <option key={department} value={department}>{department}</option>)}</select><select value={repProgram} onChange={(event) => setRepProgram(event.target.value)} className={fieldClass} disabled={!repDepartment || repPrograms.length === 0}><option value="">{repPrograms.length ? "Program *" : "No programs configured"}</option>{repPrograms.map((program) => <option key={program} value={program}>{program}</option>)}</select><select value={repLevel} onChange={(event) => setRepLevel(event.target.value)} className={fieldClass}><option value="">Level *</option>{LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}</select></div><button type="button" disabled={busy || !repProgram || !repLevel} onClick={makeCourseRep} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">Assign as Course Rep</button></div>}</div>
     </div>
   );
 }

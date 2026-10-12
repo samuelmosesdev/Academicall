@@ -275,7 +275,7 @@ export default function AdminRequests() {
         <button
           type="button"
           onClick={() => setWho("student")}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium ${
+          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
             who === "student"
               ? "bg-accent text-bg-app"
               : "border border-border-subtle text-text-secondary"
@@ -291,7 +291,7 @@ export default function AdminRequests() {
         <button
           type="button"
           onClick={() => setWho("courseRep")}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium ${
+          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
             who === "courseRep"
               ? "bg-accent text-bg-app"
               : "border border-border-subtle text-text-secondary"
@@ -410,7 +410,7 @@ export default function AdminRequests() {
                       type="button"
                       disabled={busyId === r.id}
                       onClick={() => handleReview(r, "approved")}
-                      className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-bg-app"
+                      className="flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-bg-app"
                     >
                       {busyId === r.id ? (
                         <Loader2 size={12} className="animate-spin" />

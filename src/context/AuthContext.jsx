@@ -1,7 +1,6 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { authApi, usersApi } from "../lib/api";
 import { registerFcmToken } from "../lib/fcm";
-import { signInWithGoogleIdentity } from "../lib/googleAuth";
 
 const AuthContext = createContext(null);
 
@@ -15,7 +14,7 @@ export function AuthProvider({ children }) {
   const [authMode, setAuthMode] = useState(null); // "api" | null
   const fcmRegisteredRef = useRef(false);
 
-  function applySession(data) {
+  const applySession = useCallback((data) => {
     const nextUser = { ...data.user, uid: data.user.id };
     localStorage.setItem("academicall_token", data.token);
     setUser(nextUser);
@@ -24,7 +23,7 @@ export function AuthProvider({ children }) {
     setProfileReady(true);
     setLoading(false);
     return data;
-  }
+  }, []);
 
   // ---------- API Auth (email/password) ----------
   const loginWithApi = async (identifier, password) => {
@@ -44,11 +43,11 @@ export function AuthProvider({ children }) {
   };
 
   // ---------- Google sign-in (Google Identity Services, no Firebase) ----------
-  const signInWithGoogle = async () => {
-    const credential = await signInWithGoogleIdentity();
+  const signInWithGoogle = useCallback(async (credential) => {
+    if (!credential) throw new Error("Google did not return a sign-in credential. Please try again.");
     const data = await authApi.google(credential);
     return applySession(data);
-  };
+  }, [applySession]);
 
   const completeProfile = async (details) => {
     if (authMode !== "api") throw new Error("Profile completion is unavailable for this sign-in method.");

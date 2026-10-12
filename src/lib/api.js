@@ -4,7 +4,37 @@ const API_BASE = (
     ? "http://localhost:4000/api/v1"
     : "https://academicall-api-1.onrender.com/api/v1")
 ).replace(/\/$/, "");
-const API_TIMEOUT_MS = 15000;
+const API_TIMEOUT_MS = 60000;
+const AUTH_RETRYABLE_ENDPOINTS = new Set(["/auth/login", "/auth/google"]);
+
+async function fetchWithRetry(url, config, endpoint) {
+  const attempts = AUTH_RETRYABLE_ENDPOINTS.has(endpoint) && !config.signal ? 2 : 1;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+    try {
+      return await fetch(url, {
+        ...config,
+        signal: config.signal || controller.signal,
+      });
+    } catch (error) {
+      const retryable = error instanceof TypeError || error.name === "AbortError";
+      if (attempt + 1 < attempts && retryable) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+        continue;
+      }
+      if (error.name === "AbortError") {
+        throw new Error("The sign-in server is taking too long to respond. Please try again in a moment.");
+      }
+      if (error instanceof TypeError) {
+        throw new Error("Unable to reach the sign-in server. Check your connection and try again.");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+}
 
 function getToken() {
   return localStorage.getItem("academicall_token");
@@ -12,12 +42,9 @@ function getToken() {
 
 export async function api(endpoint, options = {}) {
   const token = getToken();
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
   const config = {
     ...options,
-    signal: options.signal || controller.signal,
     headers: {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -30,7 +57,7 @@ export async function api(endpoint, options = {}) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}${endpoint}`, config);
+    const res = await fetchWithRetry(`${API_BASE}${endpoint}`, config, endpoint);
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -48,12 +75,7 @@ export async function api(endpoint, options = {}) {
     return data;
   } catch (err) {
     console.error("Network / Fetch Error:", err);
-    if (err.name === "AbortError") {
-      throw new Error("The server took too long to respond. Please try again.");
-    }
     throw err;
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 
@@ -80,9 +102,9 @@ export const usersApi = {
   remove: (id) => api(`/users/${id}`, { method: "DELETE" }),
   resetPassword: (id) => api(`/users/${id}/reset-password`, { method: "POST" }),
   createAgent: (body) => api("/users/agents", { method: "POST", body }),
-  courseRepStatus: (department, level) =>
+  courseRepStatus: (program, level) =>
     api(
-      `/users/course-rep-status?department=${encodeURIComponent(department)}&level=${encodeURIComponent(level)}`
+      `/users/course-rep-status?program=${encodeURIComponent(program)}&level=${encodeURIComponent(level)}`
     ),
 };
 
@@ -141,11 +163,11 @@ export const notificationsApi = {
 
 export const departmentApi = {
   join: (body) => api("/department/join", { method: "POST", body }),
-  me: (department) =>
-    api(`/department/me${department ? `?department=${encodeURIComponent(department)}` : ""}`),
-  members: ({ department, status } = {}) => {
+  me: (program) =>
+    api(`/department/me${program ? `?program=${encodeURIComponent(program)}` : ""}`),
+  members: ({ program, status } = {}) => {
     const params = new URLSearchParams();
-    if (department) params.set("department", department);
+    if (program) params.set("program", program);
     if (status) params.set("status", status);
     return api(`/department/members${params.toString() ? `?${params}` : ""}`);
   },

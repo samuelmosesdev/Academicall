@@ -159,7 +159,7 @@ export default function AiCourseImportModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-midnight/55 backdrop-blur-[3px] p-4 sm:items-center">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-subtle bg-bg-panel p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
@@ -185,7 +185,7 @@ export default function AiCourseImportModal({
           type="button"
           disabled={busy || !file}
           onClick={runExtract}
-          className="mb-4 inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"
+          className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent px-3 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"
         >
           {busy ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
           Extract with AI
@@ -223,7 +223,7 @@ export default function AiCourseImportModal({
               type="button"
               disabled={saving}
               onClick={handleSave}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-bg-app"
+              className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-2 text-sm font-semibold text-bg-app"
             >
               {saving ? (
                 <Loader2 size={14} className="animate-spin" />

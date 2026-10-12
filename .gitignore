@@ -3,3 +3,5 @@
 !.env.example
 dist/
 node_modules
+android/app/src/main/assets/
+android/app/src/main/res/xml/config.xml

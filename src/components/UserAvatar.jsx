@@ -47,7 +47,7 @@ export default function UserAvatar({
   name,
   nickname,
   photoURL,
-  department,
+  program,
   phone,
   role,
   plan,
@@ -68,22 +68,19 @@ export default function UserAvatar({
     name || profile?.name || profile?.email || "Student";
   const photo =
     photoURL || profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null;
-  const dept =
-    department ??
-    profile?.department ??
-    null;
+  const academicProgram = program ?? profile?.program ?? null;
   const phoneVal =
     phone ?? (profile?.showPhone === true ? profile?.phone : null);
   const roleLabel = role || profile?.role || null;
   const planVal = plan ?? profile?.plan;
   const subVal = subscription ?? profile?.subscription;
 
-  const canShowDept =
+  const canShowProgram =
     forceShowDetails || showDepartment === true
-      ? !!dept
+      ? !!academicProgram
       : showDepartment !== undefined
-        ? showDepartment && !!dept
-        : profile?.showDepartment !== false && !!dept;
+        ? showDepartment && !!academicProgram
+        : profile?.showDepartment !== false && !!academicProgram;
 
   const canShowPhone =
     forceShowDetails && phone
@@ -114,13 +111,13 @@ export default function UserAvatar({
 
   const badgeClass =
     designation === "Pro"
-      ? "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300"
+      ? "bg-lemon text-midnight border-lemon-deep/40"
       : designation === "Course Rep"
-        ? "bg-orange-500/15 text-orange-700 border-orange-500/30"
+        ? "bg-aqua-soft text-aqua-deep border-aqua-deep/25 dark:bg-aqua/15 dark:text-aqua"
         : designation === "Alpha Agent" || designation === "Admin"
           ? "bg-teal-soft text-teal border-teal/30"
           : designation === "Agent"
-            ? "bg-sky-500/15 text-sky-700 border-sky-500/30"
+            ? "bg-violet-soft text-violet border-violet/25 dark:bg-violet/20"
             : "bg-teal-soft text-teal border-teal/30";
 
   return (
@@ -192,10 +189,10 @@ export default function UserAvatar({
               </span>
             )}
 
-            {canShowDept && dept && (
+            {canShowProgram && academicProgram && (
               <p className="mt-2 text-[11px] font-medium text-ink-muted">
-                <span className="text-ink-muted/80">Dept · </span>
-                {dept}
+                <span className="text-ink-muted/80">Programme · </span>
+                {academicProgram}
               </p>
             )}
             {profile?.faculty && forceShowDetails && (
@@ -228,13 +225,13 @@ export function NameWithBadge({
   const designation = isAnonymous ? null : roleBadge(role, plan, subscription);
   const badgeClass =
     designation === "Pro"
-      ? "bg-amber-500/15 text-amber-700"
+      ? "bg-lemon text-midnight"
       : designation === "Course Rep"
-        ? "bg-orange-500/15 text-orange-700"
+        ? "bg-aqua-soft text-aqua-deep dark:bg-aqua/15 dark:text-aqua"
         : designation === "Alpha Agent" || designation === "Admin"
           ? "bg-teal-soft text-teal"
           : designation === "Agent"
-            ? "bg-sky-500/15 text-sky-700"
+            ? "bg-violet-soft text-violet dark:bg-violet/20"
             : "";
 
   return (

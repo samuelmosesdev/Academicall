@@ -17,6 +17,7 @@ export default function CreateAnnouncementModal({
   open,
   onClose,
   department,
+  program,
   level,
   faculty,
   user,
@@ -60,6 +61,7 @@ export default function CreateAnnouncementModal({
         audience: "department",
         faculty: faculty || null,
         department,
+        program: program || null,
         level: level || null,
       };
       if (authMode === "api") {
@@ -95,7 +97,7 @@ export default function CreateAnnouncementModal({
     <Modal open={open} onClose={handleClose} title="Make an announcement">
       <form onSubmit={handleSubmit} className="space-y-3">
         <p className="text-xs text-ink-muted">
-          Visible to students in <strong className="text-ink">{department}</strong>
+          Visible to students in <strong className="text-ink">{program || department}</strong>
           {level ? ` · ${level}` : ""} only.
         </p>
         <input
@@ -142,7 +144,7 @@ export default function CreateAnnouncementModal({
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
           >
             {busy ? (
               <Loader2 size={15} className="animate-spin" />

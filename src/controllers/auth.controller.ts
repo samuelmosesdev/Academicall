@@ -32,6 +32,7 @@ function publicUser(user: {
   status?: string;
   department?: string | null;
   faculty?: string | null;
+  program?: string | null;
   level?: string | null;
   matricNumber?: string | null;
   phone?: string | null;
@@ -46,10 +47,14 @@ function publicUser(user: {
     plan: user.plan,
     uniqueId: user.uniqueId,
     emailVerified: user.emailVerified,
-    profileComplete: user.profileComplete,
+    profileComplete: Boolean(
+      user.profileComplete &&
+      (user.role !== "user" && user.role !== "courseRep" || user.program?.trim())
+    ),
     status: user.status,
     department: user.department,
     faculty: user.faculty,
+    program: user.program,
     level: user.level,
     matricNumber: user.matricNumber,
     phone: user.phone,

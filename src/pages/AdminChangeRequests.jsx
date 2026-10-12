@@ -154,7 +154,7 @@ export default function AdminChangeRequests() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
               tab === t.id
                 ? "bg-accent text-bg-app"
                 : "border border-border-subtle bg-bg-panel text-text-secondary hover:text-text-primary"
@@ -234,7 +234,7 @@ export default function AdminChangeRequests() {
                     type="button"
                     disabled={busyId === r.id}
                     onClick={() => handleReview(r, "approved")}
-                    className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
+                    className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
                   >
                     <Check size={15} />
                     Approve & apply

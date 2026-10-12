@@ -242,8 +242,8 @@ export default function AdminUsers() {
   function openMakeRep(u) {
     setRepTarget(u);
     setRepFaculty(u.faculty || "");
-    setRepDepartment(u.department || "");
-    setRepProgram(u.program || u.courseRepMeta?.program || "");
+    setRepDepartment(u.courseRepMeta?.department || u.department || "");
+    setRepProgram(u.courseRepMeta?.program || u.program || "");
     setRepLevel(u.level || u.courseRepMeta?.level || "");
     setActionError("");
   }
@@ -251,17 +251,21 @@ export default function AdminUsers() {
   async function confirmMakeRep() {
     if (!repTarget) return;
     if (!repDepartment.trim()) {
-      setActionError("Select the department this Course Rep represents.");
+      setActionError("Select the parent department for this Course Rep program.");
       return;
     }
     if (!repLevel.trim()) {
       setActionError(
-        "Select the level. Each Course Rep covers one department + one level only."
+        "Select the level. Each Course Rep covers one program + one level only."
       );
       return;
     }
-    if (repPrograms.length > 0 && !repProgram.trim()) {
+    if (!repProgram.trim()) {
       setActionError("Select the program this Course Rep represents.");
+      return;
+    }
+    if (!repPrograms.includes(repProgram.trim())) {
+      setActionError("Select a program listed under the chosen department.");
       return;
     }
 
@@ -275,12 +279,12 @@ export default function AdminUsers() {
         courseRepMeta: {
           faculty: repFaculty || null,
           department,
-          program: repProgram || null,
+          program: repProgram,
           level,
         },
         faculty: repFaculty || repTarget.faculty || null,
         department,
-        program: repProgram || null,
+        program: repProgram,
         level,
         assignedBy: adminUser.uid,
         assignedAt: new Date().toISOString(),
@@ -370,7 +374,7 @@ export default function AdminUsers() {
             key={c.id}
             type="button"
             onClick={() => setCategory(c.id)}
-            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               category === c.id
                 ? "bg-accent text-bg-app"
                 : "border border-border-subtle bg-bg-panel text-text-secondary hover:text-text-primary"
@@ -508,9 +512,10 @@ export default function AdminUsers() {
                         {u.email}
                         {u.uniqueId ? ` · ${u.uniqueId}` : ""}
                       </div>
-                      {isRep && u.courseRepMeta?.department && (
+                      {isRep && u.courseRepMeta?.program && (
                         <div className="mt-1 text-[11px] text-accent">
-                          Represents: {u.courseRepMeta.department}
+                          Program: {u.courseRepMeta.program}
+                          {u.courseRepMeta.department ? ` · ${u.courseRepMeta.department}` : ""}
                         </div>
                       )}
                     </td>
@@ -638,7 +643,7 @@ export default function AdminUsers() {
 
       {/* Make Course Rep — by department */}
       {repTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/55 backdrop-blur-[3px] p-4">
           <div className="w-full max-w-md rounded-2xl border border-border-subtle bg-bg-panel p-5 shadow-xl">
             <h3 className="text-base font-semibold text-text-primary">
               Make Course Rep
@@ -687,7 +692,7 @@ export default function AdminUsers() {
             </select>
 
             <label className="mt-3 block text-xs font-medium text-text-muted">
-              Program they represent {repPrograms.length > 0 ? "*" : ""}
+              Program they represent *
             </label>
             <select
               value={repProgram}
@@ -735,9 +740,9 @@ export default function AdminUsers() {
               </button>
               <button
                 type="button"
-                disabled={busyId === repTarget.id || !repDepartment || !repLevel || (repPrograms.length > 0 && !repProgram)}
+                disabled={busyId === repTarget.id || !repDepartment || !repProgram || !repLevel}
                 onClick={confirmMakeRep}
-                className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"
+                className="rounded-full bg-accent px-3 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"
               >
                 {busyId === repTarget.id ? "Saving…" : "Confirm Course Rep"}
               </button>
@@ -763,7 +768,7 @@ export default function AdminUsers() {
         />
       )}
       {resetResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/55 backdrop-blur-[3px] p-4">
           <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-xl">
             <div className="mb-2 flex items-center gap-2 text-status-success">
               <KeyRound size={18} />

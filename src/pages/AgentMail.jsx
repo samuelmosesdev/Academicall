@@ -53,7 +53,7 @@ export default function AgentMail() {
             href={WEBMAIL_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-semibold text-bg-app"
+            className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1.5 text-xs font-semibold text-bg-app"
           >
             Open in browser <ExternalLink size={12} />
           </a>

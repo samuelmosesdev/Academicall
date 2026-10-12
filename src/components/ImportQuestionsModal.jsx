@@ -252,7 +252,7 @@ export default function ImportQuestionsModal({ open, onClose, courses = [] }) {
 
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={handleClose} className="rounded-lg border border-border-subtle px-4 py-2 text-sm text-text-secondary hover:bg-bg-panel-alt">Close</button>
-          <button type="button" disabled={!selectedCourse || parsed.length === 0 || importing} onClick={handleImport} className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-50">
+          <button type="button" disabled={!selectedCourse || parsed.length === 0 || importing} onClick={handleImport} className="flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-50">
             {importing ? "Importing…" : `Import ${parsed.length || ""} questions`}
           </button>
         </div>

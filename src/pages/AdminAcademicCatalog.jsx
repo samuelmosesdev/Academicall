@@ -70,7 +70,7 @@ export default function AdminAcademicCatalog() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><h1 className="text-lg font-semibold text-text-primary">Academic catalog</h1><p className="text-sm text-text-muted">Manage the faculty, department, and program choices used for student profiles and Course Rep assignments.</p></div>
-        <button type="button" onClick={save} disabled={busy} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"><Save size={15} /> {busy ? "Saving…" : "Save catalog"}</button>
+        <button type="button" onClick={save} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"><Save size={15} /> {busy ? "Saving…" : "Save catalog"}</button>
       </div>
       {message && <p className="rounded-lg bg-status-success/10 px-3 py-2 text-sm text-status-success">{message}</p>}
       {error && <p className="rounded-lg bg-status-danger/10 px-3 py-2 text-sm text-status-danger">{error}</p>}

@@ -16,6 +16,7 @@ export default function ScheduleClassModal({
   open,
   onClose,
   department,
+  program,
   level,
   faculty,
   user,
@@ -65,6 +66,7 @@ export default function ScheduleClassModal({
         endsAt: end ? end.toISOString() : null,
         faculty: faculty || null,
         department,
+        program: program || null,
         level: level || null,
         createdByName: authorName || user?.email || "Course Rep",
       });
@@ -90,7 +92,7 @@ export default function ScheduleClassModal({
     <Modal open={open} onClose={handleClose} title="Schedule a class">
       <form onSubmit={handleSubmit} className="space-y-3">
         <p className="text-xs text-ink-muted">
-          Students in <strong className="text-ink">{department}</strong>
+          Students in <strong className="text-ink">{program || department}</strong>
           {level ? ` · ${level}` : ""} will see this immediately.
         </p>
         <input
@@ -154,7 +156,7 @@ export default function ScheduleClassModal({
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
           >
             {busy ? (
               <Loader2 size={15} className="animate-spin" />

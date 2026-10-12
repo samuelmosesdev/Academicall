@@ -1,68 +1,83 @@
-// Google Sign-In without Firebase Auth, using Google Identity Services (GIS).
-// The GIS script tag is loaded in index.html:
-//   <script src="https://accounts.google.com/gsi/client" async defer></script>
-//
-// This returns a Google ID token credential which is sent straight to the
-// Academicall API's /auth/google endpoint (see src/lib/api.js -> authApi.google),
-// which verifies it server-side with google-auth-library. No Firebase project
-// or Firebase Admin credentials are needed for this flow.
-
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GIS_SCRIPT_URL = "https://accounts.google.com/gsi/client";
+let gisScriptPromise;
 
 function loadGisScript() {
   if (window.google?.accounts?.id) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Failed to load Google Sign-In")));
-      return;
+  if (gisScriptPromise) return gisScriptPromise;
+
+  gisScriptPromise = new Promise((resolve, reject) => {
+    const script = document.querySelector(`script[src="${GIS_SCRIPT_URL}"]`) || document.createElement("script");
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Google Sign-In did not load. Check your connection and try again."));
+    }, 15000);
+
+    function cleanup() {
+      window.clearTimeout(timeoutId);
+      script.removeEventListener("load", onLoad);
+      script.removeEventListener("error", onError);
     }
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Sign-In"));
-    document.head.appendChild(script);
+
+    function onLoad() {
+      cleanup();
+      if (window.google?.accounts?.id) resolve();
+      else reject(new Error("Google Sign-In loaded without its identity service. Please try again."));
+    }
+
+    function onError() {
+      cleanup();
+      reject(new Error("Could not load Google Sign-In. Check your connection and try again."));
+    }
+
+    script.addEventListener("load", onLoad, { once: true });
+    script.addEventListener("error", onError, { once: true });
+
+    if (!script.isConnected) {
+      script.src = GIS_SCRIPT_URL;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    } else if (window.google?.accounts?.id) {
+      onLoad();
+    }
+  }).catch((error) => {
+    gisScriptPromise = null;
+    throw error;
   });
+
+  return gisScriptPromise;
 }
 
-/**
- * Opens the Google One Tap / popup sign-in flow and resolves with the raw
- * ID token credential string (a JWT) to send to the API.
- */
-export function signInWithGoogleIdentity() {
+export async function renderGoogleSignInButton(element, onCredential, isActive = () => true) {
   if (!CLIENT_ID) {
-    return Promise.reject(new Error("Google sign-in isn't configured (missing VITE_GOOGLE_CLIENT_ID)."));
+    throw new Error("Google sign-in isn't configured (missing VITE_GOOGLE_CLIENT_ID).");
   }
 
-  return loadGisScript().then(
-    () =>
-      new Promise((resolve, reject) => {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: CLIENT_ID,
-            callback: (response) => {
-              if (response?.credential) {
-                resolve(response.credential);
-              } else {
-                reject(new Error("Google sign-in was cancelled or returned no credential."));
-              }
-            },
-          });
+  await loadGisScript();
+  if (!element || !isActive()) return () => {};
 
-          // Use the popup-based One Tap prompt. If it's dismissed/skipped
-          // (e.g. blocked by browser settings), surface a clear error so the
-          // UI can let the person retry instead of hanging forever.
-          window.google.accounts.id.prompt((notification) => {
-            if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
-              reject(new Error("Google sign-in popup was blocked or dismissed. Please try again."));
-            }
-          });
-        } catch (err) {
-          reject(err);
-        }
-      })
-  );
+  let active = true;
+  window.google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: (response) => {
+      if (!active) return;
+      if (response?.credential) {
+        onCredential(response.credential);
+      } else onCredential(null);
+    },
+  });
+  window.google.accounts.id.renderButton(element, {
+    type: "standard",
+    theme: "outline",
+    size: "large",
+    text: "continue_with",
+    shape: "pill",
+    width: Math.min(400, Math.floor(element.getBoundingClientRect().width)),
+  });
+
+  return () => {
+    active = false;
+    element.replaceChildren();
+  };
 }

@@ -195,7 +195,7 @@ export default function AdminAnnouncements() {
         <button
           type="button"
           onClick={() => setTab("announcements")}
-          className={`rounded-xl px-4 py-2 text-sm font-medium ${
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
             tab === "announcements"
               ? "bg-accent text-bg-app"
               : "border border-border-subtle bg-bg-panel text-text-secondary"
@@ -206,7 +206,7 @@ export default function AdminAnnouncements() {
         <button
           type="button"
           onClick={() => setTab("general")}
-          className={`rounded-xl px-4 py-2 text-sm font-medium ${
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
             tab === "general"
               ? "bg-accent text-bg-app"
               : "border border-border-subtle bg-bg-panel text-text-secondary"
@@ -222,7 +222,7 @@ export default function AdminAnnouncements() {
             <button
               type="button"
               onClick={() => setShowForm((v) => !v)}
-              className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app"
+              className="flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app"
             >
               <Plus size={16} />
               {showForm ? "Cancel" : "New announcement"}
@@ -246,7 +246,7 @@ export default function AdminAnnouncements() {
                   <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
                   Publish now
                 </label>
-                <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">
+                <button type="submit" disabled={busy} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">
                   {busy ? "Publishing…" : "Publish"}
                 </button>
               </div>
@@ -282,7 +282,7 @@ export default function AdminAnnouncements() {
             Posts here show on every student’s dashboard under <strong>General</strong>. Students can comment; review comments below.
           </p>
           <div className="flex justify-end">
-            <button type="button" onClick={() => setGShow((v) => !v)} className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app">
+            <button type="button" onClick={() => setGShow((v) => !v)} className="flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app">
               <Plus size={16} />
               {gShow ? "Cancel" : "New general post"}
             </button>
@@ -296,7 +296,7 @@ export default function AdminAnnouncements() {
                   <input type="checkbox" checked={gPinned} onChange={(e) => setGPinned(e.target.checked)} />
                   Pin to top
                 </label>
-                <button type="submit" disabled={gBusy} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">
+                <button type="submit" disabled={gBusy} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">
                   {gBusy ? "Publishing…" : "Publish to General feed"}
                 </button>
               </div>

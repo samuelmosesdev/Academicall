@@ -14,27 +14,28 @@ import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 import { Link } from "react-router-dom";
 import { FREE_LIMITS, isPro } from "../lib/subscription";
 import StudentGenerateQuizModal from "../components/StudentGenerateQuizModal";
+import { getAcademicScope, matchesAcademicProgram } from "../lib/academicScope";
 
 export default function StudentDocuments() {
   const { profile } = useAuth();
   const { documents, loading } = useStudentDocuments();
   const { courses } = useCbtData();
-  const { departmentsFor } = useAcademicCatalog();
+  const { programsForFaculty } = useAcademicCatalog();
 
   const [search, setSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [faculty, setFaculty] = useState(profile?.faculty || "");
-  const [department, setDepartment] = useState(profile?.department || "");
+  const [department, setDepartment] = useState(() => getAcademicScope(profile));
   const [courseCode, setCourseCode] = useState("");
   const [level, setLevel] = useState(profile?.level || "");
   const [quizMaterial, setQuizMaterial] = useState(null);
 
-  const departments = useMemo(() => departmentsFor(faculty), [faculty]);
+  const departments = useMemo(() => programsForFaculty(faculty), [faculty, programsForFaculty]);
 
   const courseOptions = useMemo(() => {
     let list = courses;
     if (faculty) list = list.filter((c) => c.faculty === faculty);
-    if (department) list = list.filter((c) => c.department === department);
+    if (department) list = list.filter((c) => matchesAcademicProgram(c.program || c.department, department));
     if (level) list = list.filter((c) => !c.level || c.level === level);
     return [...list].sort((a, b) =>
       String(a.code || "").localeCompare(String(b.code || ""))
@@ -63,7 +64,7 @@ export default function StudentDocuments() {
           .some((f) => f.toLowerCase().includes(q));
       const matchesFaculty = !faculty || !d.faculty || d.faculty === faculty;
       const matchesDepartment =
-        !department || !d.department || d.department === department;
+        !d.department || (department && matchesAcademicProgram(d.program || d.department, department));
       const matchesLevel = !level || !d.level || d.level === level;
       const matchesCourse = !courseCode || d.courseCode === courseCode;
       return (
@@ -188,10 +189,10 @@ export default function StudentDocuments() {
             className={fieldClass}
             disabled={!faculty}
           >
-            <option value="">All departments</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>
-                {d}
+            <option value="">All programs</option>
+            {departments.map((programOption) => (
+              <option key={programOption} value={programOption}>
+                {programOption}
               </option>
             ))}
           </select>
@@ -310,7 +311,7 @@ export default function StudentDocuments() {
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     <Link
                       to={`/dashboard/reading-hub/doc/${d.id}`}
-                      className="flex items-center gap-1.5 rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-dark"
+                      className="flex items-center gap-1.5 rounded-full bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-dark"
                     >
                       Read in app
                     </Link>

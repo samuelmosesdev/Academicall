@@ -15,36 +15,36 @@ export default function CbtSubmitModal({
   const secs = timeLeft != null ? timeLeft % 60 : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#263143]/40 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2A1B52]/40 p-4 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
             <AlertTriangle size={22} />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-[#111c2d]">Submit Examination?</h3>
-            <p className="text-xs text-[#44474c]">{courseLabel}</p>
+            <h3 className="text-lg font-semibold text-[#0F0326]">Submit Examination?</h3>
+            <p className="text-xs text-[#433B5A]">{courseLabel}</p>
           </div>
         </div>
 
-        <div className="mb-4 space-y-2 rounded-lg bg-[#f0f3ff] p-4 text-sm">
+        <div className="mb-4 space-y-2 rounded-lg bg-[#F4F3FD] p-4 text-sm">
           <div className="flex justify-between">
-            <span className="text-[#44474c]">Questions Answered</span>
+            <span className="text-[#433B5A]">Questions Answered</span>
             <strong>
               {stats.answered} / {total}
             </strong>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#44474c]">Flagged for Review</span>
+            <span className="text-[#433B5A]">Flagged for Review</span>
             <strong className="text-amber-600">{stats.flagged} questions</strong>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#44474c]">Unattempted</span>
+            <span className="text-[#433B5A]">Unattempted</span>
             <strong className="text-red-600">{stats.unattempted} questions</strong>
           </div>
           {timeLeft != null && (
             <div className="flex justify-between">
-              <span className="text-[#44474c]">Time Remaining</span>
+              <span className="text-[#433B5A]">Time Remaining</span>
               <strong className="font-mono">
                 {mins}m {String(secs).padStart(2, "0")}s
               </strong>
@@ -52,7 +52,7 @@ export default function CbtSubmitModal({
           )}
         </div>
 
-        <p className="mb-5 text-sm text-[#44474c]">
+        <p className="mb-5 text-sm text-[#433B5A]">
           Once submitted, your score and explanations will be shown. You cannot change answers.
         </p>
 
@@ -60,7 +60,7 @@ export default function CbtSubmitModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-[#e7eeff] px-4 py-2 text-sm font-medium text-[#111c2d] hover:bg-[#d8e3fb]"
+            className="rounded-lg bg-[#E9E9FC] px-4 py-2 text-sm font-medium text-[#0F0326] hover:bg-[#E3E3FA]"
           >
             Return to Exam
           </button>

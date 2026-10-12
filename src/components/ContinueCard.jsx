@@ -24,13 +24,13 @@ export default function ContinueCard({ title, subtitle, progressPct = 0, onClick
         <p className="mt-0.5 truncate text-xs text-text-secondary">{subtitle}</p>
         <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-bg-elevated">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-accent to-accent-strong transition-all duration-500"
+            className="h-full rounded-full bg-midnight transition-all duration-500"
             style={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }}
           />
         </div>
       </div>
 
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-bg-sidebar shadow-md shadow-accent/25 transition group-hover:scale-105">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-md shadow-accent/25 transition group-hover:scale-105">
         <Play size={16} fill="currentColor" className="ml-0.5" />
       </span>
     </button>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BackButton from "./BackButton";
-import { Search, Bell, Moon, Sun, LogOut } from "lucide-react";
+import { Search, Bell, Moon, Sun, LogOut, Menu } from "lucide-react";
 import UniqueIdBadge from "./UniqueIdBadge";
 import ConfirmModal from "./ConfirmModal";
 import UserAvatar from "./UserAvatar";
@@ -15,7 +15,7 @@ function getGreeting() {
   return "Good evening";
 }
 
-export default function UserTopbar({ profile, unreadCount, search, onSearchChange }) {
+export default function UserTopbar({ profile, unreadCount, search, onSearchChange, onMenu }) {
   const { theme, toggleTheme, isDark } = useTheme();
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -34,7 +34,6 @@ export default function UserTopbar({ profile, unreadCount, search, onSearchChang
   }
 
   const firstName = profile?.nickname || profile?.nickName || profile?.name?.split(" ")[0] || "there";
-  const officialName = profile?.name || "";
   const initials = (profile?.name || "U")
     .split(" ")
     .map((p) => p[0])
@@ -42,76 +41,77 @@ export default function UserTopbar({ profile, unreadCount, search, onSearchChang
     .join("")
     .toUpperCase();
 
+  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const iconBtn =
+    "relative flex h-10 w-10 items-center justify-center rounded-full border border-border-light bg-card-light text-ink-muted transition hover:border-border-strong hover:text-ink";
+
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-light bg-card-light px-4 py-4 sm:px-6">
-      <div className="flex items-center gap-3">
-        <BackButton className="border-border-light text-ink-muted hover:bg-surface-light hover:text-ink" />
-        <div>
-          <h1 className="text-base font-semibold text-ink sm:text-lg">
-            {getGreeting()}, {firstName}
-          </h1>
-          {officialName && (profile?.nickname || profile?.nickName) && (
-            <p className="text-[11px] text-ink-muted leading-tight">{officialName}</p>
-          )}
+    <header className="topbar-paper sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border-light px-4 py-3 sm:px-8 lg:px-10 lg:py-4">
+      <div className="flex min-w-0 items-center gap-3">
+        {onMenu && (
+          <button type="button" onClick={onMenu} aria-label="Open menu" className={`${iconBtn} shrink-0 lg:hidden`}>
+            <Menu size={18} />
+          </button>
+        )}
+        <span className="hidden sm:block">
+          <BackButton className="border-border-light text-ink-muted hover:bg-surface-light hover:text-ink" />
+        </span>
+        <div className="min-w-0">
+          <p className="eyebrow hidden text-ink-muted sm:block">{today}</p>
+          <p className="truncate font-display text-[1.15rem] font-[420] tracking-[-0.02em] text-ink sm:text-[1.4rem]">
+            {getGreeting()}, <span className="serif-i">{firstName}</span>
+          </p>
         </div>
-        <UniqueIdBadge uniqueId={profile?.uniqueId} />
+        <div className="hidden xl:block">
+          <UniqueIdBadge uniqueId={profile?.uniqueId} />
+        </div>
       </div>
 
-      <div className="flex items-center gap-3 sm:gap-4">
-        {/* Search */}
-        <div className="hidden items-center gap-2 rounded-lg border border-border-light bg-surface-light px-3 py-2 sm:flex">
-          <Search size={16} className="text-ink-muted" />
+      <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+        <div className="hidden items-center gap-2.5 rounded-full border border-border-light bg-card-light px-4 py-2.5 md:flex">
+          <Search size={15} className="text-ink-muted" />
           <input
             value={search}
             onChange={(e) => onSearchChange?.(e.target.value)}
-            placeholder="Search"
-            className="w-40 bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
+            placeholder="Search courses, materials…"
+            aria-label="Search"
+            className="w-44 bg-transparent text-sm text-ink placeholder:text-ink-muted focus:!shadow-none focus:outline-none lg:w-56"
           />
         </div>
 
-        {/* Theme toggle */}
         <button
           type="button"
           onClick={(e) => {
             e.preventDefault();
             toggleTheme();
           }}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-light text-ink-muted transition hover:bg-surface-light hover:text-ink"
+          className={`${iconBtn} hidden sm:flex`}
           aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
           title={isDark ? "Light mode" : "Dark mode"}
         >
           {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
         </button>
 
-        {/* Notification bell — opens Notifications page */}
-        <button
-          type="button"
-          onClick={() => navigate("/dashboard/notifications")}
-          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-surface-light hover:text-ink"
-          aria-label="Notifications"
-        >
-          <Bell size={19} />
+        <button type="button" onClick={() => navigate("/dashboard/notifications")} className={iconBtn} aria-label="Notifications">
+          <Bell size={17} />
           {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-status-danger text-[10px] font-semibold text-white">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[10px] font-semibold text-midnight">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
         </button>
 
-        {/* Avatar with popup */}
-        <UserAvatar profile={profile} size={36} />
+        <UserAvatar profile={profile} size={40} />
 
-        {/* Logout */}
         <button
           type="button"
           onClick={() => setConfirmLogout(true)}
           disabled={loggingOut}
-          className="flex h-9 items-center gap-1.5 rounded-lg border border-border-light px-2.5 text-ink-muted transition hover:border-status-danger/40 hover:bg-status-danger/10 hover:text-status-danger disabled:opacity-60"
+          className={`${iconBtn} hidden hover:!border-status-danger/40 hover:!text-status-danger sm:flex`}
           aria-label="Log out"
           title="Log out"
         >
           <LogOut size={16} />
-          <span className="hidden text-xs font-medium sm:inline">Log out</span>
         </button>
       </div>
 

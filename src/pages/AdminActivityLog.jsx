@@ -193,7 +193,7 @@ export default function AdminActivityLog() {
                 if (ca.type === 'revert-role') await doRevertRole(ca.entry);
                 if (ca.type === 'cancel-class') await doCancelClass(ca.entry);
               }}
-              className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-bg-app"
+              className="rounded-full bg-accent px-3 py-2 text-sm font-semibold text-bg-app"
             >
               Confirm
             </button>

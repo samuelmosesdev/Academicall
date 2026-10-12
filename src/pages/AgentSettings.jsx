@@ -144,7 +144,7 @@ export default function AgentSettings() {
         </div>
 
         <div className="mt-6 flex items-center gap-2">
-          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60">
+          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60">
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
             Save settings
           </button>

@@ -73,7 +73,7 @@ export default function QuickAddForm({ target, onDone }) {
       <button
         type="submit"
         disabled={saving}
-        className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-bg-sidebar disabled:opacity-60"
+        className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-60"
       >
         {saving ? "Saving..." : `Add ${label}`}
       </button>

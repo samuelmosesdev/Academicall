@@ -4,14 +4,13 @@ import {
   ClipboardList,
   BookOpen,
   Settings,
-  LogOut,
   Megaphone,
   MessageSquare,
   Mail,
 } from "lucide-react";
-import BrandLogo from "./BrandLogo";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import SidebarFooter from "./SidebarFooter";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/agent" },
@@ -27,7 +26,7 @@ const NAV_ITEMS = [
 export default function AgentSidebar({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, logout } = useAuth();
+  const { profile } = useAuth();
   const roleLabel =
     profile?.role === "alphaAgent"
       ? "Alpha Agent"
@@ -40,16 +39,10 @@ export default function AgentSidebar({ onNavigate }) {
     onNavigate?.();
   }
 
-  async function handleLogout() {
-    await logout();
-    navigate("/", { replace: true });
-    onNavigate?.();
-  }
-
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-border-subtle bg-bg-sidebar px-4 py-6">
+    <aside className="sidebar-ink flex h-full w-[16.5rem] shrink-0 flex-col overflow-y-auto px-3 pb-5 pt-7">
       <div className="px-2 pb-4">
-        <BrandLogo size={36} textClass="text-text-primary" />
+        <img src="/brand/logo-horizontal-reversed.png" alt="Academicall" className="h-[22px] w-auto" />
       </div>
 
       <div className="mb-6 mx-2 rounded-xl border border-border-subtle bg-bg-panel px-3 py-2.5">
@@ -70,13 +63,13 @@ export default function AgentSidebar({ onNavigate }) {
               key={label}
               type="button"
               onClick={() => go(to)}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[0.87rem] transition-colors ${
                 isActive
                   ? "bg-bg-elevated text-text-primary font-medium"
                   : "text-text-secondary hover:bg-bg-panel-alt hover:text-text-primary"
               }`}
             >
-              <Icon size={17} strokeWidth={2} />
+              <Icon size={17} strokeWidth={1.7} />
               <span className="text-left leading-tight">{label}</span>
             </button>
           );
@@ -86,19 +79,12 @@ export default function AgentSidebar({ onNavigate }) {
       <button
         type="button"
         onClick={() => go("/agent/settings")}
-        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text-secondary hover:bg-bg-panel-alt hover:text-text-primary"
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.87rem] text-text-secondary hover:bg-bg-panel-alt hover:text-text-primary"
       >
         <Settings size={17} />
         Settings
       </button>
-      <button
-        type="button"
-        onClick={handleLogout}
-        className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text-secondary hover:bg-bg-panel-alt hover:text-status-danger"
-      >
-        <LogOut size={17} />
-        Log out
-      </button>
+      <SidebarFooter onNavigate={onNavigate} />
     </aside>
   );
 }

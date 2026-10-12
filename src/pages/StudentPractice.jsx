@@ -11,13 +11,15 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCbtData } from "../hooks/useCbtData";
-import { FACULTIES, departmentsFor } from "../data/facultyData";
+import { FACULTIES } from "../data/facultyData";
 import { doc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { Link, useSearchParams } from "react-router-dom";
 import { FREE_LIMITS, isPro } from "../lib/subscription";
 import { usersApi, quizzesApi } from "../lib/api";
 import CbtExamWorkspace from "../components/cbt/CbtExamWorkspace";
+import { getAcademicScope, matchesAcademicProgram } from "../lib/academicScope";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 
 
 const LEVELS = [
@@ -37,11 +39,12 @@ const fieldClass =
 export default function StudentPractice() {
   const { user, profile, authMode, refreshProfile } = useAuth();
   const { practiceSets, questions, loading } = useCbtData({ withQuestions: true });
+  const { programsForFaculty } = useAcademicCatalog();
 
   // Filters
   const [search, setSearch] = useState("");
   const [faculty, setFaculty] = useState(profile?.faculty || "");
-  const [department, setDepartment] = useState(profile?.department || "");
+  const [department, setDepartment] = useState(() => getAcademicScope(profile));
   const [level, setLevel] = useState(profile?.level || "");
   const [difficulty, setDifficulty] = useState("all");
 
@@ -58,7 +61,7 @@ export default function StudentPractice() {
   const [myLoading, setMyLoading] = useState(true);
   const [activeQuizId, setActiveQuizId] = useState(null);
 
-  const departments = useMemo(() => departmentsFor(faculty), [faculty]);
+  const departments = useMemo(() => programsForFaculty(faculty), [faculty, programsForFaculty]);
   const pro = isPro(profile);
 
   const filteredSets = useMemo(() => {
@@ -70,15 +73,14 @@ export default function StudentPractice() {
         s.courseTitle.toLowerCase().includes(q) ||
         s.topics.some((t) => t.toLowerCase().includes(q));
       const freeFaculty = profile?.faculty || faculty;
-      const freeDept = profile?.department || department;
+      const freeProgram = getAcademicScope(profile) || department;
       const matchesFaculty = pro
         ? !faculty || s.faculty === faculty
         : !freeFaculty || s.faculty === freeFaculty;
-      const matchesDept = pro
-        ? !department || s.department === department
-        : !freeDept || s.department === freeDept;
+      const selectedProgram = pro ? department : freeProgram;
+      const matchesProgram = !selectedProgram || matchesAcademicProgram(s.program || s.department, selectedProgram);
       const matchesLevel = !level || s.level === level;
-      return matchesSearch && matchesFaculty && matchesDept && matchesLevel;
+      return matchesSearch && matchesFaculty && matchesProgram && matchesLevel;
     });
   }, [
     practiceSets,
@@ -88,7 +90,7 @@ export default function StudentPractice() {
     level,
     pro,
     profile?.faculty,
-    profile?.department,
+    profile,
   ]);
 
   const startPractice = useCallback(
@@ -375,7 +377,7 @@ export default function StudentPractice() {
                 <button
                   type="button"
                   onClick={() => openMyQuiz(quiz)}
-                  className="flex-1 rounded-lg bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
+                  className="flex-1 rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
                 >
                   Open
                 </button>
@@ -393,7 +395,7 @@ export default function StudentPractice() {
       </section>
 
       {!pro && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal/25 bg-gradient-to-r from-teal-soft to-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal/25 bg-lemon-soft dark:bg-lemon/10 p-4">
           <div>
             <p className="text-sm font-semibold text-ink">
               Free plan · max {FREE_LIMITS.practiceQuestions} questions per set
@@ -404,7 +406,7 @@ export default function StudentPractice() {
           </div>
           <Link
             to="/dashboard/upgrade"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
+            className="inline-flex items-center gap-1.5 rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
           >
             <Crown size={13} /> Go Pro
           </Link>
@@ -452,10 +454,10 @@ export default function StudentPractice() {
             className={fieldClass}
             disabled={!faculty}
           >
-            <option value="">All departments</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>
-                {d}
+            <option value="">All programs</option>
+            {departments.map((programOption) => (
+              <option key={programOption} value={programOption}>
+                {programOption}
               </option>
             ))}
           </select>
@@ -568,7 +570,7 @@ export default function StudentPractice() {
               <button
                 type="button"
                 onClick={() => startPractice(set)}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-teal px-3 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark"
+                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-teal px-3 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark"
               >
                 <Play size={15} /> Practice
               </button>

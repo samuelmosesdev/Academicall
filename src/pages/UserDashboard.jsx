@@ -12,12 +12,7 @@ import {
   BookMarked,
   Brain,
   Flame,
-  Sparkles,
-  ClipboardCheck,
-  Library,
-  BookOpen,
   ArrowRight,
-  Play,
   Eye,
   MessageCircle,
   Send,
@@ -27,12 +22,14 @@ import {
 } from "lucide-react";
 import { db } from "../firebase/config";
 import StudentKpiCard from "../components/StudentKpiCard";
-import UserAvatar, { displayLabel, NameWithBadge, isProUser } from "../components/UserAvatar";
+import DashboardHero from "../components/DashboardHero";
+import UserAvatar, { displayLabel, NameWithBadge } from "../components/UserAvatar";
 import { useUserDashboardData } from "../hooks/useUserDashboardData";
 import { useCbtData } from "../hooks/useCbtData";
 import { useAuth } from "../context/AuthContext";
 import { recordDailyActivity } from "../lib/activity";
 import { feedApi } from "../lib/api";
+import { getAcademicScope } from "../lib/academicScope";
 
 
 const REACTIONS = [
@@ -67,7 +64,7 @@ export default function UserDashboard() {
   const [expanded, setExpanded] = useState({});
   const [anonComment, setAnonComment] = useState({});
 
-  const department = profile?.department || profile?.program || "";
+  const department = getAcademicScope(profile);
   const level = profile?.level || "";
   const firstName =
     profile?.nickname ||
@@ -80,7 +77,7 @@ export default function UserDashboard() {
       if (!department) { setDeptPosts([]); setFeedLoading(false); return; }
       setFeedLoading(true);
       feedApi
-        .list("course", `department=${encodeURIComponent(department)}`)
+        .list("course", `program=${encodeURIComponent(department)}`)
         .then(({ posts = [] }) =>
           setDeptPosts(
             posts
@@ -93,7 +90,7 @@ export default function UserDashboard() {
       return;
     }
     if (user && profile) recordDailyActivity(user, profile);
-  }, [user?.uid, profile?.lastActiveDate, department, level, authMode]);
+  }, [user, profile, department, level, authMode]);
 
   // General feed (admin posts)
   useEffect(() => {
@@ -183,10 +180,10 @@ export default function UserDashboard() {
         authorRole: asAnonymous ? "user" : profile?.role || "user",
         authorPlan: asAnonymous ? null : profile?.plan || null,
         authorSubscription: asAnonymous ? null : profile?.subscription || null,
-        authorDepartment: asAnonymous
+        authorProgram: asAnonymous
           ? null
           : profile?.showDepartment !== false
-            ? profile?.department || null
+            ? profile?.program || null
             : null,
         authorPhone: asAnonymous
           ? null
@@ -231,50 +228,12 @@ export default function UserDashboard() {
   }, [practiceSets, profile?.faculty, profile?.level]);
 
   return (
-    <div className="space-y-8 animate-stitch-in">
-      {/* Welcome */}
-      <section className="rounded-2xl border border-border-light bg-card-light p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <UserAvatar profile={profile} size={48} />
-            <div>
-              <h1 className="text-lg font-semibold text-ink sm:text-xl">
-                Welcome back, {firstName}
-              </h1>
-              <p className="mt-0.5 text-sm text-ink-muted">
-                {profile?.name && (profile?.nickname || profile?.nickName)
-                  ? profile.name
-                  : null}
-                {profile?.faculty
-                  ? `${profile?.name && (profile?.nickname || profile?.nickName) ? " · " : ""}${profile.faculty}${profile.level ? ` · ${profile.level}` : ""}`
-                  : "Complete your profile for personalised feeds."}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/practice")}
-              className="flex items-center gap-2 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark"
-            >
-              <ClipboardCheck size={15} />
-              Practice CBT
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/reading-hub")}
-              className="flex items-center gap-2 rounded-lg border border-border-light bg-surface-light px-4 py-2 text-sm font-medium text-ink hover:border-teal/40"
-            >
-              <Library size={15} />
-              Reading Hub
-            </button>
-          </div>
-        </div>
-      </section>
+    <div className="space-y-10 animate-stitch-in">
+      <DashboardHero profile={profile} firstName={firstName} />
 
       {/* KPIs */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-ink-muted">Your progress</h2>
+        <h2 className="mb-5 font-display text-[1.6rem] font-[420] tracking-[-0.02em] text-ink">Your progress</h2>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <StudentKpiCard
             icon={Flame}
@@ -360,19 +319,11 @@ export default function UserDashboard() {
             const open = expanded[post.id];
             const coll =
               feedTab === "general" ? "generalPosts" : "coursePosts";
-            const accent = post.pinned
-              ? "bg-pink-500"
-              : feedTab === "general"
-                ? "bg-violet-500"
-                : "bg-teal";
             return (
               <article
                 key={post.id}
                 className="card-stitch relative overflow-hidden rounded-3xl p-5 pl-6"
               >
-                <div
-                  className={`absolute left-0 top-0 h-full w-1.5 rounded-l-3xl ${accent}`}
-                />
                 <div className="flex items-start gap-3">
                   <UserAvatar
                     name={post.authorName || post.createdByName || "Author"}
@@ -391,12 +342,12 @@ export default function UserDashboard() {
                         />
                       </p>
                       {post.pinned && (
-                        <span className="rounded-full bg-pink-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-pink-600">
+                        <span className="rounded-full bg-lemon px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-midnight">
                           Pinned
                         </span>
                       )}
                       {feedTab === "general" && (
-                        <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-600">
+                        <span className="rounded-full bg-violet-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet dark:bg-violet/20">
                           General
                         </span>
                       )}
@@ -484,7 +435,7 @@ export default function UserDashboard() {
                                 name={c.authorName}
                                 nickname={c.authorNickname}
                                 photoURL={c.authorPhoto}
-                                department={c.authorDepartment}
+                                program={c.authorProgram}
                                 phone={c.authorPhone}
                                 role={c.authorRole}
                                 plan={c.authorPlan}
@@ -551,7 +502,7 @@ export default function UserDashboard() {
                           type="button"
                           onClick={() => addComment(coll, post.id)}
                           disabled={commentBusy[post.id]}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
                         >
                           {commentBusy[post.id] ? (
                             <Loader2 size={14} className="animate-spin" />

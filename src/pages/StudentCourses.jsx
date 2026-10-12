@@ -21,21 +21,24 @@ import { useAuth } from "../context/AuthContext";
 import { useCbtData } from "../hooks/useCbtData";
 import { FREE_LIMITS, isPro } from "../lib/subscription";
 import { db } from "../firebase/config";
-import { FACULTIES, departmentsFor } from "../data/facultyData";
+import { FACULTIES } from "../data/facultyData";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 import AiCourseImportModal from "../components/AiCourseImportModal";
 import { usersApi } from "../lib/api";
 import { logActivity } from "../lib/activityLog";
+import { getAcademicScope, matchesAcademicProgram } from "../lib/academicScope";
 
 export default function StudentCourses() {
   const { user, profile, authMode, refreshProfile } = useAuth();
   const { courses, loading } = useCbtData();
+  const { programsForFaculty } = useAcademicCatalog();
   const pro = isPro(profile);
   const [selected, setSelected] = useState(() => profile?.selectedCourseIds || []);
   const [customCourses, setCustomCourses] = useState(
     () => profile?.customCourses || []
   );
   const [faculty, setFaculty] = useState(profile?.faculty || "");
-  const [department, setDepartment] = useState(profile?.department || "");
+  const [department, setDepartment] = useState(() => getAcademicScope(profile));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [showAi, setShowAi] = useState(false);
@@ -49,18 +52,18 @@ export default function StudentCourses() {
     if (profile?.customCourses) setCustomCourses(profile.customCourses);
   }, [profile?.selectedCourseIds, profile?.customCourses]);
 
-  const departments = useMemo(() => departmentsFor(faculty), [faculty]);
+  const departments = useMemo(() => programsForFaculty(faculty), [faculty, programsForFaculty]);
 
   const { recommended, suggestions } = useMemo(() => {
     let list = [...courses];
-    const dep = profile?.department || department;
+    const dep = getAcademicScope(profile) || department;
     const fac = profile?.faculty || faculty;
     if (!pro) {
       if (fac) list = list.filter((c) => !c.faculty || c.faculty === fac);
-      if (dep) list = list.filter((c) => !c.department || c.department === dep);
+      if (dep) list = list.filter((c) => !(c.program || c.department) || matchesAcademicProgram(c.program || c.department, dep));
     } else {
       if (faculty) list = list.filter((c) => c.faculty === faculty);
-      if (department) list = list.filter((c) => c.department === department);
+      if (department) list = list.filter((c) => matchesAcademicProgram(c.program || c.department, department));
     }
     list.sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
 
@@ -71,7 +74,7 @@ export default function StudentCourses() {
       (c) => c.source !== "courseRep" && c.uploadedByRole !== "courseRep"
     );
     return { recommended, suggestions };
-  }, [courses, pro, faculty, department, profile?.faculty, profile?.department]);
+  }, [courses, pro, faculty, department, profile]);
 
   const selectedFromCatalog = useMemo(
     () => courses.filter((c) => selected.includes(c.id)),
@@ -149,7 +152,8 @@ export default function StudentCourses() {
         title,
         source: "self",
         faculty: profile?.faculty || faculty || null,
-        department: profile?.department || department || null,
+        program: getAcademicScope(profile) || department || null,
+        department: getAcademicScope(profile) || department || null,
         enabled: true,
         addedAt: new Date().toISOString(),
       };
@@ -202,7 +206,8 @@ export default function StudentCourses() {
         title,
         source: "ai",
         faculty: profile?.faculty || faculty || null,
-        department: profile?.department || department || null,
+        program: getAcademicScope(profile) || department || null,
+        department: getAcademicScope(profile) || department || null,
         enabled: true,
         addedAt: new Date().toISOString(),
       });
@@ -285,14 +290,14 @@ export default function StudentCourses() {
           <button
             type="button"
             onClick={() => setShowAi(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-teal/40 bg-teal-soft px-3 py-2 text-xs font-semibold text-teal hover:bg-teal hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-full border border-teal/40 bg-teal-soft px-3 py-2 text-xs font-semibold text-teal hover:bg-teal hover:text-white"
           >
             <Sparkles size={13} /> AI course reg
           </button>
           {!pro && (
             <Link
               to="/dashboard/upgrade"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
+              className="inline-flex items-center gap-1.5 rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
             >
               <Crown size={13} /> Go Pro
             </Link>
@@ -346,7 +351,7 @@ export default function StudentCourses() {
           type="button"
           onClick={save}
           disabled={saving}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-teal px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-teal px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
         >
           {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
           Save selection
@@ -404,10 +409,10 @@ export default function StudentCourses() {
           className={fieldClass}
           disabled={!faculty}
         >
-          <option value="">All departments</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>
-              {d}
+          <option value="">All programs</option>
+          {departments.map((programOption) => (
+            <option key={programOption} value={programOption}>
+              {programOption}
             </option>
           ))}
         </select>

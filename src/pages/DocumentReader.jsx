@@ -216,7 +216,7 @@ export default function DocumentReader() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark"
+          className="rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark"
         >
           Go back
         </button>
@@ -307,7 +307,7 @@ export default function DocumentReader() {
             className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition ${
               panelOpen
                 ? "bg-teal text-white"
-                : "bg-gradient-to-r from-teal to-teal-dark text-white shadow-sm"
+                : "bg-teal text-white shadow-sm"
             }`}
           >
             <Sparkles size={14} />
@@ -389,7 +389,7 @@ export default function DocumentReader() {
                   </p>
                   <Link
                     to="/dashboard/upgrade"
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-teal px-4 py-2.5 text-xs font-semibold text-white hover:bg-teal-dark"
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-teal px-4 py-2.5 text-xs font-semibold text-white hover:bg-teal-dark"
                   >
                     <Crown size={13} /> Go Pro
                   </Link>

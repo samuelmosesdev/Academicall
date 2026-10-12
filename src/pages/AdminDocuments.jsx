@@ -177,7 +177,7 @@ export default function AdminDocuments() {
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
-          className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong"
+          className="flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong"
         >
           <Upload size={16} />
           {showForm ? "Cancel" : "Upload document"}
@@ -350,7 +350,7 @@ export default function AdminDocuments() {
           <button
             type="submit"
             disabled={uploading || courses.length === 0}
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
+            className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
           >
             {uploading ? `Uploading… ${progress}%` : "Upload"}
           </button>
@@ -419,11 +419,11 @@ export default function AdminDocuments() {
                   <div className="flex items-center gap-2">
                     {d.status === "pending" && (
                       <>
-                        <button type="button" onClick={() => handleApproval(d.id, "approved")} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">Approve</button>
+                        <button type="button" onClick={() => handleApproval(d.id, "approved")} className="rounded-lg bg-aqua-deep px-2.5 py-1 text-xs font-semibold text-white">Approve</button>
                         <button type="button" onClick={() => handleApproval(d.id, "rejected")} className="rounded-lg bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">Reject</button>
                       </>
                     )}
-                    {d.status === "approved" && <span className="text-xs font-semibold text-emerald-600">Approved</span>}
+                    {d.status === "approved" && <span className="text-xs font-semibold text-aqua-deep">Approved</span>}
                     <a
                       href={d.fileUrl}
                       target="_blank"

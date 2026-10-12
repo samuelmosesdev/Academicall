@@ -119,7 +119,7 @@ export default function AgentDashboard() {
           <button
             type="button"
             onClick={() => navigate("/agent/documents")}
-            className="flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app hover:opacity-95"
+            className="flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app hover:opacity-95"
           >
             <Upload size={15} /> Upload document
           </button>

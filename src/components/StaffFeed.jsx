@@ -326,7 +326,7 @@ export default function StaffFeed({ compact = false, maxItems = 40 }) {
                           type="button"
                           disabled={busy[post.id]}
                           onClick={() => addComment(post.id)}
-                          className="inline-flex shrink-0 items-center rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-bg-app disabled:opacity-60"
+                          className="inline-flex shrink-0 items-center rounded-full bg-accent px-3 py-2 text-xs font-semibold text-bg-app disabled:opacity-60"
                         >
                           {busy[post.id] ? (
                             <Loader2 size={14} className="animate-spin" />

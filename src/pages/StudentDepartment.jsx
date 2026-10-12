@@ -25,6 +25,7 @@ import { classEventsApi, departmentApi, documentsApi, feedApi, materialSavesApi,
 import { useAuth } from "../context/AuthContext";
 import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
+import { getAcademicDepartment, getAcademicProgram, getAcademicScope, getCourseRepProgram, matchesAcademicScope } from "../lib/academicScope";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -81,19 +82,13 @@ export default function StudentDepartment() {
   // Hub is scoped by PROGRAM (degree programme), not the broad department.
   // Backend APIs still use a string field named "department" — we pass the program there
   // so class groups, materials, and membership are per-program.
-  const program =
-    profile?.courseRepMeta?.program ||
-    profile?.program ||
-    "";
-  const departmentName =
-    profile?.courseRepMeta?.department ||
-    profile?.department ||
-    "";
+  const program = getAcademicProgram(profile);
+  const departmentName = getAcademicDepartment(profile);
   // Scope key used for API filters / membership / course-rep matching
-  const department = program || departmentName;
+  const department = getAcademicScope(profile);
   const faculty = profile?.faculty || "";
   const level = profile?.level || "";
-  const hubTitle = program || departmentName || "Your programme";
+  const hubTitle = program || "Your programme";
   const hubSubtitleParts = [
     faculty || null,
     departmentName && departmentName !== program ? departmentName : null,
@@ -146,7 +141,8 @@ export default function StudentDepartment() {
     setMembershipBusy(true);
     setMembershipMessage("");
     try {
-      const response = await departmentApi.join({ department, program: program || department, faculty, level });
+      if (!program) throw new Error("Select an academic program before requesting membership.");
+      const response = await departmentApi.join({ program, faculty, level });
       setMembership(response.membership || null);
       setMembershipMessage(response.message || "Request sent.");
     } catch (err) {
@@ -156,18 +152,9 @@ export default function StudentDepartment() {
     }
   }
 
-  const myRepDept =
-    profile?.courseRepMeta?.program ||
-    profile?.program ||
-    profile?.courseRepMeta?.department ||
-    profile?.department ||
-    profile?.courseRepDepartment ||
-    "";
+  const myRepDept = getCourseRepProgram(profile);
   const myRepLevel =
-    profile?.courseRepMeta?.level ||
-    profile?.courseRepLevel ||
-    profile?.level ||
-    "";
+    profile?.courseRepMeta?.level || "";
 
   const isRepHere =
     profile?.role === "courseRep" &&
@@ -197,7 +184,7 @@ export default function StudentDepartment() {
 
     let alive = true;
     usersApi
-      .courseRepStatus?.(department, level)
+      .courseRepStatus?.(program, level)
       .then((res) => {
         if (alive) setHasCourseRep(Boolean(res?.hasCourseRep));
       })
@@ -205,7 +192,7 @@ export default function StudentDepartment() {
         if (alive) setHasCourseRep(false);
       });
     return () => { alive = false; };
-  }, [department, level, authMode, profile?.role, myRepDept, myRepLevel]);
+  }, [department, program, level, authMode, profile?.role, myRepDept, myRepLevel]);
 
   useEffect(() => {
     if (authMode !== "api") {
@@ -216,11 +203,11 @@ export default function StudentDepartment() {
 
     let alive = true;
     classEventsApi.list()
-      .then(({ events = [] }) => alive && setClasses(events.filter((event) => event.department === department && matchesStudentLevel(event.level, level))))
+      .then(({ events = [] }) => alive && setClasses(events.filter((event) => matchesAcademicScope(event.program || event.department, profile) && matchesStudentLevel(event.level, level))))
       .catch(() => alive && setClasses([]))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
-  }, [department, level, authMode]);
+  }, [department, program, level, authMode, profile]);
 
   useEffect(() => {
     if (authMode !== "api") {
@@ -229,12 +216,15 @@ export default function StudentDepartment() {
     }
 
     let alive = true;
-    if (!department || !level) return undefined;
+    if (!program || !level) {
+      setMaterials([]);
+      return undefined;
+    }
     documentsApi.list()
-      .then(({ documents = [] }) => alive && setMaterials(documents.filter((item) => item.department === department && item.source === "courseRep" && matchesStudentLevel(item.level, level))))
+      .then(({ documents = [] }) => alive && setMaterials(documents.filter((item) => matchesAcademicScope(item.program || item.department, profile) && item.source === "courseRep" && matchesStudentLevel(item.level, level))))
       .catch(() => alive && setMaterials([]));
     return () => { alive = false; };
-  }, [department, level, authMode]);
+  }, [department, program, level, authMode, profile]);
 
   useEffect(() => {
     if (authMode !== "api") {
@@ -243,12 +233,15 @@ export default function StudentDepartment() {
     }
 
     let alive = true;
-    if (!department || !level) return undefined;
-    feedApi.list("course", `department=${encodeURIComponent(department)}`)
+    if (!program || !level) {
+      setPosts([]);
+      return undefined;
+    }
+    feedApi.list("course", `program=${encodeURIComponent(program)}`)
       .then(({ posts = [] }) => alive && setPosts(posts.filter((item) => matchesStudentLevel(item.level, level))))
       .catch(() => alive && setPosts([]));
     return () => { alive = false; };
-  }, [department, level, authMode]);
+  }, [program, department, level, authMode]);
 
   useEffect(() => {
     if (!user || authMode !== "api") {
@@ -623,7 +616,7 @@ export default function StudentDepartment() {
         <XCircle className="mx-auto mb-3 text-rose-400" size={32} />
         <p className="text-sm font-semibold text-ink">Membership request rejected</p>
         {membership.reviewReason && <p className="mt-2 text-xs text-rose-600">Reason: {membership.reviewReason}</p>}
-        <button type="button" onClick={requestMembership} disabled={membershipBusy} className="mt-4 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Request again</button>
+        <button type="button" onClick={requestMembership} disabled={membershipBusy} className="mt-4 rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Request again</button>
         {membershipMessage && <p className="mt-2 text-xs text-teal">{membershipMessage}</p>}
       </div>
     );
@@ -643,7 +636,7 @@ export default function StudentDepartment() {
       <div className="mx-auto max-w-md rounded-xl border border-border-light bg-card-light p-6 text-center">
         <Users className="mx-auto mb-3 text-ink-muted" size={32} />
         <p className="text-sm text-ink-muted">You are not yet a member of this programme group.</p>
-        <button type="button" onClick={requestMembership} disabled={membershipBusy} className="mt-4 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{membershipBusy ? "Sending…" : "Request to join"}</button>
+        <button type="button" onClick={requestMembership} disabled={membershipBusy} className="mt-4 rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{membershipBusy ? "Sending…" : "Request to join"}</button>
         {membershipMessage && <p className="mt-2 text-xs text-teal">{membershipMessage}</p>}
       </div>
     );
@@ -807,7 +800,6 @@ export default function StudentDepartment() {
                 key={ev.id}
                 className="card-stitch relative overflow-hidden rounded-2xl p-5 pl-6"
               >
-                <div className="absolute left-0 top-0 h-full w-1.5 rounded-l-2xl bg-teal" />
                 <p className="text-sm font-semibold text-ink">{ev.title}</p>
                 {ev.courseCode && (
                   <p className="text-xs font-medium text-teal mt-0.5">{ev.courseCode}</p>
@@ -816,8 +808,9 @@ export default function StudentDepartment() {
                   {start && (
                     <p className="flex items-center gap-1.5">
                       <Clock size={12} />{" "}
-                      {new Date(start).toLocaleString()}
-                      {end ? ` – ${new Date(end).toLocaleTimeString()}` : ""}
+                      {new Date(start).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })} ·{" "}
+                      {new Date(start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                      {end ? ` – ${new Date(end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}
                     </p>
                   )}
                   {ev.venue && (
@@ -913,7 +906,7 @@ export default function StudentDepartment() {
                           type="button"
                           onClick={() => addClassComment(ev.id)}
                           disabled={classCommentBusy[ev.id]}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
                         >
                           {classCommentBusy[ev.id] ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -947,17 +940,11 @@ export default function StudentDepartment() {
           {posts.map((post) => {
             const comments = Array.isArray(post.comments) ? post.comments : [];
             const open = expandedComments[post.id];
-            const accent = post.pinned
-              ? "bg-pink-500"
-              : post.courseCode
-                ? "bg-orange-500"
-                : "bg-violet-500";
             return (
               <article
                 key={post.id}
                 className="card-stitch relative overflow-hidden rounded-3xl p-6 pl-7 group"
               >
-                <div className={`absolute left-0 top-0 h-full w-1.5 rounded-l-3xl ${accent}`} />
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     {post.pinned && (
@@ -1068,7 +1055,7 @@ export default function StudentDepartment() {
                           type="button"
                           onClick={() => addComment(post.id)}
                           disabled={commentBusy[post.id]}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
                         >
                           {commentBusy[post.id] ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -1104,7 +1091,6 @@ export default function StudentDepartment() {
                 key={mat.id}
                 className="card-stitch relative overflow-hidden rounded-2xl p-5 pl-6 flex flex-col"
               >
-                <div className="absolute left-0 top-0 h-full w-1.5 rounded-l-2xl bg-orange-500" />
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-xs font-bold text-orange-600">
@@ -1172,7 +1158,8 @@ export default function StudentDepartment() {
           setShowSchedule(false);
           if (created) flash("Class scheduled — students can see it now.");
         }}
-        department={department}
+        department={departmentName || program}
+        program={program}
         level={level}
         faculty={faculty}
         user={user}
@@ -1185,7 +1172,8 @@ export default function StudentDepartment() {
           setShowAnnounce(false);
           if (created) flash("Announcement posted.");
         }}
-        department={department}
+        department={departmentName || program}
+        program={program}
         level={level}
         faculty={faculty}
         user={user}

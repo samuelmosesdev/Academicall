@@ -47,7 +47,7 @@ function CourseFormModal({ open, editingId, form, setForm, saving, error, onClos
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/55 backdrop-blur-[3px] p-4">
       <form
         onSubmit={onSubmit}
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-xl"
@@ -153,7 +153,7 @@ function CourseFormModal({ open, editingId, form, setForm, saving, error, onClos
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
+            className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
           >
             {saving ? "Saving…" : editingId ? "Update course" : "Save course"}
           </button>
@@ -167,7 +167,7 @@ function CourseFormModal({ open, editingId, form, setForm, saving, error, onClos
 function ImportModal({ open, onClose, onFile, importMsg, importErrors, importPreview, importing, onApply }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/55 backdrop-blur-[3px] p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-text-primary">
@@ -192,7 +192,7 @@ function ImportModal({ open, onClose, onFile, importMsg, importErrors, importPre
           >
             <Download size={14} /> Download sample CSV
           </button>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-bg-app hover:bg-accent-strong">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-full bg-accent px-3 py-2 text-xs font-semibold text-bg-app hover:bg-accent-strong">
             <Upload size={14} /> Choose CSV file
             <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
           </label>
@@ -553,7 +553,7 @@ export default function AdminCourses() {
           <button
             type="button"
             onClick={openCreate}
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong"
+            className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong"
           >
             <Plus size={16} /> Add course
           </button>

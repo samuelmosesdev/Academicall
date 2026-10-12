@@ -1,6 +1,6 @@
 {
   "appId": "com.uofa.readers",
-  "appName": "UofA Readers",
+  "appName": "Academicall",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"
@@ -8,14 +8,14 @@
   "plugins": {
     "SplashScreen": {
       "launchAutoHide": false,
-      "backgroundColor": "#0a0f1e",
+      "backgroundColor": "#0F0326",
       "showSpinner": false,
       "androidSplashResourceName": "splash",
       "androidScaleType": "CENTER_CROP"
     },
     "StatusBar": {
-      "style": "DARK",
-      "backgroundColor": "#0a0f1e",
+      "style": "LIGHT",
+      "backgroundColor": "#0F0326",
       "overlaysWebView": false
     },
     "SystemBars": {
@@ -25,6 +25,6 @@
   },
   "android": {
     "allowMixedContent": false,
-    "backgroundColor": "#0a0f1e"
+    "backgroundColor": "#0F0326"
   }
 }

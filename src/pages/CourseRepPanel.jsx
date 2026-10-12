@@ -32,6 +32,7 @@ import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
 import { displayLabel } from "../components/UserAvatar";
 import { classEventsApi, departmentApi, requestsApi, coursesApi, documentsApi } from "../lib/api";
+import { getAcademicDepartment, getAcademicScope, getCourseRepProgram } from "../lib/academicScope";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -51,19 +52,13 @@ export default function CourseRepPanel() {
   const allowed =
     isCourseRep(profile) || isAdmin(profile) || isAlpha(profile);
 
-  const department =
-    profile?.courseRepMeta?.department ||
-    profile?.department ||
-    profile?.courseRepMeta?.program ||
-    profile?.program ||
-    profile?.courseRepDepartment ||
-    profile?.department ||
-    "";
-  const level =
-    profile?.courseRepMeta?.level ||
-    profile?.courseRepLevel ||
-    profile?.level ||
-    "";
+  const department = profile?.role === "courseRep"
+    ? getCourseRepProgram(profile)
+    : getAcademicScope(profile);
+  const academicDepartment = getAcademicDepartment(profile);
+  const level = profile?.role === "courseRep"
+    ? profile?.courseRepMeta?.level || ""
+    : profile?.level || "";
   const faculty =
     profile?.courseRepMeta?.faculty || profile?.faculty || "";
 
@@ -114,7 +109,7 @@ export default function CourseRepPanel() {
     if (authMode !== "api" || !department) return;
     setMembersLoading(true);
     try {
-      const response = await departmentApi.members({ department, status: memberTab });
+      const response = await departmentApi.members({ program: department, status: memberTab });
       setMembers(response.members || []);
     } catch {
       setMembers([]);
@@ -298,9 +293,7 @@ export default function CourseRepPanel() {
     setMsg("");
     setErr("");
     if (!department || !level) {
-      return setErr(
-        "No department/level on your Course Rep profile. Ask Admin to assign you with a department AND level."
-      );
+      return setErr("No program/level on your Course Rep assignment. Ask an administrator to assign both.");
     }
     if (!title.trim() || !startsAt) {
       return setErr("Title and start time are required.");
@@ -316,7 +309,8 @@ export default function CourseRepPanel() {
             title: title.trim(), courseCode: courseCode.trim().toUpperCase() || null,
             venue: venue.trim() || null, notes: notes.trim() || null,
             startsAt: start.toISOString(), endsAt: end ? end.toISOString() : null,
-            faculty: faculty || null, department, level: level || null,
+            faculty: faculty || null, department: academicDepartment || null,
+            program: department, level: level || null,
             createdByName: profile?.name || user.email,
           })
         : { event: await addDoc(collection(db, "classEvents"), {
@@ -478,7 +472,8 @@ export default function CourseRepPanel() {
         courseCode: course?.code || null,
         courseTitle: course?.title || null,
         faculty: course?.faculty || faculty || null,
-        department: department || null,
+        department: academicDepartment || null,
+        program: department || null,
         level: course?.level || level || null,
         source: "courseRep",
         status: "approved",
@@ -529,7 +524,7 @@ export default function CourseRepPanel() {
         <button
           type="button"
           onClick={() => setShowSchedule(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal px-4 py-3 text-sm font-semibold text-white shadow-md shadow-teal/20 active:scale-[0.98]"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-teal px-4 py-3 text-sm font-semibold text-white shadow-md shadow-teal/20 active:scale-[0.98]"
         >
           <CalendarPlus size={16} />
           Schedule class
@@ -583,7 +578,7 @@ export default function CourseRepPanel() {
               ))}
             </div>
           </div>
-          {membersLoading ? <p className="text-sm text-ink-muted">Loading…</p> : members.length === 0 ? <p className="text-sm text-ink-muted">No {memberTab} members.</p> : <ul className="space-y-3">{members.map((member) => <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-light bg-surface-light p-3"><div><p className="text-sm font-semibold text-ink">{member.user?.name || member.user?.email}</p><p className="text-xs text-ink-muted">Program: {member.user?.program || "Not set"} · ID: {member.user?.uniqueId || "Not set"} · Level: {member.user?.level || member.level || "Not set"}</p></div>{memberTab === "pending" ? <div className="flex gap-2"><button type="button" onClick={() => handleMemberAction("admit", member.id)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white">Admit</button><button type="button" onClick={() => handleMemberAction("reject", member.id)} className="rounded-lg bg-rose-100 px-3 py-1.5 text-xs font-bold text-rose-700">Reject</button></div> : <div className="flex flex-col gap-2 sm:flex-row"><input value={withdrawReason[member.id] || ""} onChange={(event) => setWithdrawReason((previous) => ({ ...previous, [member.id]: event.target.value }))} placeholder="Withdrawal reason…" className="rounded-lg border border-border-light bg-card-light px-3 py-1.5 text-xs" /><button type="button" onClick={() => handleMemberAction("withdraw", member.id)} className="rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">Request withdrawal</button></div>}</li>)}</ul>}
+          {membersLoading ? <p className="text-sm text-ink-muted">Loading…</p> : members.length === 0 ? <p className="text-sm text-ink-muted">No {memberTab} members.</p> : <ul className="space-y-3">{members.map((member) => <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-light bg-surface-light p-3"><div><p className="text-sm font-semibold text-ink">{member.user?.name || member.user?.email}</p><p className="text-xs text-ink-muted">Program: {member.user?.program || "Not set"} · ID: {member.user?.uniqueId || "Not set"} · Level: {member.user?.level || member.level || "Not set"}</p></div>{memberTab === "pending" ? <div className="flex gap-2"><button type="button" onClick={() => handleMemberAction("admit", member.id)} className="rounded-lg bg-aqua-deep px-3 py-1.5 text-xs font-bold text-white">Admit</button><button type="button" onClick={() => handleMemberAction("reject", member.id)} className="rounded-lg bg-rose-100 px-3 py-1.5 text-xs font-bold text-rose-700">Reject</button></div> : <div className="flex flex-col gap-2 sm:flex-row"><input value={withdrawReason[member.id] || ""} onChange={(event) => setWithdrawReason((previous) => ({ ...previous, [member.id]: event.target.value }))} placeholder="Withdrawal reason…" className="rounded-lg border border-border-light bg-card-light px-3 py-1.5 text-xs" /><button type="button" onClick={() => handleMemberAction("withdraw", member.id)} className="rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">Request withdrawal</button></div>}</li>)}</ul>}
         </section>
       )}
 
@@ -662,7 +657,7 @@ export default function CourseRepPanel() {
         <button
           type="submit"
           disabled={cBusy || !department}
-          className="inline-flex items-center gap-2 rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-teal px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
         >
           {cBusy ? (
             <Loader2 size={15} className="animate-spin" />
@@ -712,7 +707,7 @@ export default function CourseRepPanel() {
         <input value={matTitle} onChange={(e) => setMatTitle(e.target.value)} placeholder="Material title" className={field} required />
         <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={(e) => setMatFile(e.target.files?.[0] || null)} />
         {matProgress > 0 && matProgress < 100 && <p className="text-xs">Upload {matProgress}%</p>}
-        <button type="submit" disabled={matBusy} className="inline-flex items-center gap-2 rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+        <button type="submit" disabled={matBusy} className="inline-flex items-center gap-2 rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
           {matBusy ? "Uploading…" : matScope === "course" ? "Publish material" : "Publish to department group"}
         </button>
       </form>
@@ -800,7 +795,7 @@ export default function CourseRepPanel() {
         <button
           type="submit"
           disabled={busy || !department}
-          className="inline-flex items-center gap-2 rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-teal px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
         >
           {busy ? (
             <Loader2 size={15} className="animate-spin" />
@@ -895,7 +890,8 @@ export default function CourseRepPanel() {
           setShowSchedule(false);
           if (ok) setMsg("Class scheduled. Students in your level will see it.");
         }}
-        department={department}
+        department={academicDepartment || department}
+        program={department}
         level={level}
         faculty={faculty}
         user={user}
@@ -908,7 +904,8 @@ export default function CourseRepPanel() {
           setShowAnnounce(false);
           if (ok) setMsg("Announcement posted to your department feed.");
         }}
-        department={department}
+        department={academicDepartment || department}
+        program={department}
         level={level}
         faculty={faculty}
         user={user}

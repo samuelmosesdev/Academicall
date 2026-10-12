@@ -11,12 +11,14 @@ import {
 import { logActivity } from "../lib/activityLog";
 import { usersApi } from "../lib/api";
 import { FACULTIES, departmentsFor, LEVELS } from "../data/facultyData";
+import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 
 /**
  * Course Rep is scoped to ONE department + ONE level (not whole department).
  */
 export default function AssignRoleControl({ targetUser }) {
   const { user, profile } = useAuth();
+  const { programsFor } = useAcademicCatalog();
   const [role, setRole] = useState(targetUser.role || "user");
   const [codes, setCodes] = useState(
     (targetUser.courseRepMeta?.courseCodes || []).join(", ")
@@ -26,6 +28,9 @@ export default function AssignRoleControl({ targetUser }) {
   );
   const [repDepartment, setRepDepartment] = useState(
     targetUser.courseRepMeta?.department || targetUser.department || ""
+  );
+  const [repProgram, setRepProgram] = useState(
+    targetUser.courseRepMeta?.program || targetUser.program || ""
   );
   const [repLevel, setRepLevel] = useState(
     targetUser.courseRepMeta?.level || targetUser.level || ""
@@ -38,17 +43,18 @@ export default function AssignRoleControl({ targetUser }) {
 
   const options = isAdmin(profile) ? ADMIN_ASSIGNABLE : ALPHA_ASSIGNABLE;
   const depts = departmentsFor(repFaculty);
+  const programs = programsFor(repDepartment);
 
   async function save() {
     if (!options.includes(role)) return;
     setErr("");
     if (role === "courseRep") {
-      if (!repDepartment.trim()) {
-        setErr("Department is required for Course Rep.");
+      if (!repDepartment.trim() || !repProgram.trim() || !programs.includes(repProgram.trim())) {
+        setErr("Choose a program listed under the required parent department.");
         return;
       }
       if (!repLevel.trim() || !LEVELS.includes(repLevel)) {
-        setErr("Level is required. Course Rep is one level per department.");
+        setErr("Level is required. Course Rep is one level per program.");
         return;
       }
     }
@@ -70,10 +76,12 @@ export default function AssignRoleControl({ targetUser }) {
             .filter(Boolean),
           faculty,
           department,
+          program: repProgram.trim(),
           level,
         };
         patch.faculty = faculty || targetUser.faculty || null;
         patch.department = department;
+        patch.program = repProgram.trim();
         patch.level = level;
       } else {
         patch.courseRepMeta = null;
@@ -129,6 +137,7 @@ export default function AssignRoleControl({ targetUser }) {
             onChange={(e) => {
               setRepFaculty(e.target.value);
               setRepDepartment("");
+              setRepProgram("");
             }}
             className="rounded border border-border-subtle bg-bg-panel px-2 py-1 text-xs"
           >
@@ -141,7 +150,10 @@ export default function AssignRoleControl({ targetUser }) {
           </select>
           <select
             value={repDepartment}
-            onChange={(e) => setRepDepartment(e.target.value)}
+            onChange={(e) => {
+              setRepDepartment(e.target.value);
+              setRepProgram("");
+            }}
             disabled={!repFaculty}
             className="rounded border border-border-subtle bg-bg-panel px-2 py-1 text-xs"
           >
@@ -149,6 +161,19 @@ export default function AssignRoleControl({ targetUser }) {
             {depts.map((d) => (
               <option key={d} value={d}>
                 {d}
+              </option>
+            ))}
+          </select>
+          <select
+            value={repProgram}
+            onChange={(e) => setRepProgram(e.target.value)}
+            disabled={!repDepartment || programs.length === 0}
+            className="rounded border border-border-subtle bg-bg-panel px-2 py-1 text-xs"
+          >
+            <option value="">{programs.length ? "Program *" : "No programs configured"}</option>
+            {programs.map((program) => (
+              <option key={program} value={program}>
+                {program}
               </option>
             ))}
           </select>
@@ -171,7 +196,7 @@ export default function AssignRoleControl({ targetUser }) {
             className="rounded border border-border-subtle bg-bg-panel px-2 py-1 text-xs"
           />
           <p className="text-[10px] text-text-muted">
-            Course Rep covers <strong>one department + one level</strong> only.
+            Course Rep covers <strong>one program + one level</strong> within its parent department.
           </p>
         </>
       )}
@@ -180,7 +205,7 @@ export default function AssignRoleControl({ targetUser }) {
 
       <button
         type="button"
-        disabled={busy}
+        disabled={busy || (role === "courseRep" && (!repDepartment || !repProgram || !repLevel))}
         onClick={save}
         className="rounded bg-accent px-2 py-1 text-xs font-semibold text-bg-app disabled:opacity-60"
       >

@@ -10,32 +10,48 @@ import {
 import { BookMarked, Calendar } from "lucide-react";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import { academicScopeValues, matchesAcademicScope } from "../lib/academicScope";
 import { classEventsApi } from "../lib/api";
 
 /**
- * Reference page: classEvents for the student's faculty/department/courses
- * + optional referenceItems collection.
+ * Reference page: class events scoped to the student's explicit program.
  */
 export default function StudentReference() {
   const { profile, authMode } = useAuth();
+  const scopes = useMemo(
+    () => academicScopeValues({ program: profile?.program }),
+    [profile?.program]
+  );
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!scopes.length) {
+      setEvents([]);
+      setLoading(false);
+      return undefined;
+    }
     if (authMode === "api") {
       let alive = true;
       classEventsApi.list().then(({ events = [] }) => {
         if (!alive) return;
-        setEvents(events.filter((event) => !profile?.department || event.department === profile.department));
+        setEvents(events.filter((event) => matchesAcademicScope(event.program || event.department, profile)));
       }).catch(() => alive && setEvents([])).finally(() => alive && setLoading(false));
       return () => { alive = false; };
     }
-    // Prefer filtering by department when set; otherwise show recent global events
+    // Legacy Firestore stores the program scope in its department field.
     let q;
-    if (profile?.department) {
+    if (scopes.length > 1) {
       q = query(
         collection(db, "classEvents"),
-        where("department", "==", profile.department),
+        where("department", "in", scopes),
+        orderBy("startsAt", "desc"),
+        limit(100)
+      );
+    } else if (scopes.length === 1) {
+      q = query(
+        collection(db, "classEvents"),
+        where("department", "==", scopes[0]),
         orderBy("startsAt", "desc"),
         limit(100)
       );
@@ -59,10 +75,12 @@ export default function StudentReference() {
       },
       () => {
         // Fallback without composite index: department filter only, no orderBy
-        const fallbackQ = profile?.department
+        const fallbackQ = scopes.length > 1
+          ? query(collection(db, "classEvents"), where("department", "in", scopes), limit(100))
+          : scopes.length === 1
           ? query(
               collection(db, "classEvents"),
-              where("department", "==", profile.department),
+              where("department", "==", scopes[0]),
               limit(100)
             )
           : query(collection(db, "classEvents"), limit(100));
@@ -77,7 +95,7 @@ export default function StudentReference() {
               const tb = b.startsAt?.toDate?.() || b.startsAt || 0;
               return new Date(tb) - new Date(ta);
             });
-            setEvents(list);
+            setEvents(list.filter((event) => matchesAcademicScope(event.program || event.department, profile)));
             setLoading(false);
           },
           () => setLoading(false)
@@ -88,7 +106,7 @@ export default function StudentReference() {
       unsub();
       fallbackUnsub?.();
     };
-  }, [profile?.department, authMode]);
+  }, [profile, authMode, scopes]);
 
   const upcoming = useMemo(() => {
     const now = Date.now();

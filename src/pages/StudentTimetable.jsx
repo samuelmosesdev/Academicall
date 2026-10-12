@@ -28,6 +28,7 @@ import { isPro } from "../lib/subscription";
 import SubscribeGateModal from "../components/SubscribeGateModal";
 import { db } from "../firebase/config";
 import { classEventsApi, timetableApi } from "../lib/api";
+import { matchesAcademicScope } from "../lib/academicScope";
 
 const DAYS = [
   { id: 1, short: "Mon", label: "Monday" },
@@ -128,7 +129,7 @@ function LockedTimetable({ onOpen }) {
         <p className="mt-1 max-w-xs text-center text-sm text-ink-muted">
           Subscribe to Pro to schedule classes, set reminders, and push to Google Calendar.
         </p>
-        <span className="mt-4 inline-flex items-center gap-2 rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white shadow-md">
+        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-teal px-5 py-2.5 text-sm font-semibold text-white shadow-md">
           <Lock size={14} /> Unlock with Pro
         </span>
       </div>
@@ -228,7 +229,7 @@ export default function StudentTimetable() {
       Promise.all([timetableApi.list(), classEventsApi.list()]).then(([personalData, sharedData]) => {
         if (cancelled) return;
         personal = (personalData.events || []).map((event) => ({ ...event, source: "personal" }));
-        shared = (sharedData.events || []).filter((event) => event.department === (profile?.department || profile?.program));
+        shared = (sharedData.events || []).filter((event) => matchesAcademicScope(event.program || event.department, profile));
         merge();
       }).catch(() => setLoading(false));
       return () => { cancelled = true; };
@@ -256,7 +257,7 @@ export default function StudentTimetable() {
         );
 
         shared = all.filter((ev) => {
-          if (profile?.department && ev.department === profile.department) {
+          if (matchesAcademicScope(ev.program || ev.department, profile)) {
             return true;
           }
           if (ev.courseCode && myCodes.has(ev.courseCode)) return true;
@@ -279,6 +280,7 @@ export default function StudentTimetable() {
     pro,
     weekAnchor,
     profile?.department,
+    profile?.program,
     profile?.faculty,
     profile?.selectedCourseIds,
     courses,
@@ -493,7 +495,7 @@ export default function StudentTimetable() {
           <button
             type="button"
             onClick={() => openCreate(1)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
+            className="inline-flex items-center gap-1.5 rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
           >
             <Plus size={14} /> Add class
           </button>
@@ -640,7 +642,7 @@ export default function StudentTimetable() {
       </p>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-midnight/55 backdrop-blur-[3px] p-4 sm:items-center">
           <button
             type="button"
             className="absolute inset-0"

@@ -222,7 +222,7 @@ export default function AdminAgents() {
               setError("");
               setSuccess("");
             }}
-            className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-bg-app"
+            className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app"
           >
             <Plus size={16} /> New agent
           </button>
@@ -388,7 +388,7 @@ export default function AdminAgents() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"
+              className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"
             >
               {saving ? "Creating…" : "Create agent"}
             </button>

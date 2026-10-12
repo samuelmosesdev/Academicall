@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import NativeBootstrap from "./native/NativeBootstrap";
 import Landing from "./pages/Landing";
 import Privacy from "./pages/Privacy";
 import Login from "./pages/Login";
@@ -63,6 +64,7 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <NativeBootstrap />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/privacy" element={<Privacy />} />

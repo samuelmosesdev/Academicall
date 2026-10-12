@@ -26,7 +26,7 @@ export default function GrowthChart({ data }) {
               onClick={() => setRange(opt.key)}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 range === opt.key
-                  ? "bg-accent text-bg-sidebar"
+                  ? "bg-accent text-white"
                   : "bg-bg-elevated text-text-secondary hover:text-text-primary"
               }`}
             >

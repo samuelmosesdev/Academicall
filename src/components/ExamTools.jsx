@@ -38,7 +38,7 @@ function CalculatorPanel({ onClose }) {
   };
   const buttons = ["7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "-", "0", ".", "(", ")", "+", "=" ];
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-midnight/55 backdrop-blur-[3px] p-4 sm:items-center">
       <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-bg-panel p-4 text-text-primary shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-bold">Calculator</h3>
@@ -75,7 +75,7 @@ function ConstantsPanel({ onClose }) {
   const [query, setQuery] = useState("");
   const rows = CONSTANTS.filter(([name, value]) => `${name} ${value}`.toLowerCase().includes(query.toLowerCase()));
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-midnight/55 backdrop-blur-[3px] p-4 sm:items-center">
       <div className="max-h-[80vh] w-full max-w-md overflow-auto rounded-2xl border border-border-subtle bg-bg-panel p-4 text-text-primary shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-bold">Scientific constants</h3>
@@ -103,10 +103,10 @@ export default function ExamTools() {
   return (
     <>
       <div className="fixed bottom-4 right-4 z-[70] flex flex-col gap-2">
-        <button type="button" onClick={() => setCalculator(true)} className="flex items-center gap-2 rounded-full bg-[#14355e] px-4 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-[#101c30]">
+        <button type="button" onClick={() => setCalculator(true)} className="flex items-center gap-2 rounded-full bg-[#0F0326] px-4 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-[#0F0326]">
           <Calculator size={16} /> Calculator
         </button>
-        <button type="button" onClick={() => setTable(true)} className="flex items-center gap-2 rounded-full bg-[#3d6fe0] px-4 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-[#14355e]">
+        <button type="button" onClick={() => setTable(true)} className="flex items-center gap-2 rounded-full bg-[#454ADE] px-4 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-[#0F0326]">
           <Table2 size={16} /> Tables
         </button>
       </div>

@@ -8,7 +8,7 @@ export default function Modal({ title, open, onClose, children, size = "md" }) {
   const previouslyFocused = useRef(null);
   const closeRef = useRef(onClose);
   const maxWidth =
-    size === "sm" ? "max-w-sm" : size === "lg" ? "max-w-2xl" : "max-w-md";
+    size === "sm" ? "sm:max-w-sm" : size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg";
 
   useEffect(() => {
     closeRef.current = onClose;
@@ -66,23 +66,24 @@ export default function Modal({ title, open, onClose, children, size = "md" }) {
 
   const node = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-6"
       role="presentation"
       style={{ top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%", minHeight: "100dvh" }}
     >
-      <button type="button" className="absolute inset-0 bg-black/60" aria-label="Close dialog" onClick={onClose} />
+      <button type="button" className="animate-fade absolute inset-0 bg-midnight/55 backdrop-blur-[3px]" aria-label="Close dialog" onClick={onClose} />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`relative z-10 w-full ${maxWidth} max-h-[min(90dvh,90vh)] overflow-y-auto rounded-2xl border border-border-subtle bg-bg-panel p-5 sm:p-6 shadow-xl outline-none`}
+        className={`animate-pop relative z-10 w-full ${maxWidth} max-h-[min(92dvh,92vh)] overflow-y-auto rounded-t-[1.75rem] border border-border-subtle bg-bg-panel px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-pop)] outline-none sm:rounded-[1.75rem] sm:p-8`}
       >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 id={titleId} className="text-base font-semibold text-text-primary">{title}</h3>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-text-muted hover:bg-bg-elevated" aria-label="Close">
-            <X size={18} />
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border-strong sm:hidden" aria-hidden="true" />
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <h2 id={titleId} className="!font-display text-[1.45rem] !font-[420] leading-tight !tracking-[-0.02em] text-text-primary">{title}</h2>
+          <button type="button" onClick={onClose} className="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-panel-alt text-text-muted transition hover:bg-bg-elevated hover:text-text-primary" aria-label="Close">
+            <X size={17} />
           </button>
         </div>
         {children}

@@ -109,7 +109,7 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
+          className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
         >
           {busy ? "Saving…" : "Save changes"}
         </button>

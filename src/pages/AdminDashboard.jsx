@@ -61,7 +61,7 @@ export default function AdminDashboard() {
               </p>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-bg-app transition group-hover:gap-2.5">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app transition group-hover:gap-2.5">
             Open channel <ArrowRight size={15} />
           </span>
         </div>

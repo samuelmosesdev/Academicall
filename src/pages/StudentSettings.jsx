@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   User,
   Palette,
@@ -18,13 +18,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { isPro, planLabel, FREE_LIMITS } from "../lib/subscription";
-import { FACULTIES, departmentsFor } from "../data/facultyData";
 import { usersApi, authApi } from "../lib/api";
+import { getAcademicScope } from "../lib/academicScope";
 
 const fieldClass =
   "w-full rounded-lg border border-border-light bg-surface-light px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-teal focus:outline-none";
-
-const LEVELS = ["100", "200", "300", "400", "500", "Postgraduate"];
 
 const DEFAULT_PREFS = {
   notifAnnouncements: true,
@@ -41,9 +39,6 @@ export default function StudentSettings() {
   const pro = isPro(profile);
 
   const [name, setName] = useState("");
-  const [faculty, setFaculty] = useState("");
-  const [department, setDepartment] = useState("");
-  const [level, setLevel] = useState("");
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -54,14 +49,9 @@ export default function StudentSettings() {
   const [pwdBusy, setPwdBusy] = useState(false);
   const [pwdMsg, setPwdMsg] = useState("");
 
-  const departments = useMemo(() => departmentsFor(faculty), [faculty]);
-
   useEffect(() => {
     if (!profile) return;
     setName(profile.name || "");
-    setFaculty(profile.faculty || "");
-    setDepartment(profile.department || "");
-    setLevel(profile.level || "");
     setPrefs({
       ...DEFAULT_PREFS,
       ...(profile.settings || {}),
@@ -81,9 +71,6 @@ export default function StudentSettings() {
     try {
       await usersApi.updateMe({
         name: name.trim(),
-        faculty: faculty || null,
-        department: department || null,
-        level: level || null,
         settings: {
           notifAnnouncements: !!prefs.notifAnnouncements,
           notifClassReminders: !!prefs.notifClassReminders,
@@ -172,50 +159,16 @@ export default function StudentSettings() {
             <label className="mb-1 block text-xs text-ink-muted">Unique ID</label>
             <input value={profile?.uniqueId || "—"} disabled className={`${fieldClass} opacity-70`} />
           </div>
-          <div>
-            <label className="mb-1 block text-xs text-ink-muted">Faculty</label>
-            <select
-              value={faculty}
-              onChange={(e) => {
-                setFaculty(e.target.value);
-                setDepartment("");
-              }}
-              className={fieldClass}
-            >
-              <option value="">Select faculty</option>
-              {FACULTIES.map((f) => (
-                <option key={f.name} value={f.name}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-ink-muted">Department</label>
-            <select
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className={fieldClass}
-              disabled={!faculty}
-            >
-              <option value="">Select department</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-ink-muted">Level</label>
-            <select value={level} onChange={(e) => setLevel(e.target.value)} className={fieldClass}>
-              <option value="">Select level</option>
-              {LEVELS.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </select>
+          <div className="sm:col-span-2 rounded-xl border border-border-light bg-surface-light p-3 text-sm">
+            <p className="font-medium text-ink">{getAcademicScope(profile) || "Programme not set"}</p>
+            <p className="mt-1 text-xs text-ink-muted">
+              {profile?.faculty || "Faculty not set"}
+              {profile?.department ? ` · ${profile.department}` : ""}
+              {profile?.level ? ` · ${profile.level}` : ""}
+            </p>
+            <Link to="/dashboard/profile" className="mt-2 inline-block text-xs font-medium text-teal hover:underline">
+              Request an academic detail change
+            </Link>
           </div>
         </div>
 
@@ -254,7 +207,7 @@ export default function StudentSettings() {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-lg bg-teal px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-teal px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
           >
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
             Save account & preferences
@@ -423,7 +376,7 @@ export default function StudentSettings() {
           </div>
           <Link
             to="/dashboard/upgrade"
-            className="rounded-lg bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
+            className="rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark"
           >
             {pro ? "View plans" : "Upgrade to Pro"}
           </Link>

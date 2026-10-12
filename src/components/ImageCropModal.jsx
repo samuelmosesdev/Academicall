@@ -57,7 +57,7 @@ export default function ImageCropModal({ file, open, onClose, onDone }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-midnight/55 backdrop-blur-[3px] p-4">
       <div className="w-full max-w-sm rounded-2xl border border-border-light bg-card-light p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-ink">Adjust photo</h3>
@@ -95,7 +95,7 @@ export default function ImageCropModal({ file, open, onClose, onDone }) {
           <button
             type="button"
             onClick={confirm}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-teal px-3 py-2 text-sm font-semibold text-white"
+            className="inline-flex items-center gap-1.5 rounded-full bg-teal px-3 py-2 text-sm font-semibold text-white"
           >
             <Check size={16} /> Use photo
           </button>

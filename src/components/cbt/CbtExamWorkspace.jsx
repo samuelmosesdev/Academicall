@@ -112,34 +112,34 @@ export default function CbtExamWorkspace({
   if (!q) return null;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#f9f9ff] text-[#111c2d]">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#FBF9F4] text-[#0F0326]">
       <ExamTools />
       {/* Sticky telemetry */}
-      <div className="sticky top-0 z-30 border-b border-[#c5c6cd]/30 bg-white/95 shadow-sm backdrop-blur-md">
+      <div className="sticky top-0 z-30 border-b border-[#D6CFC2]/30 bg-white/95 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-2.5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 rounded-lg bg-[#e7eeff] px-3 py-1.5">
-              <span className="h-2.5 w-2.5 animate-ping rounded-full bg-[#0054cd]" />
+            <div className="flex items-center gap-2 rounded-lg bg-[#E9E9FC] px-3 py-1.5">
+              <span className="h-2.5 w-2.5 animate-ping rounded-full bg-[#454ADE]" />
               <span className="text-sm font-semibold">
                 Question {currentIdx + 1}
               </span>
-              <span className="text-xs text-[#44474c]">/ {questions.length}</span>
+              <span className="text-xs text-[#433B5A]">/ {questions.length}</span>
             </div>
-            <div className="hidden items-center gap-1.5 rounded-lg bg-[#f0f3ff] px-2.5 py-1.5 text-xs text-[#44474c] sm:flex">
-              <Cloud size={14} className="text-emerald-600" />
+            <div className="hidden items-center gap-1.5 rounded-lg bg-[#F4F3FD] px-2.5 py-1.5 text-xs text-[#433B5A] sm:flex">
+              <Cloud size={14} className="text-aqua-deep" />
               Auto-saving
             </div>
             <div className="flex items-center gap-2 text-xs">
-              <span className="rounded-lg bg-[#e7eeff] px-2 py-1">
-                <span className="text-[#44474c]">Ans </span>
+              <span className="rounded-lg bg-[#E9E9FC] px-2 py-1">
+                <span className="text-[#433B5A]">Ans </span>
                 <strong>{stats.answered}</strong>
               </span>
               <span className="rounded-lg bg-amber-50 px-2 py-1">
-                <span className="text-[#44474c]">Flag </span>
+                <span className="text-[#433B5A]">Flag </span>
                 <strong className="text-amber-700">{stats.flagged}</strong>
               </span>
               <span className="rounded-lg bg-slate-100 px-2 py-1">
-                <span className="text-[#44474c]">Left </span>
+                <span className="text-[#433B5A]">Left </span>
                 <strong>{stats.unattempted}</strong>
               </span>
             </div>
@@ -147,10 +147,10 @@ export default function CbtExamWorkspace({
 
           <div className="flex items-center gap-3">
             {timeLeft != null && (
-              <div className="flex items-center gap-2 rounded-lg bg-[#dee8ff] px-3 py-1.5">
-                <Timer size={16} className="text-[#0054cd]" />
+              <div className="flex items-center gap-2 rounded-lg bg-[#E9E9FC] px-3 py-1.5">
+                <Timer size={16} className="text-[#454ADE]" />
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-[#44474c]">
+                  <div className="text-[10px] uppercase tracking-wider text-[#433B5A]">
                     Remaining
                   </div>
                   <div className="font-mono text-sm font-bold tabular-nums">
@@ -162,7 +162,7 @@ export default function CbtExamWorkspace({
             <button
               type="button"
               onClick={() => setShowPaletteMobile(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-[#e7eeff] px-3 py-1.5 text-sm font-medium xl:hidden"
+              className="flex items-center gap-1.5 rounded-lg bg-[#E9E9FC] px-3 py-1.5 text-sm font-medium xl:hidden"
             >
               <Grid3X3 size={16} /> Palette
             </button>
@@ -170,7 +170,7 @@ export default function CbtExamWorkspace({
               <button
                 type="button"
                 onClick={() => setShowSubmit(true)}
-                className="flex items-center gap-1.5 rounded-lg bg-[#0e1c2f] px-4 py-2 text-sm font-semibold text-white hover:opacity-95"
+                className="flex items-center gap-1.5 rounded-lg bg-[#0F0326] px-4 py-2 text-sm font-semibold text-white hover:opacity-95"
               >
                 End Test <LogOut size={16} />
               </button>
@@ -178,16 +178,16 @@ export default function CbtExamWorkspace({
               <button
                 type="button"
                 onClick={onExit}
-                className="rounded-lg bg-[#0054cd] px-4 py-2 text-sm font-semibold text-white"
+                className="rounded-lg bg-[#454ADE] px-4 py-2 text-sm font-semibold text-white"
               >
                 Exit session
               </button>
             )}
           </div>
         </div>
-        <div className="h-1.5 w-full bg-[#dee8ff]">
+        <div className="h-1.5 w-full bg-[#E9E9FC]">
           <div
-            className="h-full rounded-full bg-[#0054cd] transition-all duration-500"
+            className="h-full rounded-full bg-[#454ADE] transition-all duration-500"
             style={{ width: `${stats.progressPct}%` }}
           />
         </div>
@@ -198,34 +198,34 @@ export default function CbtExamWorkspace({
         <div className="flex min-w-0 flex-col gap-5 xl:col-span-8">
           {/* Course header */}
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="rounded bg-[#dae2ff] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[#001847]">
+            <span className="rounded bg-[#E3E3FA] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[#0F0326]">
               {set.courseCode}
             </span>
-            <span className="font-semibold text-[#111c2d]">{set.courseTitle}</span>
+            <span className="font-semibold text-[#0F0326]">{set.courseTitle}</span>
             {set.level && (
-              <span className="text-xs text-[#44474c]">· {set.level}</span>
+              <span className="text-xs text-[#433B5A]">· {set.level}</span>
             )}
             {submitted && score && (
-              <span className="ml-auto rounded-xl bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-800">
+              <span className="ml-auto rounded-xl bg-aqua-soft px-3 py-1 text-sm font-bold text-aqua-deep">
                 {score.pct}% · {score.correct}/{score.total}
               </span>
             )}
           </div>
 
           {/* Question card */}
-          <article className="rounded-xl border border-[#c5c6cd]/40 bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#f0f3ff]/60 p-2.5">
+          <article className="rounded-xl border border-[#D6CFC2]/40 bg-white p-5 shadow-sm sm:p-6">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#F4F3FD]/60 p-2.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded bg-[#dae2ff] px-2.5 py-1 text-xs font-semibold text-[#001847]">
+                <span className="rounded bg-[#E3E3FA] px-2.5 py-1 text-xs font-semibold text-[#0F0326]">
                   Question {currentIdx + 1} of {questions.length}
                 </span>
                 {q.topic && (
-                  <span className="rounded bg-[#e7eeff] px-2.5 py-1 text-xs text-[#44474c]">
+                  <span className="rounded bg-[#E9E9FC] px-2.5 py-1 text-xs text-[#433B5A]">
                     {q.topic}
                   </span>
                 )}
                 {q.difficulty && (
-                  <span className="rounded-full bg-[#dee8ff] px-2 py-0.5 text-[11px] font-semibold capitalize text-[#0054cd]">
+                  <span className="rounded-full bg-[#E9E9FC] px-2 py-0.5 text-[11px] font-semibold capitalize text-[#454ADE]">
                     {q.difficulty}
                     {q.marks ? ` · ${q.marks} mark${q.marks > 1 ? "s" : ""}` : ""}
                   </span>
@@ -238,7 +238,7 @@ export default function CbtExamWorkspace({
                   className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
                     isFlagged
                       ? "bg-amber-100 text-amber-900"
-                      : "bg-[#f0f3ff] text-[#44474c] hover:bg-[#e7eeff]"
+                      : "bg-[#F4F3FD] text-[#433B5A] hover:bg-[#E9E9FC]"
                   }`}
                 >
                   <Flag size={14} className={isFlagged ? "fill-amber-600 text-amber-600" : ""} />
@@ -248,15 +248,15 @@ export default function CbtExamWorkspace({
               )}
             </div>
 
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[#44474c]">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[#433B5A]">
               Problem Statement
             </p>
-            <h2 className="mb-4 text-lg font-semibold leading-snug text-[#111c2d] sm:text-xl">
+            <h2 className="mb-4 text-lg font-semibold leading-snug text-[#0F0326] sm:text-xl">
               {q.questionText}
             </h2>
 
             {q.referenceCode && (
-              <p className="mb-4 font-mono text-xs text-[#0054cd]">
+              <p className="mb-4 font-mono text-xs text-[#454ADE]">
                 REF: {q.referenceCode}
               </p>
             )}
@@ -266,17 +266,17 @@ export default function CbtExamWorkspace({
               {(q.options || []).map((opt, idx) => {
                 const letter = String.fromCharCode(65 + idx);
                 let style =
-                  "border-[#c5c6cd]/40 bg-[#f0f3ff] hover:bg-[#e7eeff]";
+                  "border-[#D6CFC2]/40 bg-[#F4F3FD] hover:bg-[#E9E9FC]";
                 if (selected === idx && !submitted) {
-                  style = "border-[#0054cd] bg-[#e7eeff] shadow-sm";
+                  style = "border-[#454ADE] bg-[#E9E9FC] shadow-sm";
                 }
                 if (submitted) {
                   if (idx === q.correctIndex) {
-                    style = "border-emerald-500 bg-emerald-50";
+                    style = "border-emerald-500 bg-aqua-soft";
                   } else if (selected === idx) {
                     style = "border-red-400 bg-red-50";
                   } else {
-                    style = "border-[#c5c6cd]/30 bg-[#f9f9ff] opacity-60";
+                    style = "border-[#D6CFC2]/30 bg-[#FBF9F4] opacity-60";
                   }
                 }
 
@@ -292,12 +292,12 @@ export default function CbtExamWorkspace({
                       <span
                         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                           selected === idx && !submitted
-                            ? "bg-[#316ee9] text-white"
+                            ? "bg-[#454ADE] text-white"
                             : submitted && idx === q.correctIndex
-                              ? "bg-emerald-600 text-white"
+                              ? "bg-aqua-deep text-white"
                               : submitted && selected === idx
                                 ? "bg-red-500 text-white"
-                                : "bg-[#d8e3fb] text-[#44474c]"
+                                : "bg-[#E3E3FA] text-[#433B5A]"
                         }`}
                       >
                         {submitted && idx === q.correctIndex ? (
@@ -312,7 +312,7 @@ export default function CbtExamWorkspace({
                       </span>
                       <span className="text-sm font-medium">{opt}</span>
                     </div>
-                    <span className="hidden text-[10px] uppercase text-[#75777d] sm:inline">
+                    <span className="hidden text-[10px] uppercase text-[#7B7490] sm:inline">
                       Press {letter}
                     </span>
                   </button>
@@ -322,11 +322,11 @@ export default function CbtExamWorkspace({
 
             {/* Hint / Explanation */}
             {(q.explanation || q.hintEnabled !== false) && (
-              <div className="mt-5 overflow-hidden rounded-lg bg-[#f0f3ff]">
+              <div className="mt-5 overflow-hidden rounded-lg bg-[#F4F3FD]">
                 <button
                   type="button"
                   onClick={() => setShowHint((v) => !v)}
-                  className="flex w-full items-center justify-between p-3.5 text-left hover:bg-[#e7eeff]"
+                  className="flex w-full items-center justify-between p-3.5 text-left hover:bg-[#E9E9FC]"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="flex h-7 w-7 items-center justify-center rounded bg-amber-100 text-amber-800">
@@ -336,7 +336,7 @@ export default function CbtExamWorkspace({
                       <div className="text-sm font-semibold">
                         {submitted ? "Explanation" : "Practice Mode Hint"}
                       </div>
-                      <div className="text-xs text-[#44474c]">
+                      <div className="text-xs text-[#433B5A]">
                         {submitted
                           ? "See why this is the correct answer"
                           : "Click to expand · Press H"}
@@ -348,12 +348,12 @@ export default function CbtExamWorkspace({
                   </span>
                 </button>
                 {showHint && q.explanation && (
-                  <div className="border-t border-[#c5c6cd]/30 bg-white p-4 text-sm leading-relaxed text-[#111c2d]">
+                  <div className="border-t border-[#D6CFC2]/30 bg-white p-4 text-sm leading-relaxed text-[#0F0326]">
                     {q.explanation}
                   </div>
                 )}
                 {showHint && !q.explanation && !submitted && (
-                  <div className="border-t border-[#c5c6cd]/30 bg-white p-4 text-sm text-[#44474c]">
+                  <div className="border-t border-[#D6CFC2]/30 bg-white p-4 text-sm text-[#433B5A]">
                     No hint available for this question yet.
                   </div>
                 )}
@@ -361,13 +361,13 @@ export default function CbtExamWorkspace({
             )}
 
             {/* Nav controls */}
-            <div className="mt-6 flex flex-col gap-3 border-t border-[#c5c6cd]/30 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-6 flex flex-col gap-3 border-t border-[#D6CFC2]/30 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex gap-2">
                 <button
                   type="button"
                   disabled={currentIdx === 0}
                   onClick={() => onNavigate(currentIdx - 1)}
-                  className="flex items-center gap-1.5 rounded-lg bg-[#e7eeff] px-4 py-2 text-sm font-medium disabled:opacity-40"
+                  className="flex items-center gap-1.5 rounded-lg bg-[#E9E9FC] px-4 py-2 text-sm font-medium disabled:opacity-40"
                 >
                   <ChevronLeft size={16} /> Previous
                 </button>
@@ -375,7 +375,7 @@ export default function CbtExamWorkspace({
                   <button
                     type="button"
                     onClick={() => onClearAnswer(q.id)}
-                    className="rounded-lg bg-[#f0f3ff] px-3 py-2 text-sm text-[#44474c] hover:bg-[#e7eeff]"
+                    className="rounded-lg bg-[#F4F3FD] px-3 py-2 text-sm text-[#433B5A] hover:bg-[#E9E9FC]"
                   >
                     Clear
                   </button>
@@ -385,7 +385,7 @@ export default function CbtExamWorkspace({
                 type="button"
                 disabled={currentIdx >= questions.length - 1}
                 onClick={() => onNavigate(currentIdx + 1)}
-                className="flex items-center justify-center gap-2 rounded-lg bg-[#0054cd] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#0040a1] disabled:opacity-40"
+                className="flex items-center justify-center gap-2 rounded-lg bg-[#454ADE] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#0040a1] disabled:opacity-40"
               >
                 Save & Next <ChevronRight size={16} />
               </button>
@@ -393,13 +393,13 @@ export default function CbtExamWorkspace({
           </article>
 
           {/* Keyboard assist */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#c5c6cd]/30 bg-white px-3 py-2 text-xs text-[#44474c]">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#D6CFC2]/30 bg-white px-3 py-2 text-xs text-[#433B5A]">
             <div className="flex items-center gap-2">
-              <Keyboard size={14} className="text-[#0054cd]" />
-              <span className="font-semibold text-[#111c2d]">Keyboard:</span>
+              <Keyboard size={14} className="text-[#454ADE]" />
+              <span className="font-semibold text-[#0F0326]">Keyboard:</span>
               <span>[A–D] Select · [N/P] Next/Prev · [F] Flag · [H] Hint</span>
             </div>
-            <span className="rounded bg-emerald-50 px-2 py-0.5 font-mono text-[10px] text-emerald-800">
+            <span className="rounded bg-aqua-soft px-2 py-0.5 font-mono text-[10px] text-aqua-deep">
               PRACTICE ENGINE
             </span>
           </div>
@@ -421,9 +421,9 @@ export default function CbtExamWorkspace({
           />
 
           {/* Toolkit */}
-          <div className="rounded-xl border border-[#c5c6cd]/40 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-[#D6CFC2]/40 bg-white p-4 shadow-sm">
             <h4 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
-              <Calculator size={16} className="text-[#0054cd]" /> Examination Toolkit
+              <Calculator size={16} className="text-[#454ADE]" /> Examination Toolkit
             </h4>
             <div className="space-y-2">
               {[
@@ -433,14 +433,14 @@ export default function CbtExamWorkspace({
               ].map((t) => (
                 <div
                   key={t.title}
-                  className="flex cursor-default items-center gap-3 rounded-lg bg-[#f0f3ff] p-2.5"
+                  className="flex cursor-default items-center gap-3 rounded-lg bg-[#F4F3FD] p-2.5"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded bg-[#e7eeff]">
+                  <div className="flex h-8 w-8 items-center justify-center rounded bg-[#E9E9FC]">
                     <t.icon size={16} />
                   </div>
                   <div>
                     <div className="text-sm font-medium">{t.title}</div>
-                    <div className="text-[11px] text-[#44474c]">{t.sub}</div>
+                    <div className="text-[11px] text-[#433B5A]">{t.sub}</div>
                   </div>
                 </div>
               ))}
@@ -448,19 +448,19 @@ export default function CbtExamWorkspace({
           </div>
 
           {/* Session info */}
-          <div className="rounded-xl border border-[#c5c6cd]/40 bg-white p-4 text-xs shadow-sm">
+          <div className="rounded-xl border border-[#D6CFC2]/40 bg-white p-4 text-xs shadow-sm">
             <div className="flex justify-between py-1">
-              <span className="text-[#44474c]">Candidate</span>
+              <span className="text-[#433B5A]">Candidate</span>
               <span className="font-medium">
                 {profile?.displayName || profile?.name || "Student"}
               </span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-[#44474c]">Matric / ID</span>
+              <span className="text-[#433B5A]">Matric / ID</span>
               <span className="font-mono">{profile?.uniqueId || "—"}</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-[#44474c]">Course</span>
+              <span className="text-[#433B5A]">Course</span>
               <span className="font-medium">{set.courseCode}</span>
             </div>
           </div>
@@ -469,7 +469,7 @@ export default function CbtExamWorkspace({
 
       {/* Mobile palette drawer */}
       {showPaletteMobile && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40 xl:hidden">
+        <div className="fixed inset-0 z-50 flex items-end bg-midnight/55 backdrop-blur-[3px] xl:hidden">
           <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="font-semibold">Question Palette</h3>
@@ -525,15 +525,15 @@ function PalettePanel({
   onNavigate,
 }) {
   return (
-    <div className="rounded-xl border border-[#c5c6cd]/40 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-[#D6CFC2]/40 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-          <Grid3X3 size={16} className="text-[#0054cd]" /> Question Palette
+          <Grid3X3 size={16} className="text-[#454ADE]" /> Question Palette
         </h3>
-        <span className="font-mono text-xs text-[#44474c]">{questions.length} TOTAL</span>
+        <span className="font-mono text-xs text-[#433B5A]">{questions.length} TOTAL</span>
       </div>
 
-      <div className="mb-3 grid grid-cols-4 gap-1 rounded-lg bg-[#f0f3ff] p-1 text-[11px] font-medium">
+      <div className="mb-3 grid grid-cols-4 gap-1 rounded-lg bg-[#F4F3FD] p-1 text-[11px] font-medium">
         {[
           { id: "all", label: "All" },
           { id: "ans", label: "Ans" },
@@ -546,8 +546,8 @@ function PalettePanel({
             onClick={() => setPaletteFilter(t.id)}
             className={`rounded py-1.5 ${
               paletteFilter === t.id
-                ? "bg-[#0e1c2f] text-white"
-                : "text-[#44474c] hover:bg-[#e7eeff]"
+                ? "bg-[#0F0326] text-white"
+                : "text-[#433B5A] hover:bg-[#E9E9FC]"
             }`}
           >
             {t.label}
@@ -557,15 +557,15 @@ function PalettePanel({
 
       <div className="grid max-h-[320px] grid-cols-5 gap-1.5 overflow-y-auto p-0.5 sm:grid-cols-8 xl:grid-cols-5">
         {filteredPalette.map(({ qq, i, status }) => {
-          let cls = "bg-[#e7eeff] text-[#44474c]";
-          if (i === currentIdx) cls = "bg-[#316ee9] text-white font-bold shadow";
+          let cls = "bg-[#E9E9FC] text-[#433B5A]";
+          if (i === currentIdx) cls = "bg-[#454ADE] text-white font-bold shadow";
           else if (submitted) {
             const correct = answers[qq.id] === qq.correctIndex;
             if (answers[qq.id] === undefined) cls = "bg-slate-200 text-slate-500";
-            else if (correct) cls = "bg-emerald-500 text-white";
+            else if (correct) cls = "bg-aqua-deep text-white";
             else cls = "bg-red-100 text-red-700";
           } else if (status === "flagged") cls = "bg-amber-100 text-amber-900 relative";
-          else if (status === "answered") cls = "bg-emerald-600 text-white";
+          else if (status === "answered") cls = "bg-aqua-deep text-white";
 
           return (
             <button
@@ -583,18 +583,18 @@ function PalettePanel({
         })}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-[#44474c]">
+      <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-[#433B5A]">
         <span className="flex items-center gap-1">
-          <span className="h-2.5 w-2.5 rounded bg-emerald-600" /> Answered
+          <span className="h-2.5 w-2.5 rounded bg-aqua-deep" /> Answered
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-2.5 w-2.5 rounded bg-[#316ee9]" /> Current
+          <span className="h-2.5 w-2.5 rounded bg-[#454ADE]" /> Current
         </span>
         <span className="flex items-center gap-1">
           <span className="h-2.5 w-2.5 rounded bg-amber-200" /> Flagged
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-2.5 w-2.5 rounded bg-[#e7eeff]" /> Unattempted
+          <span className="h-2.5 w-2.5 rounded bg-[#E9E9FC]" /> Unattempted
         </span>
       </div>
     </div>

@@ -15,6 +15,7 @@ import {
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { announcementsApi, notificationsApi } from "../lib/api";
+import { matchesAcademicScope } from "../lib/academicScope";
 
 /**
  * Student notifications = system notifications + published announcements
@@ -118,7 +119,7 @@ export function useStudentNotifications() {
         return a.level && profile?.level === a.level;
       }
       if (a.audience === "department") {
-        return a.department && profile?.department === a.department;
+        return matchesAcademicScope(a.program || a.department, profile);
       }
       return true; // all
     });

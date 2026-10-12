@@ -184,7 +184,7 @@ export default function AiGenerateQuestionsModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/55 backdrop-blur-[3px] p-4">
       <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border-subtle bg-bg-panel shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
@@ -484,7 +484,7 @@ export default function AiGenerateQuestionsModal({
               type="button"
               onClick={handleSaveSelected}
               disabled={saving || selected.size === 0}
-              className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
+              className="flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-bg-app hover:bg-accent-strong disabled:opacity-60"
             >
               {saving ? (
                 <>

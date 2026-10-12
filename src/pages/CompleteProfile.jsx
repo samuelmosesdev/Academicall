@@ -13,12 +13,12 @@ export default function CompleteProfile() {
   const navigate = useNavigate();
   const { faculties, departmentsFor, programsFor } = useAcademicCatalog();
 
-  const [faculty, setFaculty] = useState("");
-  const [department, setDepartment] = useState("");
-  const [program, setProgram] = useState("");
-  const [level, setLevel] = useState("");
-  const [matricNumber, setMatricNumber] = useState("");
-  const [phone, setPhone] = useState("");
+  const [faculty, setFaculty] = useState(profile?.faculty || "");
+  const [department, setDepartment] = useState(profile?.department || "");
+  const [program, setProgram] = useState(profile?.program || "");
+  const [level, setLevel] = useState(profile?.level || "");
+  const [matricNumber, setMatricNumber] = useState(profile?.matricNumber || "");
+  const [phone, setPhone] = useState(profile?.phone || "");
   const [photoDataUrl, setPhotoDataUrl] = useState("");
   const [photoError, setPhotoError] = useState("");
 
@@ -63,14 +63,9 @@ export default function CompleteProfile() {
     setError("");
     setBusy(true);
     try {
-      console.log("CompleteProfile: submitting", {
-        faculty,
-        department,
-        level,
-        matricNumber,
-        phone,
-        hasPhoto: Boolean(photoDataUrl),
-      });
+      if (!program.trim()) {
+        throw new Error("Select your academic program. A department alone cannot complete your profile.");
+      }
       const uniqueId = await completeProfile({
         faculty: faculty.trim(),
         department: department.trim(),
@@ -201,15 +196,20 @@ export default function CompleteProfile() {
           <div>
             <label className="mb-1 block text-xs font-medium text-text-secondary">Program</label>
             <select
-              required={programOptions.length > 0}
+              required
               disabled={!department || programOptions.length === 0}
               value={program}
               onChange={(e) => setProgram(e.target.value)}
               className="w-full rounded-lg border border-border-subtle bg-bg-panel-alt px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <option value="">{programOptions.length ? "Select your program" : "Select department first"}</option>
+              <option value="">{programOptions.length ? "Select your program" : "No programs configured for this department"}</option>
               {programOptions.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
+              {department && programOptions.length === 0 && (
+                <p className="mt-1 text-xs text-status-danger">
+                  This department has no programs configured. Ask an administrator to update the academic catalog before continuing.
+                </p>
+              )}
           </div>
 
           <div>
@@ -261,7 +261,7 @@ export default function CompleteProfile() {
 
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || !program || programOptions.length === 0}
             className="w-full rounded-lg bg-accent px-3 py-2.5 text-sm font-semibold text-bg-app transition-colors hover:bg-accent-strong disabled:opacity-60"
           >
             {busy ? "Generating your ID…" : "Generate my Unique ID"}
