@@ -1,149 +1,64 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { isNativeApp } from "../lib/platform";
-import {
-  listOfflineMaterials,
-  saveMaterialOffline,
-  removeMaterialOffline,
-  isOfflineAvailable,
-} from "../lib/offlineMaterials";
-import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
-import {
-  FolderOpen,
-  BookOpen,
-  ExternalLink,
-  Trash2,
-  Loader2,
-  FileText,
-} from "lucide-react";
-import { db } from "../firebase/config";
-import { useAuth } from "../context/AuthContext";
-import { materialSavesApi } from "../lib/api";
+import { BookOpenText, FolderOpen, Loader2, Search } from "lucide-react";
+import useMaterialSaves, { folderSlug } from "../hooks/useMaterialSaves";
 
 export default function StudentMaterials() {
-  const { user, authMode } = useAuth();
-  const [saves, setSaves] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [removing, setRemoving] = useState(null);
-  const [offlineIds, setOfflineIds] = useState(() => new Set());
-  const [offlineBusyId, setOfflineBusyId] = useState(null);
-  const native = isNativeApp();
+  const { saves, folders, loading, error } = useMaterialSaves();
+  const [term, setTerm] = useState("");
 
-  useEffect(() => {
-    if (!native) return;
-    listOfflineMaterials()
-      .then((list) => setOfflineIds(new Set(list.map((x) => x.id))))
-      .catch(() => {});
-  }, [native]);
-
-  useEffect(() => {
-    if (authMode === "api") {
-      let alive = true;
-      materialSavesApi.list().then(({ saves = [] }) => alive && setSaves(saves.map((item) => ({ id: item.id, ...item.meta, materialId: item.materialId, title: item.title, fileUrl: item.url })))).catch(() => alive && setSaves([])).finally(() => alive && setLoading(false));
-      return () => { alive = false; };
-    }
-    if (!user) return;
-    const q = query(
-      collection(db, "materialSaves"),
-      where("userId", "==", user.uid)
+  const visible = useMemo(() => {
+    const search = term.trim().toLowerCase();
+    if (!search) return folders;
+    return folders.filter(
+      (folder) =>
+        folder.courseCode.toLowerCase().includes(search) ||
+        (folder.courseTitle || "").toLowerCase().includes(search) ||
+        folder.items.some((item) => (item.title || "").toLowerCase().includes(search))
     );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        list.sort((a, b) => {
-          const ta = a.savedAt?.toDate?.() || a.savedAt || 0;
-          const tb = b.savedAt?.toDate?.() || b.savedAt || 0;
-          return new Date(tb) - new Date(ta);
-        });
-        setSaves(list);
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return () => unsub();
-  }, [user, authMode]);
-
-  const byCourse = useMemo(() => {
-    const map = new Map();
-    for (const s of saves) {
-      const code = (s.courseCode || "GENERAL").toUpperCase();
-      if (!map.has(code)) {
-        map.set(code, {
-          courseCode: code,
-          courseTitle: s.courseTitle || code,
-          items: [],
-        });
-      }
-      map.get(code).items.push(s);
-    }
-    return Array.from(map.values()).sort((a, b) =>
-      a.courseCode.localeCompare(b.courseCode)
-    );
-  }, [saves]);
-
-  async function toggleOfflineFor(item) {
-    const id = item.materialId || item.id;
-    const url = item.fileUrl;
-    if (!id || !url) {
-      alert("No file URL for this material.");
-      return;
-    }
-    setOfflineBusyId(id);
-    try {
-      if (offlineIds.has(id)) {
-        await removeMaterialOffline(id);
-        setOfflineIds((prev) => {
-          const n = new Set(prev);
-          n.delete(id);
-          return n;
-        });
-      } else {
-        await saveMaterialOffline({
-          id,
-          title: item.title,
-          fileUrl: url,
-          courseCode: item.courseCode,
-          fileName: item.fileName || item.title,
-        });
-        setOfflineIds((prev) => new Set(prev).add(id));
-      }
-    } catch (e) {
-      alert(e.message || "Could not save offline. Connect once to download.");
-    } finally {
-      setOfflineBusyId(null);
-    }
-  }
-
-  async function removeSave(saveId) {
-    if (!window.confirm("Remove this material from your Materials?")) return;
-    setRemoving(saveId);
-    try {
-      if (authMode === "api") await materialSavesApi.remove(saveId);
-      else await deleteDoc(doc(db, "materialSaves", saveId));
-      setSaves((current) => current.filter((item) => item.id !== saveId));
-    } catch (e) {
-      alert(e.message || "Could not remove.");
-    } finally {
-      setRemoving(null);
-    }
-  }
+  }, [folders, term]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold text-ink">My Materials</h1>
-        <p className="text-sm text-ink-muted">
-          Materials you saved from your Department feed, organised by course code.
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow text-ink-muted">Library</p>
+          <h1 className="font-display text-3xl text-ink sm:text-4xl">
+            My <span className="serif-i">materials</span>
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            {loading
+              ? "Opening your folders…"
+              : `${folders.length} folder${folders.length !== 1 ? "s" : ""} · ${saves.length} material${saves.length !== 1 ? "s" : ""}, sorted by course code`}
+          </p>
+        </div>
+        {saves.length > 0 && (
+          <Link
+            to="/dashboard/materials/library"
+            className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+          >
+            <BookOpenText size={16} /> Read all materials
+          </Link>
+        )}
+      </header>
+
+      {error && (
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
         </p>
-      </div>
+      )}
+
+      {folders.length > 3 && (
+        <label className="flex max-w-md items-center gap-2 rounded-full border border-border-light bg-card-light px-4 py-2.5 focus-within:border-teal">
+          <Search size={16} className="text-ink-muted" />
+          <input
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="Find a course or a material"
+            className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted"
+          />
+        </label>
+      )}
 
       {loading && (
         <div className="flex items-center gap-2 text-sm text-ink-muted">
@@ -151,112 +66,55 @@ export default function StudentMaterials() {
         </div>
       )}
 
-      {!loading && saves.length === 0 && (
-        <div className="rounded-2xl border border-border-light bg-card-light px-6 py-14 text-center">
-          <FolderOpen className="mx-auto mb-3 text-ink-muted opacity-50" size={36} />
-          <p className="text-sm font-medium text-ink">No saved materials yet</p>
-          <p className="mt-1 text-xs text-ink-muted">
-            Open <strong>Department</strong>, read materials from your Course Rep, and tap{" "}
-            <strong>Save to Materials</strong>.
+      {!loading && !error && saves.length === 0 && (
+        <div className="rounded-3xl border border-dashed border-border-strong bg-card-light px-6 py-16 text-center">
+          <div className="folder-box folder-tone-sand mx-auto mb-6 h-24 w-36" aria-hidden />
+          <p className="font-display text-xl text-ink">No folders yet</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-ink-muted">
+            Open <strong>Programme</strong>, find a material from your Course Rep and tap{" "}
+            <strong>Save to Materials</strong>. It lands in a folder named after its course.
           </p>
+          <Link to="/dashboard/department" className="btn-primary mt-6 inline-flex px-5 py-2.5 text-sm">
+            Go to Programme
+          </Link>
         </div>
       )}
 
-      <div className="space-y-6">
-        {byCourse.map((group) => (
-          <section
-            key={group.courseCode}
-            className="rounded-2xl border border-border-light bg-card-light overflow-hidden"
+      {!loading && saves.length > 0 && visible.length === 0 && (
+        <p className="text-sm text-ink-muted">Nothing matches “{term}”.</p>
+      )}
+
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
+        {visible.map((folder) => (
+          <Link
+            key={folder.courseCode}
+            to={`/dashboard/materials/folder/${folderSlug(folder.courseCode)}`}
+            className={`folder-box folder-tone-${folder.tone} flex min-h-[150px] flex-col justify-between p-4 sm:min-h-[170px] sm:p-5`}
+            aria-label={`Open ${folder.courseCode} folder`}
           >
-            <div className="flex items-center gap-2 border-b border-border-light bg-bg-panel-alt/40 px-4 py-3">
-              <BookOpen size={16} className="text-teal" />
-              <h2 className="text-sm font-semibold text-ink">
-                {group.courseCode}
-                {group.courseTitle && group.courseTitle !== group.courseCode && (
-                  <span className="ml-2 font-normal text-ink-muted">
-                    — {group.courseTitle}
-                  </span>
-                )}
-              </h2>
-              <span className="ml-auto text-xs text-ink-muted">
-                {group.items.length} item{group.items.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-            <ul className="divide-y divide-border-light">
-              {group.items.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex flex-wrap items-center gap-3 px-4 py-3"
-                >
-                  <FileText size={16} className="shrink-0 text-teal" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-ink truncate">
-                      {item.title || "Untitled"}
-                    </p>
-                    {item.description && (
-                      <p className="mt-0.5 text-xs text-ink-muted line-clamp-2">
-                        {item.description}
-                      </p>
-                    )}
-                    <p className="mt-0.5 text-[11px] text-ink-muted">
-                      Saved{" "}
-                      {item.savedAt?.toDate
-                        ? item.savedAt.toDate().toLocaleString()
-                        : "—"}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {native && (item.materialId || item.id) && item.fileUrl && (
-                      <button
-                        type="button"
-                        disabled={offlineBusyId === (item.materialId || item.id)}
-                        onClick={() => toggleOfflineFor(item)}
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
-                          offlineIds.has(item.materialId || item.id)
-                            ? "border-teal/40 bg-teal-soft text-teal"
-                            : "border-border-light text-ink hover:border-teal/40"
-                        }`}
-                      >
-                        {offlineBusyId === (item.materialId || item.id) ? (
-                          <Loader2 size={12} className="animate-spin" />
-                        ) : null}
-                        {offlineIds.has(item.materialId || item.id)
-                          ? "Offline ✓"
-                          : "Save offline"}
-                      </button>
-                    )}
-                    <Link
-                      to={
-                        item.materialId
-                          ? `/dashboard/reading-hub/doc/${item.materialId}`
-                          : `/dashboard/reading-hub/doc/saved?url=${encodeURIComponent(
-                              item.fileUrl || ""
-                            )}&title=${encodeURIComponent(item.title || "Material")}&code=${encodeURIComponent(
-                              item.courseCode || ""
-                            )}`
-                      }
-                      className="inline-flex items-center gap-1 rounded-full bg-teal px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-dark"
-                    >
-                      Read in app
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => removeSave(item.id)}
-                      disabled={removing === item.id}
-                      className="inline-flex items-center gap-1 rounded-lg border border-border-light px-2.5 py-1.5 text-xs text-status-danger hover:bg-status-danger/10 disabled:opacity-50"
-                    >
-                      {removing === item.id ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={12} />
-                      )}
-                      Remove
-                    </button>
-                  </div>
-                </li>
+            <span className="folder-sheets" aria-hidden>
+              {folder.items.slice(0, 2).map((item) => (
+                <span key={item.id} />
               ))}
-            </ul>
-          </section>
+            </span>
+            <div>
+              <FolderOpen size={18} className="mb-2 opacity-60" />
+              <p className="font-display text-xl leading-tight sm:text-2xl">{folder.courseCode}</p>
+              {folder.courseTitle && folder.courseTitle !== folder.courseCode && (
+                <p className="mt-1 line-clamp-2 break-words text-xs opacity-75">{folder.courseTitle}</p>
+              )}
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <span className="eyebrow opacity-70">
+                {folder.items.length} file{folder.items.length !== 1 ? "s" : ""}
+              </span>
+              {folder.lastSaved && (
+                <span className="text-[11px] opacity-60">
+                  {folder.lastSaved.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                </span>
+              )}
+            </div>
+          </Link>
         ))}
       </div>
     </div>

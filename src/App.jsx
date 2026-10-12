@@ -57,6 +57,8 @@ const CourseRepPanel = lazy(() => import("./pages/CourseRepPanel"));
 import StudentReference from "./pages/StudentReference";
 import StudentDepartment from "./pages/StudentDepartment";
 import StudentMaterials from "./pages/StudentMaterials";
+import StudentMaterialFolder from "./pages/StudentMaterialFolder";
+import StudentMaterialsLibrary from "./pages/StudentMaterialsLibrary";
 import StudentDocumentsComingSoon from "./pages/StudentDocumentsComingSoon";
 
 export default function App() {
@@ -195,6 +197,8 @@ export default function App() {
               <Route path="courses" element={<StudentCourses />} />
               <Route path="department" element={<StudentDepartment />} />
               <Route path="materials" element={<StudentMaterials />} />
+              <Route path="materials/folder/:courseCode" element={<StudentMaterialFolder />} />
+              <Route path="materials/library" element={<StudentMaterialsLibrary />} />
               <Route path="documents" element={<StudentDocumentsComingSoon />} />
               <Route path="settings" element={<StudentSettings />} />
               <Route

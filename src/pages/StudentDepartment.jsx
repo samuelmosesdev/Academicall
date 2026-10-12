@@ -267,8 +267,19 @@ export default function StudentDepartment() {
       await materialSavesApi.create({
         materialId: mat.id,
         title: mat.title || "Untitled",
-        url: mat.fileUrl || mat.url || null,
-        meta: { ...mat, department: mat.department || department, faculty: mat.faculty || faculty, courseCode: mat.courseCode || "GENERAL" },
+        url: mat.fileUrl || mat.url || undefined,
+        meta: {
+          description: mat.description || null,
+          fileSize: mat.fileSize || null,
+          source: mat.source || null,
+          department: mat.department || department,
+          faculty: mat.faculty || faculty,
+          level: mat.level || level,
+          courseCode: mat.course?.code || mat.courseCode || "GENERAL",
+          courseTitle: mat.course?.title || mat.courseTitle || "",
+          fileName: mat.fileName || mat.title || "material",
+          fileUrl: mat.fileUrl || mat.url || null,
+        },
       });
       setSavedIds((current) => new Set(current).add(mat.id));
     } catch (e) {
@@ -1104,11 +1115,14 @@ export default function StudentDepartment() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-xs font-bold text-orange-600">
-                      {mat.courseCode || "—"}
+                      {mat.course?.code || mat.courseCode || "Programme material"}
                     </p>
                     <p className="mt-0.5 text-sm font-semibold text-ink">
                       {mat.title}
                     </p>
+                    {(mat.course?.title || mat.courseTitle) && (
+                      <p className="mt-0.5 text-xs text-ink-muted">{mat.course?.title || mat.courseTitle}</p>
+                    )}
                   </div>
                 </div>
                 {mat.description && (

@@ -463,7 +463,7 @@ export default function CourseRepPanel() {
       const url = res.secure_url || res.url;
       const bytes = res.bytes || matFile.size;
 
-      await documentsApi.create({
+      const { document } = await documentsApi.create({
         title: matTitle.trim(),
         fileUrl: url,
         fileSize: bytes || matFile.size,
@@ -479,6 +479,13 @@ export default function CourseRepPanel() {
         status: "approved",
       });
 
+      setRepMaterials((current) => [
+        {
+          ...document,
+          course: course ? { id: course.id, code: course.code, title: course.title } : null,
+        },
+        ...current.filter((item) => item.id !== document.id),
+      ]);
       setMatTitle("");
       setMatFile(null);
       setMatScope("course");
@@ -486,7 +493,7 @@ export default function CourseRepPanel() {
       setMsg(
         matScope === "course"
           ? "Material published to the selected course."
-          : "Material published to the department group."
+          : "Material published to your programme group."
       );
     } catch (ex) {
       setErr(ex.message || "Upload failed");
@@ -670,8 +677,8 @@ export default function CourseRepPanel() {
 
       {/* Upload material for a course or the department group */}
       <form onSubmit={uploadMaterial} className="space-y-3 rounded-2xl border border-border-light bg-card-light p-5">
-        <h2 className="text-sm font-semibold text-ink">Upload material to a course or department group</h2>
-        <p className="text-xs text-ink-muted">Publish a file directly to a course, or post it to your department group so all students in {department || "this department"} can access it.</p>
+        <h2 className="text-sm font-semibold text-ink">Upload material to a course or programme group</h2>
+        <p className="text-xs text-ink-muted">Publish a file directly to a course, or share it with students in your assigned programme, {department || "your programme"}.</p>
 
         <div className="flex flex-wrap gap-2 text-xs font-medium">
           <button
@@ -686,7 +693,7 @@ export default function CourseRepPanel() {
             onClick={() => setMatScope("department")}
             className={`rounded-lg px-3 py-1.5 ${matScope === "department" ? "bg-teal-soft text-teal" : "bg-surface-light text-ink-muted"}`}
           >
-            Department group
+            Programme group
           </button>
         </div>
 
@@ -708,7 +715,7 @@ export default function CourseRepPanel() {
         <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={(e) => setMatFile(e.target.files?.[0] || null)} />
         {matProgress > 0 && matProgress < 100 && <p className="text-xs">Upload {matProgress}%</p>}
         <button type="submit" disabled={matBusy} className="inline-flex items-center gap-2 rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-          {matBusy ? "Uploading…" : matScope === "course" ? "Publish material" : "Publish to department group"}
+          {matBusy ? "Uploading…" : matScope === "course" ? "Publish material" : "Publish to programme group"}
         </button>
       </form>
 
