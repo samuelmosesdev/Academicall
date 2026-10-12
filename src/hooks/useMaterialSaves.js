@@ -50,6 +50,8 @@ export default function useMaterialSaves() {
               materialId: item.materialId,
               title: item.title || item.meta?.title,
               fileUrl: item.url || item.meta?.fileUrl || item.meta?.url,
+              courseCode: item.meta?.course?.code || item.meta?.courseCode || "GENERAL",
+              courseTitle: item.meta?.course?.title || item.meta?.courseTitle || "",
               savedAt: item.createdAt || item.savedAt || item.meta?.savedAt,
             }))
           );
