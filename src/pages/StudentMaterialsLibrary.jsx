@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -17,13 +17,12 @@ import {
 } from "lucide-react";
 import useMaterialSaves, { fileExtension, materialKey } from "../hooks/useMaterialSaves";
 import { isPdfFile } from "../lib/pdfUtils";
+import PdfReader from "../components/reader/PdfReader";
 import { useAuth } from "../context/AuthContext";
 import { recordDailyActivity, recordMaterialOpen } from "../lib/activity";
 import { withDownloadFlag } from "../lib/cloudinaryUpload";
 import { isNativeApp } from "../lib/platform";
 import { getOfflineObjectUrl, isOfflineAvailable } from "../lib/offlineMaterials";
-
-const PdfReader = lazy(() => import("../components/reader/PdfReader"));
 
 function viewerFor(item, offlineUrl) {
   if (!item?.fileUrl) return "";
@@ -306,15 +305,7 @@ export default function StudentMaterialsLibrary() {
 
         <div className="relative min-w-0 flex-1 bg-[#ece8df] dark:bg-[#0b0220]">
           {source && pdf ? (
-            <Suspense
-              fallback={
-                <div className="flex h-full items-center justify-center gap-2 text-sm text-ink-muted">
-                  <Loader2 size={16} className="animate-spin" /> Preparing PDF reader…
-                </div>
-              }
-            >
-              <PdfReader key={current?.id} src={source} title={current?.title} />
-            </Suspense>
+            <PdfReader key={current?.id} src={source} title={current?.title} />
           ) : source ? (
             <iframe
               key={current?.id}

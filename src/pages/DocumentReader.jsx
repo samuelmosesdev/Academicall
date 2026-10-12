@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -18,6 +18,7 @@ import { recordMaterialOpen, recordDailyActivity } from "../lib/activity";
 import { isPro } from "../lib/subscription";
 import { withDownloadFlag } from "../lib/cloudinaryUpload";
 import { isPdfFile } from "../lib/pdfUtils";
+import PdfReader from "../components/reader/PdfReader";
 import { generateQuestionsFromDocument } from "../lib/geminiGenerate";
 import { isNativeApp } from "../lib/platform";
 import {
@@ -26,8 +27,6 @@ import {
   removeMaterialOffline,
   getOfflineObjectUrl,
 } from "../lib/offlineMaterials";
-
-const PdfReader = lazy(() => import("../components/reader/PdfReader"));
 
 function useDocumentRecord(docId) {
   const { authMode } = useAuth();
@@ -340,15 +339,7 @@ export default function DocumentReader() {
           )}
 
           {isPdf ? (
-            <Suspense
-              fallback={
-                <div className="flex h-full items-center justify-center gap-2 text-sm text-ink-muted">
-                  <Loader2 size={16} className="animate-spin" /> Preparing PDF reader…
-                </div>
-              }
-            >
-              <PdfReader key={effectiveUrl} src={effectiveUrl} title={record.title} />
-            </Suspense>
+            <PdfReader key={effectiveUrl} src={effectiveUrl} title={record.title} />
           ) : (
             <iframe
               title={record.title || "Document viewer"}
