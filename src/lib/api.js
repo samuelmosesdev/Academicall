@@ -1,6 +1,8 @@
 const API_BASE = (
   import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? "http://localhost:4000/api/v1" : "/api/v1")
+  (import.meta.env.DEV
+    ? "http://localhost:4000/api/v1"
+    : "https://academicall-api-1.onrender.com/api/v1")
 ).replace(/\/$/, "");
 const API_TIMEOUT_MS = 15000;
 
@@ -36,7 +38,9 @@ export async function api(endpoint, options = {}) {
       const details = Array.isArray(data.error)
         ? data.error.map((item) => item.message || item.path?.join(".")).filter(Boolean).join(", ")
         : data.reason || data.error;
-      const error = new Error(details || data.message || `Request failed with status ${res.status}`);
+      const message = [details || data.message, data.detail].filter(Boolean).join(" — ")
+        || `Request failed with status ${res.status}`;
+      const error = new Error(message);
       error.status = res.status;
       throw error;
     }
