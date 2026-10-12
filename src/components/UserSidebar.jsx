@@ -24,7 +24,7 @@ import { useUserDashboardData } from "../hooks/useUserDashboardData";
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/dashboard" },
   { label: "Courses", icon: BookOpen, to: "/dashboard/courses" },
-  { label: "Department", icon: Building2, to: "/dashboard/department", badgeKey: "dept" },
+  { label: "Programme", icon: Building2, to: "/dashboard/department", badgeKey: "dept" },
   { label: "Materials", icon: FolderOpen, to: "/dashboard/materials" },
   { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice" },
   { label: "Documents", icon: FileText, to: "/dashboard/documents" },

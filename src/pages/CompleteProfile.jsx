@@ -11,7 +11,7 @@ const LEVELS = ["100 Level", "200 Level", "300 Level", "400 Level", "500 Level",
 export default function CompleteProfile() {
   const { profile, completeProfile } = useAuth();
   const navigate = useNavigate();
-  const { faculties, programsForFaculty, departmentForProgram } = useAcademicCatalog();
+  const { faculties, departmentsFor, programsFor } = useAcademicCatalog();
 
   const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
@@ -26,12 +26,18 @@ export default function CompleteProfile() {
   const [busy, setBusy] = useState(false);
   const [generatedId, setGeneratedId] = useState(null);
 
-  const programOptions = programsForFaculty(faculty);
+  const departmentOptions = departmentsFor(faculty);
+  const programOptions = programsFor(department);
 
   function handleFacultyChange(value) {
     setFaculty(value);
-    setProgram("");
     setDepartment("");
+    setProgram("");
+  }
+
+  function handleDepartmentChange(value) {
+    setDepartment(value);
+    setProgram("");
   }
 
   async function handlePhotoChange(e) {
@@ -179,32 +185,31 @@ export default function CompleteProfile() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-secondary">Program</label>
+            <label className="mb-1 block text-xs font-medium text-text-secondary">Department</label>
             <select
-              required={programOptions.length > 0}
-              disabled={!faculty || programOptions.length === 0}
-              value={program}
-              onChange={(e) => {
-                const nextProgram = e.target.value;
-                setProgram(nextProgram);
-                setDepartment(departmentForProgram(nextProgram, faculty));
-              }}
+              required
+              disabled={!faculty || departmentOptions.length === 0}
+              value={department}
+              onChange={(e) => handleDepartmentChange(e.target.value)}
               className="w-full rounded-lg border border-border-subtle bg-bg-panel-alt px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <option value="">{programOptions.length ? "Select your program" : "No programs listed"}</option>
-              {programOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+              <option value="">{departmentOptions.length ? "Select your department" : "Select faculty first"}</option>
+              {departmentOptions.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-secondary">Department</label>
-            <input
-              required
-              readOnly
-              value={department}
-              placeholder={program ? "Derived from program" : "Select a program first"}
-              className="w-full rounded-lg border border-border-subtle bg-bg-panel-alt px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none read-only:opacity-75"
-            />
+            <label className="mb-1 block text-xs font-medium text-text-secondary">Program</label>
+            <select
+              required={programOptions.length > 0}
+              disabled={!department || programOptions.length === 0}
+              value={program}
+              onChange={(e) => setProgram(e.target.value)}
+              className="w-full rounded-lg border border-border-subtle bg-bg-panel-alt px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <option value="">{programOptions.length ? "Select your program" : "Select department first"}</option>
+              {programOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
           </div>
 
           <div>

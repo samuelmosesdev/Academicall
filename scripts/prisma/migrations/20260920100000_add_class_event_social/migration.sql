@@ -1,0 +1,3 @@
+ALTER TABLE "class_events"
+ADD COLUMN IF NOT EXISTS "comments" JSONB,
+ADD COLUMN IF NOT EXISTS "reactions" JSONB;

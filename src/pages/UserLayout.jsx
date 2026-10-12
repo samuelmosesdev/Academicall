@@ -64,7 +64,7 @@ function UserLayoutShell() {
         />
 
         {/* More breathing room on mobile */}
-        <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        <main className="animate-stitch-in flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
           <Outlet />
         </main>
       </div>

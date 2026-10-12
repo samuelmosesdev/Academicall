@@ -59,7 +59,7 @@ const fieldClass =
 
 export default function StudentProfile() {
   const { user, profile, authMode, refreshProfile } = useAuth();
-  const { programsForFaculty, departmentForProgram } = useAcademicCatalog();
+  const { departmentsFor: catalogDepartmentsFor, programsFor } = useAcademicCatalog();
 
   const [bio, setBio] = useState("");
   const [interests, setInterests] = useState("");
@@ -154,8 +154,8 @@ export default function StudentProfile() {
     [reqFaculty, profile?.faculty]
   );
   const requestProgramOptions = useMemo(
-    () => programsForFaculty(reqFaculty || profile?.faculty || ""),
-    [programsForFaculty, reqFaculty, profile?.faculty]
+    () => programsFor(reqDepartment || profile?.department || ""),
+    [programsFor, reqDepartment, profile?.department]
   );
 
   function handlePhotoChange(e) {
@@ -654,17 +654,13 @@ export default function StudentProfile() {
                   <label className="mb-1 block text-xs font-medium text-ink-muted">New program</label>
                   <select
                     value={reqProgram}
-                    onChange={(e) => {
-                      const nextProgram = e.target.value;
-                      setReqProgram(nextProgram);
-                      setReqDepartment(departmentForProgram(nextProgram, reqFaculty || profile?.faculty || ""));
-                    }}
+                    onChange={(e) => setReqProgram(e.target.value)}
                     className={fieldClass}
                   >
                     <option value="">Select program</option>
                     {requestProgramOptions.map((program) => <option key={program} value={program}>{program}</option>)}
                   </select>
-                  <p className="mt-1 text-[11px] text-ink-muted">The department will be updated automatically from this program.</p>
+                  <p className="mt-1 text-[11px] text-ink-muted">Programs shown are for your current department. Change department first if needed.</p>
                 </div>
               ) : reqField === "department" ? (
                 <div>

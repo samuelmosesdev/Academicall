@@ -6,7 +6,7 @@ import { friendlyAuthError } from "../lib/authErrors";
 import { authApi } from "../lib/api";
 
 const inputClass =
-  "w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-teal-400 focus:outline-none";
+  "w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-[#78a0ff] focus:outline-none focus:ring-4 focus:ring-[#78a0ff]/15";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -32,7 +32,7 @@ export default function ForgotPassword() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
       <AuthAmbientBackground />
 
-      <div className="relative z-10 w-full max-w-sm rounded-2xl border border-white/15 bg-[#0b1220]/85 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+      <div className="animate-stitch-in relative z-10 w-full max-w-sm rounded-2xl border border-white/15 bg-[#0b1220]/85 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl">
         <div className="mb-6">
           <BrandLogo size={40} textClass="text-white" />
         </div>
@@ -50,13 +50,13 @@ export default function ForgotPassword() {
 
         {sent ? (
           <div className="space-y-4">
-            <p className="rounded-lg border border-teal-400/30 bg-teal-500/15 px-3 py-3 text-sm text-teal-100">
+            <p className="rounded-xl border border-[#78a0ff]/30 bg-[#3d6fe0]/15 px-3 py-3 text-sm text-[#dce7ff]">
               If an account exists for <strong className="text-white">{email}</strong>, a reset link
               has been sent. Check your inbox and spam folder.
             </p>
             <Link
               to="/login"
-              className="block w-full rounded-lg bg-teal-500 px-3 py-2.5 text-center text-sm font-semibold text-white hover:bg-teal-400"
+              className="block w-full rounded-xl bg-[#3d6fe0] px-3 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#14355e]"
             >
               Back to sign in
             </Link>
@@ -78,7 +78,7 @@ export default function ForgotPassword() {
             <button
               type="submit"
               disabled={busy}
-              className="w-full rounded-lg bg-teal-500 px-3 py-2.5 text-sm font-semibold text-white hover:bg-teal-400 disabled:opacity-60"
+              className="w-full rounded-xl bg-[#3d6fe0] px-3 py-3 text-sm font-semibold text-white transition hover:bg-[#14355e] disabled:opacity-60"
             >
               {busy ? "Sending…" : "Send reset link"}
             </button>
@@ -87,7 +87,7 @@ export default function ForgotPassword() {
 
         <p className="mt-6 text-center text-sm text-white/70">
           Remembered it?{" "}
-          <Link to="/login" className="font-medium text-teal-300 hover:text-teal-200">
+          <Link to="/login" className="font-medium text-[#a9c1ff] hover:text-white">
             Sign in
           </Link>
         </p>

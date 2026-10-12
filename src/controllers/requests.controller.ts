@@ -119,16 +119,76 @@ export async function updateProfileChangeRequest(req: Request, res: Response) {
     if (!current) return res.status(404).json({ error: "Profile change request not found" });
     if (!["admin", "alphaAgent", "agent"].includes(req.user.role) && current.userId !== req.user.id) return res.status(403).json({ error: "Forbidden" });
     if (body.status === "approved") {
+      // Normalize field keys (legacy clients sometimes sent "Program", "Programme", etc.)
+      const fieldRaw = String(current.field || "").trim();
+      const fieldKey = fieldRaw.toLowerCase().replace(/\s+/g, "");
+      const fieldAliases: Record<string, string> = {
+        name: "name",
+        fullname: "name",
+        phone: "phone",
+        phonenumber: "phone",
+        faculty: "faculty",
+        program: "program",
+        programme: "program",
+        department: "department",
+        dept: "department",
+        level: "level",
+        matricnumber: "matricNumber",
+        matric: "matricNumber",
+      };
+      const normalizedField = fieldAliases[fieldKey];
       const allowedFields = ["name", "phone", "faculty", "program", "department", "level", "matricNumber"];
-      if (!allowedFields.includes(current.field)) return res.status(400).json({ error: "Field cannot be approved" });
-      const updateData: Record<string, string> = { [current.field]: current.requestedValue };
-      if (current.field === "program") {
-        const user = await prisma.user.findUnique({ where: { id: current.userId }, select: { faculty: true } });
+      if (!normalizedField || !allowedFields.includes(normalizedField)) {
+        return res.status(400).json({
+          error: `Field cannot be approved`,
+          detail: `Unsupported field "${fieldRaw}". Allowed: ${allowedFields.join(", ")}`,
+        });
+      }
+      const updateData: Record<string, string> = {
+        [normalizedField]: current.requestedValue,
+      };
+      if (normalizedField === "program") {
+        // Derive department from catalog so Faculty → Department → Program stays consistent
+        const user = await prisma.user.findUnique({
+          where: { id: current.userId },
+          select: { faculty: true, department: true },
+        });
         const setting = await prisma.setting.findUnique({ where: { key: "academicCatalog" } });
-        const catalog = setting?.value as { faculties?: Array<{ name?: string; departments?: Array<{ name?: string; programs?: string[] }> }> } | null;
-        const faculty = catalog?.faculties?.find((item) => item.name === user?.faculty);
-        const department = faculty?.departments?.find((item) => item.programs?.includes(current.requestedValue))?.name;
+        const catalog = setting?.value as {
+          faculties?: Array<{ name?: string; departments?: Array<{ name?: string; programs?: string[] }> }>;
+        } | null;
+        let department: string | undefined;
+        const faculties = catalog?.faculties || [];
+        // Prefer match within the student's faculty; fall back to any faculty
+        const preferred = user?.faculty
+          ? faculties.filter((item) => item.name === user.faculty)
+          : faculties;
+        const searchLists = preferred.length ? preferred : faculties;
+        for (const faculty of searchLists) {
+          const match = faculty.departments?.find((item) =>
+            (item.programs || []).some(
+              (p) => String(p).trim().toLowerCase() === String(current.requestedValue).trim().toLowerCase()
+            )
+          );
+          if (match?.name) {
+            department = match.name;
+            break;
+          }
+        }
         if (department) updateData.department = department;
+      }
+      if (normalizedField === "faculty") {
+        // Faculty change alone should not leave a mismatched department/program;
+        // clear them so the student re-selects under the new faculty.
+        // Only clear if the requested faculty differs from current.
+        const user = await prisma.user.findUnique({
+          where: { id: current.userId },
+          select: { faculty: true },
+        });
+        if (user?.faculty && user.faculty !== current.requestedValue) {
+          updateData.department = "";
+          updateData.program = "";
+        }
       }
       await prisma.user.update({ where: { id: current.userId }, data: updateData });
     }

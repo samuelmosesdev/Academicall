@@ -19,7 +19,15 @@ export function roleBadge(role, plan, subscription) {
 
 export function displayLabel(profile, fallback = "Student") {
   if (!profile) return fallback;
-  return profile.nickname || profile.nickName || profile.name || fallback;
+  return profile.nickname || profile.nickName || profile.name || profile.email || fallback;
+}
+
+export function getUserIdentity(profile, fallback = "User") {
+  const name = profile?.nickname || profile?.nickName || profile?.name || profile?.email || fallback;
+  return {
+    name,
+    email: profile?.email || "",
+  };
 }
 
 export function isProUser(profile) {
@@ -164,9 +172,16 @@ export default function UserAvatar({
                 </p>
               </>
             ) : (
-              <p className="mt-2.5 text-base font-bold leading-tight text-ink">
-                {displayName}
-              </p>
+              <>
+                <p className="mt-2.5 text-base font-bold leading-tight text-ink">
+                  {displayName}
+                </p>
+                {profile?.email && (
+                  <p className="mt-0.5 text-[12px] font-normal text-ink-muted">
+                    {profile.email}
+                  </p>
+                )}
+              </>
             )}
 
             {designation && (

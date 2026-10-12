@@ -21,6 +21,11 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
     setProgram("");
   }
 
+  function handleDepartmentChange(value) {
+    setDepartment(value);
+    setProgram("");
+  }
+
   function handleSubmit(e) {
     e.preventDefault();
     onSave({ name: name.trim(), faculty, department, program, level, phone: phone.trim() });
@@ -47,6 +52,22 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
         </select>
       </div>
       <div>
+        <label className="mb-1 block text-xs font-medium text-text-secondary">Department</label>
+        <select
+          value={department}
+          disabled={!faculty}
+          onChange={(e) => handleDepartmentChange(e.target.value)}
+          className={`${fieldClass} disabled:opacity-60`}
+        >
+          <option value="">Select department</option>
+          {departmentOptions.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
         <label className="mb-1 block text-xs font-medium text-text-secondary">Program</label>
         <select
           value={program}
@@ -58,22 +79,6 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
           {programOptions.map((item) => (
             <option key={item} value={item}>
               {item}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="mb-1 block text-xs font-medium text-text-secondary">Department</label>
-        <select
-          value={department}
-          disabled={!faculty}
-          onChange={(e) => setDepartment(e.target.value)}
-          className={`${fieldClass} disabled:opacity-60`}
-        >
-          <option value="">Select department</option>
-          {departmentOptions.map((d) => (
-            <option key={d} value={d}>
-              {d}
             </option>
           ))}
         </select>

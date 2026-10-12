@@ -1,0 +1,32 @@
+UofA Readers — update pack
+==========================
+
+1. Close VS Code / stop npm run dev if running.
+
+2. Open your project folder: uofa-readers-admin
+
+3. Unzip this archive INTO the project root so folders merge:
+   - functions/  → project/functions/
+   - src/        → project/src/
+   - firebase.json, firestore.rules → project root
+
+   PowerShell example:
+   Expand-Archive -Path uofa-readers-updates.zip -DestinationPath . -Force
+
+4. Install function deps (for Paystack webhook):
+   cd functions
+   npm install
+   cd ..
+
+5. Deploy:
+   firebase deploy --only firestore:rules
+   firebase functions:config:set paystack.secret="sk_test_YOUR_KEY"
+   firebase deploy --only functions
+   npm run build
+   firebase deploy --only hosting
+
+6. Paystack Dashboard → Webhooks → URL from Firebase after deploy:
+   https://REGION-PROJECT.cloudfunctions.net/paystackWebhook
+
+Annual plan link (already in code):
+https://paystack.shop/pay/5o79vdpr6a

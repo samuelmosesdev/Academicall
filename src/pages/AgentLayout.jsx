@@ -29,7 +29,7 @@ export default function AgentLayout() {
         </div>
         <Topbar search={search} onSearchChange={setSearch} />
 
-        <main className="flex-1 space-y-6 px-4 py-6 sm:px-6">
+        <main className="animate-stitch-in flex-1 space-y-6 px-4 py-6 sm:px-6">
           <Outlet />
         </main>
       </div>

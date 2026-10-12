@@ -140,8 +140,11 @@ export default function AdminRequests() {
         await requestsApi.updateProfileChange(req.id, { status: decision, reviewedBy: user.uid, reviewedByName: profile?.name || user.email, adminNote: (note[req.id] || "").trim() || null });
       } else {
         if (decision === "approved") {
+          const fieldKey = String(req.field || "").trim().toLowerCase();
           const patch = { [req.field]: req.requestedValue, updatedAt: serverTimestamp() };
-          if (req.field === "program" && req.requestedDepartment) patch.department = req.requestedDepartment;
+          if ((fieldKey === "program" || fieldKey === "programme") && req.requestedDepartment) {
+            patch.department = req.requestedDepartment;
+          }
           await updateDoc(doc(db, "users", req.userId), patch);
         }
         await updateDoc(doc(db, "profileChangeRequests", req.id), { status: decision, reviewedAt: serverTimestamp(), reviewedBy: user.uid, reviewedByName: profile?.name || user.email, adminNote: (note[req.id] || "").trim() || null });

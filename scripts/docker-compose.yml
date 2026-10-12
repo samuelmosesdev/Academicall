@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: academicall-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: academicall
+      POSTGRES_PASSWORD: academicall_secret
+      POSTGRES_DB: academicall
+    ports:
+      - "5432:5432"
+    volumes:
+      - academicall_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U academicall -d academicall"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  academicall_pgdata:

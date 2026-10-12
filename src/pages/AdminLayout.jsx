@@ -34,7 +34,7 @@ export default function AdminLayout() {
         </div>
         <Topbar search={search} onSearchChange={setSearch} />
 
-        <main className="flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <main className="animate-stitch-in flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>

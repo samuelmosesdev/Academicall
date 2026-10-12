@@ -78,14 +78,27 @@ function myReaction(list, uid) {
 export default function StudentDepartment() {
   const navigate = useNavigate();
   const { user, profile, authMode } = useAuth();
-  const department =
-    profile?.courseRepMeta?.department ||
-    profile?.department ||
+  // Hub is scoped by PROGRAM (degree programme), not the broad department.
+  // Backend APIs still use a string field named "department" — we pass the program there
+  // so class groups, materials, and membership are per-program.
+  const program =
     profile?.courseRepMeta?.program ||
     profile?.program ||
     "";
+  const departmentName =
+    profile?.courseRepMeta?.department ||
+    profile?.department ||
+    "";
+  // Scope key used for API filters / membership / course-rep matching
+  const department = program || departmentName;
   const faculty = profile?.faculty || "";
   const level = profile?.level || "";
+  const hubTitle = program || departmentName || "Your programme";
+  const hubSubtitleParts = [
+    faculty || null,
+    departmentName && departmentName !== program ? departmentName : null,
+    level || null,
+  ].filter(Boolean);
 
   const [classes, setClasses] = useState([]);
   const [materials, setMaterials] = useState([]);
@@ -133,7 +146,7 @@ export default function StudentDepartment() {
     setMembershipBusy(true);
     setMembershipMessage("");
     try {
-      const response = await departmentApi.join({ department, faculty, level });
+      const response = await departmentApi.join({ department, program: program || department, faculty, level });
       setMembership(response.membership || null);
       setMembershipMessage(response.message || "Request sent.");
     } catch (err) {
@@ -144,12 +157,11 @@ export default function StudentDepartment() {
   }
 
   const myRepDept =
-    profile?.courseRepMeta?.department ||
-    profile?.department ||
     profile?.courseRepMeta?.program ||
     profile?.program ||
-    profile?.courseRepDepartment ||
+    profile?.courseRepMeta?.department ||
     profile?.department ||
+    profile?.courseRepDepartment ||
     "";
   const myRepLevel =
     profile?.courseRepMeta?.level ||
@@ -572,9 +584,9 @@ export default function StudentDepartment() {
     return (
       <div className="rounded-2xl border border-border-light bg-card-light p-8 text-center">
         <Building2 className="mx-auto mb-3 text-ink-muted opacity-50" size={36} />
-        <p className="text-sm font-medium text-ink">No department on your profile</p>
+        <p className="text-sm font-medium text-ink">No programme on your profile</p>
         <p className="mt-1 text-xs text-ink-muted">
-          Complete your profile with faculty &amp; department to see class schedules and
+          Complete your profile with faculty, department &amp; programme to see class schedules and
           course-rep materials.
         </p>
       </div>
@@ -621,7 +633,7 @@ export default function StudentDepartment() {
     return (
       <div className="mx-auto max-w-md rounded-xl border border-border-light bg-card-light p-6 text-center">
         <Loader2 className="mx-auto mb-3 animate-spin text-teal" size={28} />
-        <p className="text-sm text-ink-muted">Loading your department membership…</p>
+        <p className="text-sm text-ink-muted">Loading your programme membership…</p>
       </div>
     );
   }
@@ -630,7 +642,7 @@ export default function StudentDepartment() {
     return (
       <div className="mx-auto max-w-md rounded-xl border border-border-light bg-card-light p-6 text-center">
         <Users className="mx-auto mb-3 text-ink-muted" size={32} />
-        <p className="text-sm text-ink-muted">You are not yet a member of this department group.</p>
+        <p className="text-sm text-ink-muted">You are not yet a member of this programme group.</p>
         <button type="button" onClick={requestMembership} disabled={membershipBusy} className="mt-4 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{membershipBusy ? "Sending…" : "Request to join"}</button>
         {membershipMessage && <p className="mt-2 text-xs text-teal">{membershipMessage}</p>}
       </div>
@@ -646,7 +658,7 @@ export default function StudentDepartment() {
         <p className="font-display text-base font-semibold text-ink">No Course Rep yet</p>
         <p className="mt-2 text-sm text-ink-muted leading-relaxed">
           There is no Course Rep assigned for{" "}
-          <strong className="text-ink">{department}</strong>
+          <strong className="text-ink">{hubTitle}</strong>
           {level ? (
             <>
               {" "}
@@ -657,7 +669,7 @@ export default function StudentDepartment() {
         </p>
         <p className="mt-3 text-xs text-ink-muted">
           Schedules, announcements, and materials stay locked until Admin assigns a Course Rep
-          for your department and level.
+          for your programme and level.
         </p>
       </div>
     );
@@ -684,22 +696,21 @@ export default function StudentDepartment() {
 
   return (
     <div className="space-y-8 animate-stitch-in max-w-4xl mx-auto">
-      {/* Header — Stitch Departmental Hub style */}
+      {/* Header — Programme Hub (scoped by program, not broad department) */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
-            Departmental Hub
+            Programme Hub
           </p>
           <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-soft text-teal">
               <Building2 size={18} />
             </span>
-            {department}
+            {hubTitle}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            {faculty ? `${faculty} · ` : ""}
-            {level ? `${level} · ` : ""}
-            Only your department & level
+            {hubSubtitleParts.length ? `${hubSubtitleParts.join(" · ")} · ` : ""}
+            Only your programme &amp; level
           </p>
         </div>
         {isRepHere && (
@@ -782,7 +793,7 @@ export default function StudentDepartment() {
         )}
         {!loading && upcoming.length === 0 && (
           <div className="rounded-xl border border-border-light bg-card-light px-4 py-8 text-center text-sm text-ink-muted">
-            No upcoming classes scheduled for your department.
+            No upcoming classes scheduled for your programme.
           </div>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -924,7 +935,7 @@ export default function StudentDepartment() {
         <div className="mb-1 flex items-center justify-between px-1">
           <h2 className="font-display text-base font-semibold text-ink flex items-center gap-2">
             <Megaphone size={16} className="text-teal" />
-            Department Feed
+            Programme Feed
           </h2>
         </div>
         {posts.length === 0 && (
