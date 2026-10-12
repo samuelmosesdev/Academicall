@@ -682,8 +682,7 @@ export default function StudentDepartment() {
 
   const upcoming = classes.filter((c) => {
     const start = c.startsAt?.toDate?.() || c.startsAt;
-    const end = c.endsAt?.toDate?.() || c.endsAt || start;
-    return Boolean(start && new Date(end) > new Date());
+    return Boolean(start && new Date(start) > new Date());
   });
 
   function flash(msg) {

@@ -73,8 +73,8 @@ export default function DashboardHero({ profile, firstName }) {
   const { next, todayCount } = useMemo(() => {
     const currentTime = new Date(now);
     const upcoming = events
-      .map((e) => ({ ...e, start: toDate(e.startsAt), end: toDate(e.endsAt) }))
-      .filter((e) => e.start && (e.end || e.start) > currentTime && e.status !== "cancelled")
+      .map((e) => ({ ...e, start: toDate(e.startsAt) }))
+      .filter((e) => e.start > currentTime && e.status !== "cancelled")
       .sort((a, b) => a.start - b.start);
     return {
       next: upcoming[0] || null,
