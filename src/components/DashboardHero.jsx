@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { getAcademicScope, matchesAcademicScope } from "../lib/academicScope";
 
 const toDate = (v) => (v?.toDate ? v.toDate() : v ? new Date(v) : null);
-const digits = (v) => String(v || "").replace(/\D/g, "");
+const normalizeLevel = (value) => String(value || "").trim().toLowerCase().replace(/\s*level\s*/g, "");
 
 function countdown(date, now) {
   const t = date - now;
@@ -51,8 +51,11 @@ export default function DashboardHero({ profile, firstName }) {
       .list()
       .then(({ events: list = [] }) => {
         if (!alive) return;
-        const lvl = digits(level);
-        setEvents(list.filter((e) => matchesAcademicScope(e.program || e.department, profile) && (!e.level || digits(e.level) === lvl)));
+        setEvents(list.filter((event) =>
+          matchesAcademicScope(event.program || event.department, profile) &&
+          normalizeLevel(event.level) === normalizeLevel(level) &&
+          normalizeLevel(level)
+        ));
       })
       .catch((err) => {
         if (!alive) return;

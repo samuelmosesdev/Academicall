@@ -49,6 +49,11 @@ function countReactions(list) {
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
 
+function feedAuthorName(post, fallback) {
+  const name = post.authorName || post.createdByName;
+  return name && !name.includes("@") ? name : fallback;
+}
+
 export default function UserDashboard() {
   const navigate = useNavigate();
   const { user, profile, authMode } = useAuth();
@@ -326,7 +331,7 @@ export default function UserDashboard() {
               >
                 <div className="flex items-start gap-3">
                   <UserAvatar
-                    name={post.authorName || post.createdByName || "Author"}
+                    name={feedAuthorName(post, "Course Rep")}
                     photoURL={post.authorPhoto}
                     role={post.authorRole}
                     size={40}
@@ -335,7 +340,7 @@ export default function UserDashboard() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm text-ink">
                         <NameWithBadge
-                          name={post.authorName || post.createdByName || "Author"}
+                          name={feedAuthorName(post, feedTab === "general" ? "Academicall Team" : "Course Rep")}
                           role={post.authorRole || (feedTab === "general" ? "admin" : "courseRep")}
                           plan={post.authorPlan}
                           subscription={post.authorSubscription}
@@ -352,6 +357,9 @@ export default function UserDashboard() {
                         </span>
                       )}
                     </div>
+                    {post.authorEmail && (
+                      <p className="text-[10px] text-ink-muted">{post.authorEmail}</p>
+                    )}
                     <p className="text-[11px] text-ink-muted">
                       {post.createdAt?.toDate
                         ? post.createdAt.toDate().toLocaleString()

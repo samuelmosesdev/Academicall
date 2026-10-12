@@ -55,9 +55,8 @@ function deptsMatch(a, b) {
 }
 
 function matchesStudentLevel(itemLevel, studentLevel) {
-  // Strict: only same level. Legacy docs with no level are hidden (not shared across levels).
   if (!studentLevel) return false;
-  if (!itemLevel) return false;
+  if (!itemLevel) return true;
   return levelsMatch(itemLevel, studentLevel);
 }
 
@@ -68,6 +67,11 @@ function countReactions(list) {
     if (counts[r.type] !== undefined) counts[r.type] += 1;
   });
   return counts;
+}
+
+function feedAuthorName(post) {
+  const name = post.authorName || post.createdByName;
+  return name && !name.includes("@") ? name : "Course Rep";
 }
 
 /** My current reaction type on an item, or null */
@@ -678,8 +682,8 @@ export default function StudentDepartment() {
 
   const upcoming = classes.filter((c) => {
     const start = c.startsAt?.toDate?.() || c.startsAt;
-    if (!start) return true;
-    return new Date(start) >= new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const end = c.endsAt?.toDate?.() || c.endsAt || start;
+    return Boolean(start && new Date(end) > new Date());
   });
 
   function flash(msg) {
@@ -819,6 +823,12 @@ export default function StudentDepartment() {
                     </p>
                   )}
                   {ev.notes && <p className="mt-1 text-ink-muted">{ev.notes}</p>}
+                  {ev.createdByName && (
+                    <p className="mt-2 text-[11px] text-ink-muted">
+                      Scheduled by <span className="font-medium text-ink">{ev.createdByName}</span>
+                      {ev.createdByEmail && <span className="block">{ev.createdByEmail}</span>}
+                    </p>
+                  )}
                 </div>
 
                 {/* Class reactions */}
@@ -963,11 +973,12 @@ export default function StudentDepartment() {
                 <p className="mt-1.5 text-sm text-ink-muted whitespace-pre-wrap leading-relaxed">
                   {post.body}
                 </p>
-                <p className="mt-2 text-[11px] text-ink-muted">
-                  {post.authorName || "Course Rep"} ·{" "}
-                  {post.createdAt?.toDate
-                    ? post.createdAt.toDate().toLocaleString()
-                    : ""}
+                <p className="mt-2 text-[11px] font-medium text-ink">
+                  {feedAuthorName(post)}
+                </p>
+                {post.authorEmail && <p className="text-[10px] text-ink-muted">{post.authorEmail}</p>}
+                <p className="mt-1 text-[10px] text-ink-muted">
+                  {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleString() : ""}
                 </p>
 
                 {/* Post reactions */}
