@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
-  BookOpen,
   Check,
   ChevronLeft,
   ChevronRight,
   Crown,
   Download,
-  ExternalLink,
   FileText,
   Loader2,
   Sparkles,
@@ -19,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { recordMaterialOpen, recordDailyActivity } from "../lib/activity";
 import { isPro } from "../lib/subscription";
 import { withDownloadFlag } from "../lib/cloudinaryUpload";
+import { isPdfFile } from "../lib/pdfUtils";
 import { generateQuestionsFromDocument } from "../lib/geminiGenerate";
 import { isNativeApp } from "../lib/platform";
 import {
@@ -28,11 +27,7 @@ import {
   getOfflineObjectUrl,
 } from "../lib/offlineMaterials";
 
-function getExtension(name = "", url = "") {
-  const source = name || url;
-  const match = source.split("?")[0].match(/\.([a-zA-Z0-9]+)$/);
-  return match ? match[1].toLowerCase() : "";
-}
+const PdfReader = lazy(() => import("../components/reader/PdfReader"));
 
 function useDocumentRecord(docId) {
   const { authMode } = useAuth();
@@ -45,7 +40,7 @@ function useDocumentRecord(docId) {
       .then(({ document }) => alive && setRecord(document || null))
       .catch(() => alive && setRecord(null));
     return () => { alive = false; };
-  }, [docId]);
+  }, [authMode, docId]);
   return record;
 }
 
@@ -67,7 +62,7 @@ export default function DocumentReader() {
       recordMaterialOpen(user, docId, profile);
       if (profile) recordDailyActivity(user, profile);
     }
-  }, [user?.uid, docId]);
+  }, [user, profile, docId]);
 
   // App only: detect offline copy & prefer local blob when online file blocked
   useEffect(() => {
@@ -106,7 +101,6 @@ export default function DocumentReader() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [quiz, setQuiz] = useState(null); // { questions, index, answers, submitted }
-  const viewerRef = useRef(null);
   const [offlineReady, setOfflineReady] = useState(false);
   const [offlineBusy, setOfflineBusy] = useState(false);
   const [offlineUrl, setOfflineUrl] = useState(null);
@@ -224,8 +218,7 @@ export default function DocumentReader() {
     );
   }
 
-  const ext = getExtension(record.fileName, record.fileUrl);
-  const isPdf = ext === "pdf" || (record.fileUrl || "").toLowerCase().includes(".pdf");
+  const isPdf = isPdfFile(record);
   const downloadUrl = withDownloadFlag(
     record.fileUrl,
     record.fileName || record.title
@@ -260,11 +253,9 @@ export default function DocumentReader() {
   }
 
   const effectiveUrl = offlineUrl || record.fileUrl;
-  const viewerSrc = isPdf
-    ? `${effectiveUrl}#toolbar=1&navpanes=0`
-    : offlineUrl
-      ? effectiveUrl
-      : `https://docs.google.com/viewer?url=${encodeURIComponent(record.fileUrl)}&embedded=true`;
+  const viewerSrc = offlineUrl
+    ? effectiveUrl
+    : `https://docs.google.com/viewer?url=${encodeURIComponent(record.fileUrl)}&embedded=true`;
 
   const currentQ = quiz?.questions?.[quiz.index];
 
@@ -348,13 +339,24 @@ export default function DocumentReader() {
             </div>
           )}
 
-          <iframe
-            ref={viewerRef}
-            title={record.title || "Document viewer"}
-            src={viewerSrc}
-            className="h-full w-full border-0 bg-white"
-            allow="fullscreen"
-          />
+          {isPdf ? (
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center gap-2 text-sm text-ink-muted">
+                  <Loader2 size={16} className="animate-spin" /> Preparing PDF reader…
+                </div>
+              }
+            >
+              <PdfReader key={effectiveUrl} src={effectiveUrl} title={record.title} />
+            </Suspense>
+          ) : (
+            <iframe
+              title={record.title || "Document viewer"}
+              src={viewerSrc}
+              className="h-full w-full border-0 bg-white"
+              allow="fullscreen"
+            />
+          )}
         </div>
 
         {/* AI practice panel */}

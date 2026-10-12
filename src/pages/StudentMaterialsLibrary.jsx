@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -16,18 +16,20 @@ import {
   X,
 } from "lucide-react";
 import useMaterialSaves, { fileExtension, materialKey } from "../hooks/useMaterialSaves";
+import { isPdfFile } from "../lib/pdfUtils";
 import { useAuth } from "../context/AuthContext";
 import { recordDailyActivity, recordMaterialOpen } from "../lib/activity";
 import { withDownloadFlag } from "../lib/cloudinaryUpload";
 import { isNativeApp } from "../lib/platform";
 import { getOfflineObjectUrl, isOfflineAvailable } from "../lib/offlineMaterials";
 
+const PdfReader = lazy(() => import("../components/reader/PdfReader"));
+
 function viewerFor(item, offlineUrl) {
   if (!item?.fileUrl) return "";
   const extension = fileExtension(item);
-  const isPdf = extension === "pdf" || item.fileUrl.toLowerCase().includes(".pdf");
   if (offlineUrl) return offlineUrl;
-  if (isPdf) return `${item.fileUrl}#toolbar=1&navpanes=0`;
+  if (isPdfFile(item)) return item.fileUrl;
   if (["png", "jpg", "jpeg", "webp", "gif"].includes(extension)) return item.fileUrl;
   return `https://docs.google.com/viewer?url=${encodeURIComponent(item.fileUrl)}&embedded=true`;
 }
@@ -48,6 +50,7 @@ export default function StudentMaterialsLibrary() {
   const index = foundIndex < 0 ? 0 : foundIndex;
   const current = ordered[index];
   const currentFolder = String(current?.courseCode || "GENERAL").toUpperCase();
+  const pdf = isPdfFile(current);
 
   useEffect(() => {
     if (!current) return;
@@ -301,8 +304,18 @@ export default function StudentMaterialsLibrary() {
           </div>
         )}
 
-        <div className="relative min-w-0 flex-1 bg-[#1a1f1c]">
-          {source ? (
+        <div className="relative min-w-0 flex-1 bg-[#ece8df] dark:bg-[#0b0220]">
+          {source && pdf ? (
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center gap-2 text-sm text-ink-muted">
+                  <Loader2 size={16} className="animate-spin" /> Preparing PDF reader…
+                </div>
+              }
+            >
+              <PdfReader key={current?.id} src={source} title={current?.title} />
+            </Suspense>
+          ) : source ? (
             <iframe
               key={current?.id}
               title={current?.title || "Material viewer"}
@@ -311,7 +324,7 @@ export default function StudentMaterialsLibrary() {
               allow="fullscreen"
             />
           ) : (
-            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-white/70">
+            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-ink-muted">
               This material has no file attached.
             </div>
           )}
