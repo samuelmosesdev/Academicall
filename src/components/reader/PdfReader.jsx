@@ -23,6 +23,37 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 const ZOOMS = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 const MAX_PAGE_WIDTH = 920;
 
+function usePdfBytes(src, attempt) {
+  const [state, setState] = useState({ data: null, error: null, loading: true });
+
+  useEffect(() => {
+    if (!src) {
+      setState({ data: null, error: new Error("No file URL was provided."), loading: false });
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setState({ data: null, error: null, loading: true });
+    fetch(src, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`The PDF request failed (${response.status}).`);
+        return response.arrayBuffer();
+      })
+      .then((buffer) => {
+        setState({ data: new Uint8Array(buffer), error: null, loading: false });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setState({ data: null, error, loading: false });
+        }
+      });
+
+    return () => controller.abort();
+  }, [src, attempt]);
+
+  return state;
+}
+
 function ToolButton({ label, onClick, disabled = false, active = false, children, className = "" }) {
   return (
     <button
@@ -41,7 +72,9 @@ function ToolButton({ label, onClick, disabled = false, active = false, children
 }
 
 export default function PdfReader({ src, title }) {
-  const file = useMemo(() => (src ? { url: src } : null), [src]);
+  const [attempt, setAttempt] = useState(0);
+  const { data, error: fetchError, loading: fetching } = usePdfBytes(src, attempt);
+  const file = useMemo(() => (data ? { data } : null), [data]);
   const shellRef = useRef(null);
   const scrollRef = useRef(null);
   const pageRefs = useRef([]);
@@ -56,9 +89,8 @@ export default function PdfReader({ src, title }) {
   const [visiblePages, setVisiblePages] = useState(() => new Set([1, 2]));
   const [fullscreen, setFullscreen] = useState(false);
   const [loadError, setLoadError] = useState(null);
-  const [fetching, setFetching] = useState(Boolean(src));
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [progress, setProgress] = useState(null);
-  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     setNumPages(0);
@@ -66,7 +98,7 @@ export default function PdfReader({ src, title }) {
     setPageInput("1");
     setVisiblePages(new Set([1, 2]));
     setLoadError(null);
-    setFetching(Boolean(src));
+    setPdfLoading(false);
     setProgress(null);
     setRotation(0);
     scrollRef.current?.scrollTo({ top: 0 });
@@ -217,12 +249,12 @@ export default function PdfReader({ src, title }) {
   }, [fullscreen, goToPage, page, toggleFullscreen, zoomBy]);
 
   const handleLoadProgress = useCallback(({ loaded, total }) => {
-    setFetching(true);
+    setPdfLoading(true);
     setProgress(total ? Math.min(100, Math.round((loaded / total) * 100)) : null);
   }, []);
 
   const handleLoadSuccess = useCallback((pdf) => {
-    setFetching(false);
+    setPdfLoading(false);
     setProgress(null);
     setNumPages(pdf.numPages);
     pdf
@@ -235,18 +267,18 @@ export default function PdfReader({ src, title }) {
   }, []);
 
   const handleLoadError = useCallback((error) => {
-    setFetching(false);
+    setPdfLoading(false);
     setLoadError(error);
   }, []);
 
   function retry() {
     setLoadError(null);
-    setFetching(true);
+    setPdfLoading(true);
     setProgress(null);
     setAttempt((current) => current + 1);
   }
 
-  const failed = Boolean(loadError);
+  const failed = Boolean(fetchError || loadError);
   const zoomLabel = fitWidth ? "Fit" : `${Math.round(zoom * 100)}%`;
 
   return (
@@ -332,7 +364,7 @@ export default function PdfReader({ src, title }) {
         tabIndex={0}
         className="relative min-h-0 flex-1 overflow-auto overscroll-contain outline-none"
       >
-        {(fetching || (!failed && !numPages)) && (
+        {(fetching || pdfLoading || (!failed && data && !numPages)) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-ink-muted">
             <Loader2 size={22} className="animate-spin text-teal" />
             <p className="eyebrow">Opening document</p>
@@ -343,7 +375,9 @@ export default function PdfReader({ src, title }) {
             <Expand size={22} className="text-ink-muted" />
             <p className="font-display text-lg text-ink">This document couldn&apos;t open</p>
             <p className="max-w-md text-sm text-ink-muted">
-              The PDF could not be loaded for in-app reading. Check your connection or open the file directly.
+              {fetchError
+                ? "The PDF could not be fetched for in-app reading. Check your connection or open the file directly."
+                : "The file was downloaded but could not be rendered as a PDF."}
             </p>
             {src && (
               <a
@@ -400,7 +434,7 @@ export default function PdfReader({ src, title }) {
                       style={{ width: pageWidth, height: pageHeight }}
                     />
                   )}
-                  {fetching && progress !== null && (
+                  {pdfLoading && progress !== null && (
                     <div className="absolute inset-x-4 bottom-4 mx-auto max-w-xs rounded-full bg-midnight/90 px-4 py-2 text-center text-xs text-white">
                       Loading PDF… {progress}%
                     </div>
