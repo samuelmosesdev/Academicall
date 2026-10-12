@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  ExternalLink,
   FileText,
   Folder,
   FolderOpen,
@@ -253,6 +254,17 @@ export default function StudentMaterialsLibrary() {
           >
             <ChevronRight size={16} />
           </button>
+          {current?.fileUrl && (
+            <a
+              href={current.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open material in a new tab"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border-light px-2.5 text-xs font-medium text-ink hover:border-teal"
+            >
+              <ExternalLink size={14} /> <span className="hidden sm:inline">Open file</span>
+            </a>
+          )}
           {current?.fileUrl && (
             <a
               href={withDownloadFlag(current.fileUrl, current.fileName || current.title) || current.fileUrl}
