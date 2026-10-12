@@ -1170,7 +1170,17 @@ export default function StudentDepartment() {
         open={showAnnounce}
         onClose={(created) => {
           setShowAnnounce(false);
-          if (created) flash("Announcement posted.");
+          if (created) {
+            flash("Announcement posted.");
+            feedApi.list("course", `program=${encodeURIComponent(program)}`)
+              .then(({ posts = [] }) => {
+                setPosts(posts.filter((item) => matchesStudentLevel(item.level, level)));
+              })
+              .catch((error) => {
+                console.error("Announcement posted, but the feed refresh failed:", error);
+                flash("Announcement posted. Reload to refresh the feed.");
+              });
+          }
         }}
         department={departmentName || program}
         program={program}
