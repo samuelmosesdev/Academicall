@@ -85,7 +85,7 @@ export default function PdfReader({ src, title }) {
   const [fitWidth, setFitWidth] = useState(true);
   const [rotation, setRotation] = useState(0);
   const [containerWidth, setContainerWidth] = useState(800);
-  const [pageRatio, setPageRatio] = useState(1.414);
+  const pageRatio = 1.414;
   const [visiblePages, setVisiblePages] = useState(() => new Set([1, 2]));
   const [fullscreen, setFullscreen] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -257,13 +257,6 @@ export default function PdfReader({ src, title }) {
     setPdfLoading(false);
     setProgress(null);
     setNumPages(pdf.numPages);
-    pdf
-      .getPage(1)
-      .then((firstPage) => {
-        const viewport = firstPage.getViewport({ scale: 1 });
-        setPageRatio(viewport.height / viewport.width);
-      })
-      .catch((error) => console.error("Could not read PDF page dimensions:", error));
   }, []);
 
   const handleLoadError = useCallback((error) => {
