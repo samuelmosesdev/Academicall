@@ -94,9 +94,9 @@ export default function DashboardHero({ profile, firstName }) {
             Welcome back, <span className="serif-i text-lemon">{firstName}.</span>
           </h1>
           <p className="mt-4 max-w-md text-[0.98rem] leading-relaxed text-white/65">
-            {todayCount > 0
-              ? `You have ${todayCount} class${todayCount > 1 ? "es" : ""} today. Read a few pages in between to keep your streak.`
-              : "No more classes today — a good moment to read a few pages."}
+            {next
+              ? `Your next class is ${next.courseCode || next.title} on ${dayFmt(next.start)} at ${timeFmt(next.start)}.${todayCount > 1 ? ` You have ${todayCount} classes scheduled today.` : ""}`
+              : "No upcoming classes are scheduled for your programme yet. When your Course Rep adds one, it will appear here."}
           </p>
           <div className="mt-8 flex flex-wrap gap-2.5">
             <button type="button" onClick={() => navigate("/dashboard/reading-hub")} className="inline-flex items-center gap-2 rounded-full bg-lemon px-5 py-3 text-sm font-semibold text-midnight transition hover:brightness-105">
