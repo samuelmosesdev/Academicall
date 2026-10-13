@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MailCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, MailCheck, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { isBrevoVerifyConfigured } from "../lib/brevoVerify";
 
@@ -11,6 +11,7 @@ export default function VerifyEmail() {
   const {
     user,
     profile,
+    logout,
     resendVerificationEmail,
     refreshEmailVerified,
     verifyEmailWithCode,
@@ -23,11 +24,21 @@ export default function VerifyEmail() {
   const [msg, setMsg] = useState("");
   const [resending, setResending] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [exiting, setExiting] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [code, setCode] = useState("");
   const pollRef = useRef(null);
+  const exitRef = useRef(false);
 
   const alreadyVerified = profile?.emailVerified === true;
+
+  async function handleExit() {
+    exitRef.current = true;
+    setExiting(true);
+    clearInterval(pollRef.current);
+    await logout();
+    navigate("/login", { replace: true });
+  }
 
   // Navigating during render (and returning early, above the hooks below) meant
   // this component rendered a different number of hooks on the verifying render
@@ -40,6 +51,7 @@ export default function VerifyEmail() {
     if (alreadyVerified) return;
     pollRef.current = setInterval(async () => {
       const verified = await refreshEmailVerified().catch(() => false);
+      if (exitRef.current) return;
       if (verified) {
         clearInterval(pollRef.current);
         navigate("/complete-profile", { replace: true });
@@ -90,6 +102,7 @@ export default function VerifyEmail() {
     setVerifying(true);
     try {
       await verifyEmailWithCode(trimmed);
+      if (exitRef.current) return;
       setMsg("Email verified. Continuing…");
       navigate("/complete-profile", { replace: true });
     } catch (err) {
@@ -101,7 +114,22 @@ export default function VerifyEmail() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg-app px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-bg-panel p-8 text-center">
+      <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-bg-panel p-6 text-center sm:p-8">
+        <div className="mb-4 flex justify-start">
+          <button
+            type="button"
+            onClick={handleExit}
+            disabled={exiting}
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-text-secondary transition hover:bg-bg-panel-alt hover:text-text-primary disabled:opacity-60"
+          >
+            {exiting ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <ArrowLeft size={16} />
+            )}
+            Exit to sign in
+          </button>
+        </div>
         <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
           <MailCheck size={22} />
         </span>
@@ -143,7 +171,7 @@ export default function VerifyEmail() {
             />
             <button
               type="submit"
-              disabled={verifying || code.length !== 6}
+              disabled={verifying || exiting || code.length !== 6}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app disabled:opacity-60"
             >
               {verifying ? (
@@ -169,7 +197,7 @@ export default function VerifyEmail() {
         <button
           type="button"
           onClick={handleResend}
-          disabled={resending || cooldown > 0}
+          disabled={resending || exiting || cooldown > 0}
           className="text-sm font-medium text-accent hover:underline disabled:cursor-not-allowed disabled:text-text-muted disabled:no-underline"
         >
           {cooldown > 0
