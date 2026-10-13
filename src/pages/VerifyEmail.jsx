@@ -162,10 +162,12 @@ export default function VerifyEmail() {
             </>
           )}
         </p>
-        <p className="mb-6 rounded-xl border border-border-subtle bg-bg-panel-alt px-3 py-2.5 text-left text-[12px] leading-relaxed text-text-muted">
-          <strong className="text-text-secondary">Not in inbox?</strong> Check{" "}
-          <strong>Spam / Junk / Promotions</strong>, then mark it as Not spam.
-        </p>
+        {verificationEmailStatus === "sent" && (
+          <p className="mb-6 rounded-xl border border-border-subtle bg-bg-panel-alt px-3 py-2.5 text-left text-[12px] leading-relaxed text-text-muted">
+            <strong className="text-text-secondary">Not in inbox?</strong> Check{" "}
+            <strong>Spam / Junk / Promotions</strong>, then mark it as Not spam.
+          </p>
+        )}
 
         {useBrevo && (
           <form onSubmit={handleVerifyCode} className="mb-4 space-y-3 text-left">
