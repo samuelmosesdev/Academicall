@@ -2,10 +2,11 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { homePathFor } from "../lib/roles";
 import { LoadingState } from "../components/ui";
+import { pendingGroupInvitePath } from "../lib/groupInvite";
 
 /** After login: wait for profile, then route by role */
 export default function LoginRedirect() {
-  const { user, profile, profileReady, loading, authMode } = useAuth();
+  const { user, profile, profileReady, loading } = useAuth();
 
   // Still loading auth state
   if (loading) {
@@ -35,6 +36,9 @@ export default function LoginRedirect() {
   if (isStudent && !profile?.profileComplete) {
     return <Navigate to="/complete-profile" replace />;
   }
+
+  const invitePath = isStudent ? pendingGroupInvitePath() : null;
+  if (invitePath) return <Navigate to={invitePath} replace />;
 
   const destination = homePathFor(profile || user) || "/dashboard";
 

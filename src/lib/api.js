@@ -1,4 +1,4 @@
-const API_BASE = (
+export const API_BASE = (
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV
     ? "http://localhost:4000/api/v1"
@@ -230,6 +230,10 @@ export const classEventsApi = {
   create: (body) => api("/class-events", { method: "POST", body }),
   update: (id, body) => api(`/class-events/${id}`, { method: "PATCH", body }),
   remove: (id) => api(`/class-events/${id}`, { method: "DELETE" }),
+  addComment: (id, body) => api(`/class-events/${id}/comments`, { method: "POST", body }),
+  deleteComment: (id, commentId) => api(`/class-events/${id}/comments/${commentId}`, { method: "DELETE" }),
+  react: (id, type) => api(`/class-events/${id}/reactions`, { method: "POST", body: { type } }),
+  reactComment: (id, commentId, type) => api(`/class-events/${id}/comments/${commentId}/reactions`, { method: "POST", body: { type } }),
 };
 
 export const feedApi = {
@@ -237,6 +241,10 @@ export const feedApi = {
   create: (kind, body) => api(`/feed/${kind}`, { method: "POST", body }),
   update: (kind, id, body) => api(`/feed/${kind}/${id}`, { method: "PATCH", body }),
   remove: (kind, id) => api(`/feed/${kind}/${id}`, { method: "DELETE" }),
+  addComment: (kind, id, body) => api(`/feed/${kind}/${id}/comments`, { method: "POST", body }),
+  deleteComment: (kind, id, commentId) => api(`/feed/${kind}/${id}/comments/${commentId}`, { method: "DELETE" }),
+  react: (kind, id, type) => api(`/feed/${kind}/${id}/reactions`, { method: "POST", body: { type } }),
+  reactComment: (kind, id, commentId, type) => api(`/feed/${kind}/${id}/comments/${commentId}/reactions`, { method: "POST", body: { type } }),
 };
 
 export const subscriptionsApi = {
@@ -259,4 +267,50 @@ export const quizzesApi = {
   // Reuse pool: existing AI questions for a material
   listMaterialQuestions: (materialId) =>
     api(`/questions?materialId=${encodeURIComponent(materialId)}`),
+};
+
+export const institutionsApi = {
+  search: ({ q = "", limit = 25, offset = 0, state = "" } = {}) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (state) params.set("state", state);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return api(`/institutions?${params}`);
+  },
+  get: (id) => api(`/institutions/${encodeURIComponent(id)}`),
+  tree: (id) => api(`/institutions/${encodeURIComponent(id)}/tree`),
+};
+
+export const groupsApi = {
+  list: () => api("/groups"),
+  discover: () => api("/groups/discover"),
+  create: (body) => api("/groups", { method: "POST", body }),
+  get: (id) => api(`/groups/${id}`),
+  update: (id, body) => api(`/groups/${id}`, { method: "PATCH", body }),
+  remove: (id) => api(`/groups/${id}`, { method: "DELETE" }),
+  preview: (code) => api(`/groups/code/${encodeURIComponent(code)}`),
+  join: (code) => api(`/groups/code/${encodeURIComponent(code)}/join`, { method: "POST" }),
+  cancelRequest: (id) => api(`/groups/${id}/request`, { method: "DELETE" }),
+  leave: (id) => api(`/groups/${id}/leave`, { method: "POST" }),
+  transfer: (id, userId) => api(`/groups/${id}/transfer`, { method: "POST", body: { userId } }),
+  markRead: (id) => api(`/groups/${id}/read`, { method: "POST" }),
+  inviteScope: (id) => api(`/groups/${id}/invite-scope`, { method: "POST" }),
+  members: (id, status = "active") => api(`/groups/${id}/members?status=${encodeURIComponent(status)}`),
+  review: (id, userId, action) => api(`/groups/${id}/members/${userId}/review`, { method: "POST", body: { action } }),
+  setRole: (id, userId, role) => api(`/groups/${id}/members/${userId}/role`, { method: "POST", body: { role } }),
+  removeMember: (id, userId) => api(`/groups/${id}/members/${userId}`, { method: "DELETE" }),
+  requestHistory: (id) => api(`/groups/${id}/history-request`, { method: "POST" }),
+  reviewHistory: (id, userId, action) => api(`/groups/${id}/history-requests/${userId}`, { method: "POST", body: { action } }),
+  messages: (id, { before, beforeId, after, limit } = {}) => {
+    const params = new URLSearchParams();
+    if (before) params.set("before", before);
+    if (beforeId) params.set("beforeId", beforeId);
+    if (after) params.set("after", after);
+    if (limit) params.set("limit", String(limit));
+    return api(`/groups/${id}/messages${params.toString() ? `?${params}` : ""}`);
+  },
+  send: (id, body) => api(`/groups/${id}/messages`, { method: "POST", body }),
+  deleteMessage: (id, messageId) => api(`/groups/${id}/messages/${messageId}`, { method: "DELETE" }),
+  saveMaterial: (id, messageId) => api(`/groups/${id}/messages/${messageId}/save`, { method: "POST" }),
 };

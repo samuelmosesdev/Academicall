@@ -17,7 +17,6 @@ import {
   MapPin,
   Lock,
   Users,
-  CheckCircle2,
   XCircle,
   Upload,
 } from "lucide-react";
@@ -26,6 +25,7 @@ import { useAuth } from "../context/AuthContext";
 import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
 import { getAcademicDepartment, getAcademicProgram, getAcademicScope, getCourseRepProgram, matchesAcademicScope } from "../lib/academicScope";
+import { useRealtime } from "../lib/realtime";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -247,6 +247,24 @@ export default function StudentDepartment() {
     return () => { alive = false; };
   }, [program, department, level, authMode]);
 
+  useRealtime(["programme.post", "programme.class", "programme.material", "reconnected", "poll"], (_data, eventType) => {
+    if (eventType === "programme.class" || eventType === "reconnected" || eventType === "poll") {
+      classEventsApi.list()
+        .then(({ events = [] }) => setClasses(events.filter((event) => matchesAcademicScope(event.program || event.department, profile) && matchesStudentLevel(event.level, level))))
+        .catch((error) => console.warn("Could not refresh programme classes after live update:", error));
+    }
+    if (eventType === "programme.post" || eventType === "reconnected" || eventType === "poll") {
+      feedApi.list("course", `program=${encodeURIComponent(program)}`)
+        .then(({ posts = [] }) => setPosts(posts.filter((post) => matchesStudentLevel(post.level, level))))
+        .catch((error) => console.warn("Could not refresh programme posts after live update:", error));
+    }
+    if (eventType === "programme.material" || eventType === "reconnected" || eventType === "poll") {
+      documentsApi.list()
+        .then(({ documents = [] }) => setMaterials(documents.filter((item) => matchesAcademicScope(item.program || item.department, profile) && item.source === "courseRep" && matchesStudentLevel(item.level, level))))
+        .catch((error) => console.warn("Could not refresh programme materials after live update:", error));
+    }
+  });
+
   useEffect(() => {
     if (!user || authMode !== "api") {
       setSavedIds(new Set());
@@ -295,20 +313,9 @@ export default function StudentDepartment() {
     setCommentBusy((p) => ({ ...p, [postId]: true }));
     try {
       const post = posts.find((p) => p.id === postId);
-      const comments = Array.isArray(post?.comments) ? [...post.comments] : [];
-      comments.push({
-        id: `${Date.now()}_${user.uid}`,
-        text,
-        authorUid: user.uid,
-        authorName: profile?.nickname || profile?.name || user.email || "Student",
-        authorPhoto: profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null,
-        authorRole: profile?.role || "user",
-        authorPlan: profile?.plan || null,
-        authorSubscription: profile?.subscription || null,
-        createdAt: new Date().toISOString(),
-        reactions: [],
-      });
-      await feedApi.update("course", postId, { comments });
+      if (!post) return;
+      const { post: updated } = await feedApi.addComment("course", postId, { text });
+      setPosts((current) => current.map((item) => item.id === postId ? updated : item));
       setCommentText((p) => ({ ...p, [postId]: "" }));
       setExpandedComments((p) => ({ ...p, [postId]: true }));
     } catch (e) {
@@ -324,20 +331,9 @@ export default function StudentDepartment() {
     setClassCommentBusy((p) => ({ ...p, [classId]: true }));
     try {
       const ev = classes.find((c) => c.id === classId);
-      const comments = Array.isArray(ev?.comments) ? [...ev.comments] : [];
-      comments.push({
-        id: `${Date.now()}_${user.uid}`,
-        text,
-        authorUid: user.uid,
-        authorName: profile?.nickname || profile?.name || user.email || "Student",
-        authorPhoto: profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null,
-        authorRole: profile?.role || "user",
-        authorPlan: profile?.plan || null,
-        authorSubscription: profile?.subscription || null,
-        createdAt: new Date().toISOString(),
-        reactions: [],
-      });
-      await classEventsApi.update(classId, { comments });
+      if (!ev) return;
+      const { event: updated } = await classEventsApi.addComment(classId, { text });
+      setClasses((current) => current.map((item) => item.id === classId ? updated : item));
       setClassCommentText((p) => ({ ...p, [classId]: "" }));
       setExpandedClassComments((p) => ({ ...p, [classId]: true }));
     } catch (e) {
@@ -381,8 +377,15 @@ export default function StudentDepartment() {
           name: profile?.name || user.email || "Student",
         });
       }
-      if (collectionName === "classEvents") await classEventsApi.update(docId, { reactions });
-      else await feedApi.update("course", docId, { reactions });
+      if (collectionName === "classEvents") {
+        const { event: updated } = await classEventsApi.react(docId, reactionType);
+        setClasses((current) => current.map((entry) => entry.id === docId ? updated : entry));
+      } else if (collectionName === "coursePosts") {
+        const { post: updated } = await feedApi.react("course", docId, reactionType);
+        setPosts((current) => current.map((entry) => entry.id === docId ? updated : entry));
+      } else {
+        await feedApi.update("course", docId, { reactions });
+      }
     } catch (e) {
       alert(e.message || "Could not react.");
     }
@@ -407,35 +410,14 @@ export default function StudentDepartment() {
             : [];
       const item = list.find((x) => x.id === docId);
       if (!item) return;
-      const comments = Array.isArray(item.comments) ? [...item.comments] : [];
-      const idx = comments.findIndex((c) => c.id === commentId);
-      if (idx < 0) return;
-      const comment = { ...comments[idx] };
-      let reactions = Array.isArray(comment.reactions)
-        ? [...comment.reactions]
-        : [];
-      const existing = reactions.findIndex((r) => r.uid === user.uid);
-      if (existing >= 0) {
-        if (reactions[existing].type === reactionType) {
-          reactions.splice(existing, 1);
-        } else {
-          reactions[existing] = {
-            uid: user.uid,
-            type: reactionType,
-            name: profile?.name || user.email || "Student",
-          };
-        }
+      if (!item.comments?.some((comment) => comment.id === commentId)) return;
+      if (collectionName === "classEvents") {
+        const { event: updated } = await classEventsApi.reactComment(docId, commentId, reactionType);
+        setClasses((current) => current.map((entry) => entry.id === docId ? updated : entry));
       } else {
-        reactions.push({
-          uid: user.uid,
-          type: reactionType,
-          name: profile?.name || user.email || "Student",
-        });
+        const { post: updated } = await feedApi.reactComment("course", docId, commentId, reactionType);
+        setPosts((current) => current.map((entry) => entry.id === docId ? updated : entry));
       }
-      comment.reactions = reactions;
-      comments[idx] = comment;
-      if (collectionName === "classEvents") await classEventsApi.update(docId, { comments });
-      else await feedApi.update("course", docId, { comments });
     } catch (e) {
       alert(e.message || "Could not react to comment.");
     }

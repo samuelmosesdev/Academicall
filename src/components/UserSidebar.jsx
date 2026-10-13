@@ -13,11 +13,13 @@ import {
   CalendarPlus,
   Building2,
   FolderOpen,
+  MessagesSquare,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { isPro } from "../lib/subscription";
 import { useUserDashboardData } from "../hooks/useUserDashboardData";
+import { useGroups } from "../hooks/useGroups";
 import SidebarFooter from "./SidebarFooter";
 
 const NAV_ITEMS = [
@@ -25,6 +27,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/dashboard" },
   { label: "Courses", icon: BookOpen, to: "/dashboard/courses" },
   { label: "Programme", icon: Building2, to: "/dashboard/department", badgeKey: "dept" },
+  { label: "Groups", icon: MessagesSquare, to: "/dashboard/groups", badgeKey: "groups" },
   { label: "Materials", icon: FolderOpen, to: "/dashboard/materials" },
   { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice" },
   { label: "Reading Hub", icon: Library, to: "/dashboard/reading-hub" },
@@ -42,9 +45,10 @@ const NAV_ITEMS = [
 export default function UserSidebar({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const pro = isPro(profile);
   const isRep = profile?.role === "courseRep";
+  const { totalUnread: groupUnread = 0 } = useGroups(user?.uid);
   const { unreadCount: unread = 0 } = useUserDashboardData();
 
   function go(to) {
@@ -69,9 +73,10 @@ export default function UserSidebar({ onNavigate }) {
                 ? location.pathname === to
                 : location.pathname.startsWith(to);
           const locked = proOnly && !pro;
+          const badgeCount = badgeKey === "groups" ? groupUnread : unread;
           const showBadge =
-            unread > 0 &&
-            (badgeKey === "notif" || (badgeKey === "dept" && location.pathname !== "/dashboard/department"));
+            badgeCount > 0 &&
+            (badgeKey === "notif" || badgeKey === "groups" || (badgeKey === "dept" && location.pathname !== "/dashboard/department"));
           return (
             <button
               key={label}
@@ -86,7 +91,7 @@ export default function UserSidebar({ onNavigate }) {
               <span className="flex-1 text-left">{label}</span>
               {showBadge && (
                 <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-lemon px-1.5 text-[10px] font-semibold text-midnight">
-                  {unread > 9 ? "9+" : unread}
+                  {badgeCount > 9 ? "9+" : badgeCount}
                 </span>
               )}
               {locked && <Lock size={13} className="opacity-50" />}

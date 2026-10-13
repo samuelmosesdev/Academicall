@@ -59,6 +59,11 @@ import StudentDepartment from "./pages/StudentDepartment";
 import StudentMaterials from "./pages/StudentMaterials";
 import StudentMaterialFolder from "./pages/StudentMaterialFolder";
 import StudentMaterialsLibrary from "./pages/StudentMaterialsLibrary";
+const StudentGroups = lazy(() => import("./pages/StudentGroups"));
+const StudyGroupJoin = lazy(() => import("./pages/StudyGroupJoin"));
+const StudyInviteRedirect = lazy(() =>
+  import("./pages/StudyGroupJoin").then((module) => ({ default: module.StudyInviteRedirect }))
+);
 
 export default function App() {
   return (
@@ -82,6 +87,7 @@ export default function App() {
               }
             />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/study/:code" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudyInviteRedirect /></Suspense>} />
             <Route
               path="/verify-email"
               element={
@@ -195,6 +201,9 @@ export default function App() {
               <Route path="notifications/archived" element={<ArchivedNotifications />} />
               <Route path="courses" element={<StudentCourses />} />
               <Route path="department" element={<StudentDepartment />} />
+              <Route path="groups" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudentGroups /></Suspense>} />
+              <Route path="groups/:groupId" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudentGroups /></Suspense>} />
+              <Route path="groups/join/:code" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudyGroupJoin /></Suspense>} />
               <Route path="materials" element={<StudentMaterials />} />
               <Route path="documents" element={<Navigate to="/dashboard/materials" replace />} />
               <Route path="materials/folder/:courseCode" element={<StudentMaterialFolder />} />

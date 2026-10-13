@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { authApi, usersApi } from "../lib/api";
 import { registerFcmToken } from "../lib/fcm";
+import { startRealtime, stopRealtime } from "../lib/realtime";
 
 const AuthContext = createContext(null);
 
@@ -101,6 +102,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     fcmRegisteredRef.current = false;
+    stopRealtime();
     localStorage.removeItem("academicall_token");
     setUser(null);
     setProfile(null);
@@ -108,6 +110,12 @@ export function AuthProvider({ children }) {
     setAuthMode(null);
     setVerificationEmailStatus(null);
   };
+
+  const scopeKey = `${profile?.institutionId || ""}|${profile?.program || ""}|${profile?.department || ""}|${profile?.level || ""}|${profile?.role || ""}`;
+  useEffect(() => {
+    if (user?.uid && authMode) startRealtime();
+    else stopRealtime();
+  }, [user?.uid, authMode, scopeKey]);
 
   // ---------- FCM (web push) registration once logged in ----------
   useEffect(() => {
