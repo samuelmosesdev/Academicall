@@ -122,7 +122,7 @@ export function useGroups(meId) {
     wire();
     if (!state.loaded) refreshGroups();
   }, [meId]);
-  return useSyncExternalStore(
+  const current = useSyncExternalStore(
     (cb) => {
       subs.add(cb);
       return () => subs.delete(cb);
@@ -130,4 +130,6 @@ export function useGroups(meId) {
     () => snapshot,
     () => snapshot
   );
+  if (current.meId === (meId || null)) return current;
+  return { meId: meId || null, groups: [], totalUnread: 0, loading: Boolean(meId), error: "", loaded: false, activeGroupId: null };
 }
