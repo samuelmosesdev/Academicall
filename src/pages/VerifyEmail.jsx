@@ -16,6 +16,7 @@ export default function VerifyEmail() {
     refreshEmailVerified,
     verifyEmailWithCode,
     authMode,
+    verificationEmailStatus,
   } = useAuth();
   const navigate = useNavigate();
   const useBrevo = authMode === "api" || isBrevoVerifyConfigured();
@@ -137,11 +138,22 @@ export default function VerifyEmail() {
           Verify your email
         </h1>
         <p className="mb-3 text-sm text-text-secondary">
-          {useBrevo ? (
+          {useBrevo && verificationEmailStatus === "sent" ? (
             <>
               We sent a <strong className="text-text-primary">6-digit code</strong> from{" "}
               <strong className="text-text-primary">Academicall</strong> to{" "}
               <span className="font-medium text-text-primary">{user?.email}</span>.
+            </>
+          ) : useBrevo && verificationEmailStatus === "failed" ? (
+            <>
+              We couldn't send a verification code to{" "}
+              <span className="font-medium text-text-primary">{user?.email}</span>.
+              Please retry below.
+            </>
+          ) : useBrevo ? (
+            <>
+              Verify your email to continue. If you haven't received a code, select{" "}
+              <strong className="text-text-primary">Resend code</strong>.
             </>
           ) : (
             <>

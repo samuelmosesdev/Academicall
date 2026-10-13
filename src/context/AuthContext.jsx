@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileReady, setProfileReady] = useState(false);
+  const [verificationEmailStatus, setVerificationEmailStatus] = useState(null);
   // authMode is always "api" once signed in — kept for backwards
   // compatibility with components that still branch on it.
   const [authMode, setAuthMode] = useState(null); // "api" | null
@@ -35,7 +36,7 @@ export function AuthProvider({ children }) {
     const data = await authApi.register({ email, password, name });
     applySession(data);
     try {
-      await authApi.sendVerification();
+      await resendVerificationEmail();
     } catch (err) {
       console.warn("Verification email could not be sent during signup:", err);
     }
@@ -80,7 +81,16 @@ export function AuthProvider({ children }) {
     return nextUser;
   };
 
-  const resendVerificationEmail = async () => authApi.sendVerification();
+  const resendVerificationEmail = async () => {
+    try {
+      const data = await authApi.sendVerification();
+      setVerificationEmailStatus("sent");
+      return data;
+    } catch (err) {
+      setVerificationEmailStatus("failed");
+      throw err;
+    }
+  };
 
   const verifyEmailWithCode = async (code) => {
     const data = await authApi.verifyEmail(code);
@@ -96,6 +106,7 @@ export function AuthProvider({ children }) {
     setProfile(null);
     setProfileReady(false);
     setAuthMode(null);
+    setVerificationEmailStatus(null);
   };
 
   // ---------- FCM (web push) registration once logged in ----------
@@ -161,6 +172,7 @@ export function AuthProvider({ children }) {
     loading,
     profileReady,
     authMode,
+    verificationEmailStatus,
     loginWithApi,
     registerWithApi,
     signInWithGoogle,
