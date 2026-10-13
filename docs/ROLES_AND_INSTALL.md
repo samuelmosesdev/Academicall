@@ -9,7 +9,7 @@ Set the field **`role`** on documents in collection **`users/{uid}`**.
 | `admin` | Platform owner | Full control, assign any role, all approvals, all logs |
 | `alphaAgent` | Master / elevated agent | Approve requests, assign courseRep / agent / PRO (not admin), activity logs (not admin private), announcements |
 | `agent` | Basic agent | Documents, courses, CBT (existing agent panel) |
-| `courseRep` | Special student | Student app + schedule classes, propose materials/courses for their dept |
+| `courseRep` | Special student | Student app + schedule classes, directly publish courses and materials for their assigned program and level |
 | `user` | Normal student | Student dashboard only |
 
 ### Optional fields on the same user doc
@@ -19,9 +19,10 @@ role: "courseRep" | "user" | "agent" | "alphaAgent" | "admin"
 plan: "free" | "weekly" | "monthly" | "annual" | "pro"
 status: "active" | "suspended"
 courseRepMeta: {
-  courseCodes: ["CSC101", "CSC102"],   // courses they represent
+  courseCodes: ["CSC101", "CSC102"],   // optional course list
   faculty: "...",
-  department: "..."
+  program: "...",
+  level: "200 Level"
 }
 assignedBy: "<adminUid>"
 assignedAt: <timestamp>

@@ -13,7 +13,6 @@ import {
   CalendarPlus,
   Building2,
   FolderOpen,
-  FileText,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -28,7 +27,6 @@ const NAV_ITEMS = [
   { label: "Programme", icon: Building2, to: "/dashboard/department", badgeKey: "dept" },
   { label: "Materials", icon: FolderOpen, to: "/dashboard/materials" },
   { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice" },
-  { label: "Documents", icon: FileText, to: "/dashboard/documents" },
   { label: "Reading Hub", icon: Library, to: "/dashboard/reading-hub" },
   { label: "Reference", icon: BookMarked, to: "/dashboard/reference" },
   { label: "Timetable", icon: Calendar, to: "/dashboard/timetable", proOnly: true },

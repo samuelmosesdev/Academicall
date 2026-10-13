@@ -1,11 +1,84 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { BookOpenText, FolderOpen, Loader2, Search } from "lucide-react";
+import { BookOpenText, ExternalLink, FileText, FolderOpen, Loader2, Search, Trash2, Upload } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { documentsApi } from "../lib/api";
+import { uploadDocumentToCloudinary } from "../lib/cloudinaryUpload";
+import { isPro } from "../lib/subscription";
 import useMaterialSaves, { folderSlug } from "../hooks/useMaterialSaves";
 
 export default function StudentMaterials() {
+  const { user, profile, authMode } = useAuth();
   const { saves, folders, loading, error } = useMaterialSaves();
   const [term, setTerm] = useState("");
+  const [uploads, setUploads] = useState([]);
+  const [uploadsLoading, setUploadsLoading] = useState(false);
+  const [uploadsError, setUploadsError] = useState("");
+  const [title, setTitle] = useState("");
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [removingId, setRemovingId] = useState(null);
+  const canUpload = authMode === "api" && profile?.role === "user" && isPro(profile);
+
+  useEffect(() => {
+    if (!canUpload || !user?.uid) {
+      setUploads([]);
+      setUploadsLoading(false);
+      return undefined;
+    }
+    let alive = true;
+    setUploadsLoading(true);
+    setUploadsError("");
+    documentsApi.mine()
+      .then(({ documents: list = [] }) => alive && setUploads(list))
+      .catch((err) => alive && setUploadsError(err.message || "Could not load your uploads."))
+      .finally(() => alive && setUploadsLoading(false));
+    return () => { alive = false; };
+  }, [canUpload, user?.uid]);
+
+  async function uploadPersonalMaterial(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    setUploadsError("");
+    if (!title.trim() || !file) {
+      setUploadsError("Add a title and select a file.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploaded = await uploadDocumentToCloudinary(file, setProgress);
+      const { document } = await documentsApi.create({
+        title: title.trim(),
+        fileUrl: uploaded.secure_url || uploaded.url,
+        fileName: file.name,
+        fileSize: uploaded.bytes || file.size,
+      });
+      setUploads((current) => [document, ...current.filter((item) => item.id !== document.id)]);
+      setTitle("");
+      setFile(null);
+      form.reset();
+    } catch (err) {
+      setUploadsError(err.message || "Could not upload this material.");
+    } finally {
+      setUploading(false);
+      setProgress(0);
+    }
+  }
+
+  async function removeUpload(document) {
+    if (!window.confirm(`Delete "${document.title}" from your uploads?`)) return;
+    setRemovingId(document.id);
+    setUploadsError("");
+    try {
+      await documentsApi.remove(document.id);
+      setUploads((current) => current.filter((item) => item.id !== document.id));
+    } catch (err) {
+      setUploadsError(err.message || "Could not delete this upload.");
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   const visible = useMemo(() => {
     const search = term.trim().toLowerCase();
@@ -29,7 +102,7 @@ export default function StudentMaterials() {
           <p className="mt-1 text-sm text-ink-muted">
             {loading
               ? "Opening your folders…"
-              : `${folders.length} folder${folders.length !== 1 ? "s" : ""} · ${saves.length} material${saves.length !== 1 ? "s" : ""}, sorted by course code`}
+              : `${folders.length} folder${folders.length !== 1 ? "s" : ""} · ${saves.length} saved material${saves.length !== 1 ? "s" : ""}${canUpload ? ` · ${uploads.length} personal upload${uploads.length !== 1 ? "s" : ""}` : ""}`}
           </p>
         </div>
         {saves.length > 0 && (
@@ -46,6 +119,94 @@ export default function StudentMaterials() {
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </p>
+      )}
+
+      {canUpload && (
+        <section className="space-y-4 rounded-2xl border border-border-light bg-card-light p-5">
+          <div>
+            <h2 className="font-display text-xl text-ink">Upload your own material</h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              Your uploads are listed here for you and won't be shared to your Programme.
+            </p>
+          </div>
+          <form onSubmit={uploadPersonalMaterial} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <label className="block text-xs font-medium text-ink-muted">
+              Material title
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                maxLength={160}
+                required
+                className="mt-1 w-full rounded-xl border border-border-light bg-white px-3 py-2.5 text-sm text-ink"
+                placeholder="e.g. Lecture notes"
+              />
+            </label>
+            <label className="block text-xs font-medium text-ink-muted">
+              File
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,image/*"
+                onChange={(event) => setFile(event.target.files?.[0] || null)}
+                required
+                className="mt-1 w-full rounded-xl border border-border-light bg-white px-3 py-2 text-sm text-ink"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={uploading}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-midnight px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+              {uploading ? `Uploading${progress ? ` ${progress}%` : "…"}` : "Upload"}
+            </button>
+          </form>
+          {uploadsError && (
+            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {uploadsError}
+            </p>
+          )}
+          {uploads.length > 0 && (
+            <div className="space-y-2">
+              {uploads.map((document) => (
+                <article key={document.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-light bg-white p-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <FileText size={18} className="shrink-0 text-teal" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-ink">{document.title}</p>
+                      <p className="text-xs text-ink-muted">{document.fileName || "Personal material"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/dashboard/reading-hub/doc/${document.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-teal-soft px-3 py-1.5 text-xs font-semibold text-teal"
+                    >
+                      Open <ExternalLink size={13} />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => removeUpload(document)}
+                      disabled={removingId === document.id}
+                      aria-label={`Delete ${document.title}`}
+                      className="rounded-full p-2 text-ink-muted hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    >
+                      {removingId === document.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {authMode === "api" && profile?.role === "user" && !isPro(profile) && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border-light bg-card-light p-4">
+          <p className="text-sm text-ink-muted">Personal material uploads are available with Premium.</p>
+          <Link to="/dashboard/upgrade" className="btn-primary px-4 py-2 text-sm">
+            Upgrade to Premium
+          </Link>
+        </div>
       )}
 
       {folders.length > 3 && (
@@ -66,7 +227,7 @@ export default function StudentMaterials() {
         </div>
       )}
 
-      {!loading && !error && saves.length === 0 && (
+      {!loading && !error && saves.length === 0 && (!canUpload || (!uploadsLoading && uploads.length === 0)) && (
         <div className="rounded-3xl border border-dashed border-border-strong bg-card-light px-6 py-16 text-center">
           <div className="folder-box folder-tone-sand mx-auto mb-6 h-24 w-36" aria-hidden />
           <p className="font-display text-xl text-ink">No folders yet</p>

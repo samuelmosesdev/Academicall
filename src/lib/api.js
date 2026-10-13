@@ -110,6 +110,7 @@ export const usersApi = {
 
 export const documentsApi = {
   list: () => api("/documents"),
+  mine: () => api("/documents/mine"),
   get: (id) => api(`/documents/${id}`),
   create: (body) => api("/documents", { method: "POST", body }),
   update: (id, body) => api(`/documents/${id}`, { method: "PATCH", body }),

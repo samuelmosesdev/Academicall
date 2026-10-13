@@ -11,6 +11,7 @@ export const PRO_FEATURES = [
   "Full practice banks — no 15-question cap",
   "Timed exam-mode quizzes",
   "All documents & materials per course",
+  "Upload your own private study materials",
   "Class timetable access",
   "Priority access to new CBT sets",
 ];
@@ -59,7 +60,7 @@ export function isPro(profile) {
   if (!profile) return false;
   if (profile.role === "admin" || profile.role === "agent" || profile.role === "alphaAgent" || profile.role === "courseRep") return true;
   const plan = (profile.plan || profile.subscription || "free").toLowerCase();
-  if (plan === "pro" || plan === "paid" || plan === "premium") return true;
+  if (plan === "pro" || plan === "premium" || plan === "paid" || plan === "annual") return true;
   if (profile.subscriptionExpiresAt?.toDate) {
     return profile.subscriptionExpiresAt.toDate() > new Date();
   }

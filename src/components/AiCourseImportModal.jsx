@@ -10,8 +10,9 @@ import { useAuth } from "../context/AuthContext";
 import { extractCoursesFromFile } from "../lib/geminiGenerate";
 
 /**
- * mode: "direct" = write to courses (admin/agent)
- * mode: "request" = Course Rep → requests for admin approval
+ * mode: "direct" = write to courses (staff)
+ * mode: "courseRep" = publish into the Course Rep's assigned program
+ * mode: "request" = legacy Course Rep approval request
  */
 export default function AiCourseImportModal({
   open,
@@ -19,6 +20,7 @@ export default function AiCourseImportModal({
   mode = "direct",
   defaultFaculty = "",
   defaultDepartment = "",
+  defaultLevel = "",
   onDone,
   onImported,
   studentMode = false,
@@ -42,11 +44,12 @@ export default function AiCourseImportModal({
     try {
       let list = await extractCoursesFromFile(file);
       // Course Rep: force their department
-      if (mode === "request" && defaultDepartment) {
+      if ((mode === "request" || mode === "courseRep") && defaultDepartment) {
         list = list.map((r) => ({
           ...r,
-          department: r.department || defaultDepartment,
+          department: defaultDepartment,
           faculty: r.faculty || defaultFaculty || "",
+          ...(mode === "courseRep" && defaultLevel ? { level: defaultLevel } : {}),
         }));
       }
       setRows(list);
@@ -83,10 +86,17 @@ export default function AiCourseImportModal({
       }
       await Promise.all(valid.map((payload) => coursesApi.create({
         ...payload,
+        ...(mode === "courseRep"
+          ? {
+              department: defaultDepartment,
+              faculty: defaultFaculty || payload.faculty,
+              level: defaultLevel || payload.level,
+            }
+          : {}),
         published: true,
-        source: "ai-import",
+        source: mode === "courseRep" ? "courseRep" : "ai-import",
       })));
-      setMsg(`Imported ${valid.length} course(s).`);
+      setMsg(`Published ${valid.length} course(s).`);
       onDone?.();
       setTimeout(onClose, 1200);
     } catch (e) {
