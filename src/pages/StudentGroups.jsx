@@ -228,7 +228,7 @@ export default function StudentGroups() {
         isCourseRep={profile?.role === "courseRep"}
         onSaved={(g) => {
           if (g) {
-            upsertGroup({ ...g, unreadCount: 0 });
+            upsertGroup({ ...g, unreadCount: 0 }, user?.uid);
             navigate(`/dashboard/groups/${g.id}`);
           }
           refreshGroups();

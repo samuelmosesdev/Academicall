@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Library, ClipboardCheck, MapPin, Clock } from "lucide-react";
+import { ArrowRight, Library, ClipboardCheck, MapPin, Clock, Building2 } from "lucide-react";
 import { classEventsApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { getAcademicScope, matchesAcademicScope } from "../lib/academicScope";
+import { institutionLabel } from "../hooks/useInstitutions";
 
 const toDate = (v) => (v?.toDate ? v.toDate() : v ? new Date(v) : null);
 const normalizeLevel = (value) => String(value || "").trim().toLowerCase().replace(/\s*level\s*/g, "");
@@ -82,7 +83,9 @@ export default function DashboardHero({ profile, firstName }) {
     };
   }, [events, now]);
 
-  const meta = [program || profile?.faculty, level ? `${level} Level` : null].filter(Boolean).join(" · ");
+  const institution = institutionLabel(profile?.institution) || (profile?.institutionId === "uofa" ? "University of Abuja" : "Institution not set");
+  const levelLabel = level ? `${String(level).replace(/\s*level\s*$/i, "").trim()} Level` : null;
+  const meta = [program || profile?.faculty, levelLabel].filter(Boolean).join(" · ");
   const timeFmt = (d) => d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   const dayFmt = (d) => d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
 
@@ -92,7 +95,11 @@ export default function DashboardHero({ profile, firstName }) {
         <img src="/images/campus/library-wide.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover object-[80%_center] opacity-35" />
         <div className="absolute inset-0 bg-gradient-to-r from-midnight via-midnight/90 to-midnight/30" />
         <div className="relative">
-          <p className="eyebrow text-aqua">{meta || "Complete your profile for a personal feed"}</p>
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/85">
+            <Building2 size={13} aria-hidden="true" />
+            {institution}
+          </p>
+          <p className="eyebrow mt-3 text-aqua">{meta || "Complete your profile for a personal feed"}</p>
           <h1 className="mt-5 font-display text-[2.3rem] font-[350] leading-[1.02] tracking-[-0.035em] sm:text-[3rem]">
             Welcome back, <span className="serif-i text-lemon">{firstName}.</span>
           </h1>

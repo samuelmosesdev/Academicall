@@ -211,7 +211,7 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
     loadLatest();
     setActiveGroup(groupId, me?.uid);
     groupsApi.markRead(groupId).catch(() => {});
-    return () => setActiveGroup(null);
+    return () => setActiveGroup(null, me?.uid);
   }, [groupId, loadGroup, loadLatest, me?.uid]);
 
   useEffect(() => {

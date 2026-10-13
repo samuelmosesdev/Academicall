@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { authApi, usersApi } from "../lib/api";
 import { registerFcmToken } from "../lib/fcm";
 import { startRealtime, stopRealtime } from "../lib/realtime";
+import { setGroupsAccount } from "../hooks/useGroups";
 
 const AuthContext = createContext(null);
 
@@ -103,6 +104,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     fcmRegisteredRef.current = false;
     stopRealtime();
+    setGroupsAccount(null);
     localStorage.removeItem("academicall_token");
     setUser(null);
     setProfile(null);
@@ -136,6 +138,7 @@ export function AuthProvider({ children }) {
       const token = localStorage.getItem("academicall_token");
       if (!token) {
         if (!cancelled) {
+          setGroupsAccount(null);
           setUser(null);
           setProfile(null);
           setAuthMode(null);
@@ -153,6 +156,7 @@ export function AuthProvider({ children }) {
         setAuthMode("api");
       } catch (err) {
         console.warn("Stored session invalid, clearing...", err);
+        setGroupsAccount(null);
         localStorage.removeItem("academicall_token");
         if (!cancelled) {
           setUser(null);

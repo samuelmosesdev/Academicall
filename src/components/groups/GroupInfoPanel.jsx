@@ -204,7 +204,7 @@ export default function GroupInfoPanel({ group, me, onClose, onUpdated }) {
     if (!(await appConfirm(isCreator ? "You're the creator. If you're the only member, the group will be deleted." : "You'll stop getting messages from this group. You can ask to rejoin with the link.", { title: `Leave ${group.name}?`, confirmLabel: "Leave group", tone: "danger" }))) return;
     try {
       await groupsApi.leave(group.id);
-      dropGroup(group.id);
+      dropGroup(group.id, me?.uid);
       notify.success("You left the group");
       navigate("/dashboard/groups", { replace: true });
     } catch (err) {
@@ -216,7 +216,7 @@ export default function GroupInfoPanel({ group, me, onClose, onUpdated }) {
     if (!(await appConfirm("Every member loses access to the messages and files. This can't be undone.", { title: `Delete ${group.name}?`, confirmLabel: "Delete group", tone: "danger" }))) return;
     try {
       await groupsApi.remove(group.id);
-      dropGroup(group.id);
+      dropGroup(group.id, me?.uid);
       notify.success("Group deleted");
       navigate("/dashboard/groups", { replace: true });
     } catch (err) {

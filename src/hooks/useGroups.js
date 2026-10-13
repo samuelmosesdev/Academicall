@@ -6,11 +6,12 @@ import { subscribe } from "../lib/realtime";
  * Shared store for the signed-in student's study groups, so the sidebar badge
  * and the Groups page read the same data and update together in real time.
  */
-const state = { groups: [], totalUnread: 0, loading: true, error: "", loaded: false, activeGroupId: null };
+const state = { meId: null, groups: [], totalUnread: 0, loading: true, error: "", loaded: false, activeGroupId: null };
 const subs = new Set();
 let inflight = null;
 let timer = null;
 let wired = false;
+let generation = 0;
 let snapshot = { ...state };
 
 function commit(patch) {
@@ -20,20 +21,28 @@ function commit(patch) {
 }
 
 export async function refreshGroups() {
-  if (!localStorage.getItem("academicall_token")) return;
-  if (inflight) return inflight;
-  inflight = groupsApi
+  const meId = state.meId;
+  if (!meId || !localStorage.getItem("academicall_token")) return;
+  if (inflight?.meId === meId && inflight.generation === generation) return inflight.promise;
+
+  const request = { meId, generation, promise: null };
+  const isCurrent = () => request.generation === generation && state.meId === request.meId;
+  request.promise = groupsApi
     .list()
     .then(({ groups = [] }) => {
+      if (!isCurrent()) return;
       // the open conversation is being read right now
       const list = groups.map((g) => (g.id === state.activeGroupId ? { ...g, unreadCount: 0 } : g));
       commit({ groups: list, totalUnread: list.reduce((n, g) => n + (g.unreadCount || 0), 0), loading: false, loaded: true, error: "" });
     })
-    .catch((err) => commit({ loading: false, error: err.message || "Could not load your groups" }))
+    .catch((err) => {
+      if (isCurrent()) commit({ loading: false, error: err.message || "Could not load your groups" });
+    })
     .finally(() => {
-      inflight = null;
+      if (inflight === request) inflight = null;
     });
-  return inflight;
+  inflight = request;
+  return request.promise;
 }
 
 function refreshSoon(ms = 400) {
@@ -71,29 +80,45 @@ function wire() {
 
 /** Mark which conversation is on screen (its unread count stays at zero). */
 export function setActiveGroup(groupId, meId) {
-  state.meId = meId || state.meId;
+  if (meId && state.meId !== meId) return;
   if (state.activeGroupId === groupId) return;
   const groups = state.groups.map((g) => (g.id === groupId ? { ...g, unreadCount: 0 } : g));
   commit({ activeGroupId: groupId, groups, totalUnread: groups.reduce((n, g) => n + (g.unreadCount || 0), 0) });
 }
 
-export function upsertGroup(group) {
+export function setGroupsAccount(meId) {
+  const nextMeId = meId || null;
+  if (state.meId === nextMeId) return;
+  generation += 1;
+  inflight = null;
+  clearTimeout(timer);
+  state.meId = nextMeId;
+  commit({
+    meId: nextMeId,
+    groups: [],
+    totalUnread: 0,
+    loading: Boolean(nextMeId),
+    loaded: false,
+    error: "",
+    activeGroupId: null,
+  });
+}
+
+export function upsertGroup(group, expectedMeId = state.meId) {
+  if (!expectedMeId || state.meId !== expectedMeId) return;
   const groups = [group, ...state.groups.filter((g) => g.id !== group.id)];
   commit({ groups, totalUnread: groups.reduce((n, g) => n + (g.unreadCount || 0), 0) });
 }
 
-export function dropGroup(groupId) {
+export function dropGroup(groupId, expectedMeId = state.meId) {
+  if (!expectedMeId || state.meId !== expectedMeId) return;
   const groups = state.groups.filter((g) => g.id !== groupId);
   commit({ groups, totalUnread: groups.reduce((n, g) => n + (g.unreadCount || 0), 0) });
 }
 
 export function useGroups(meId) {
   useEffect(() => {
-    if (meId && state.meId && state.meId !== meId) {
-      // a different account signed in on this device
-      commit({ groups: [], totalUnread: 0, loading: true, loaded: false, error: "", activeGroupId: null });
-    }
-    if (meId) state.meId = meId;
+    setGroupsAccount(meId);
     wire();
     if (!state.loaded) refreshGroups();
   }, [meId]);

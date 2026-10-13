@@ -29,7 +29,7 @@ export function StudyInviteRedirect() {
 export default function StudyGroupJoin() {
   const { code } = useParams();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [group, setGroup] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -69,7 +69,7 @@ export default function StudyGroupJoin() {
     try {
       const res = await groupsApi.join(code);
       if (res.status === "active") {
-        upsertGroup({ ...res.group, unreadCount: 0 });
+        upsertGroup({ ...res.group, unreadCount: 0 }, user?.uid);
         notify.success(`You joined ${group.name}`);
         navigate(`/dashboard/groups/${res.group.id}`, { replace: true });
       } else {
