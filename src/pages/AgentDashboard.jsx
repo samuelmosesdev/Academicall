@@ -16,6 +16,8 @@ import { isAgent, isAlpha, isAdmin } from "../lib/roles";
 import { useCbtData } from "../hooks/useCbtData";
 import { useAdminDocuments } from "../hooks/useAdminDocuments";
 import StaffFeed from "../components/StaffFeed";
+import MyAccessCard from "../components/access/MyAccessCard";
+import { can } from "../lib/roles";
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
@@ -37,6 +39,7 @@ export default function AgentDashboard() {
       icon: FileText,
       to: "/agent/documents",
       hint: "Upload reading materials",
+      cap: ["documents.review", "documents.manage"],
     },
     {
       label: "Courses",
@@ -44,6 +47,7 @@ export default function AgentDashboard() {
       icon: BookOpen,
       to: "/agent/courses",
       hint: "Manage course list",
+      cap: ["courses.manage"],
     },
     {
       label: "CBT questions",
@@ -51,8 +55,9 @@ export default function AgentDashboard() {
       icon: ClipboardList,
       to: "/agent/cbt-builder",
       hint: "Add or import questions",
+      cap: ["cbt.manage"],
     },
-  ];
+  ].filter((c) => c.cap.some((k) => can(profile, k)));
 
   return (
     <div className="space-y-7 animate-fade-in">
@@ -68,6 +73,8 @@ export default function AgentDashboard() {
           </div>
         </div>
       </section>
+
+      <MyAccessCard profile={profile} />
 
       {/* Staff HQ card */}
       <button
@@ -116,27 +123,27 @@ export default function AgentDashboard() {
       <div className="rounded-2xl border border-border-subtle bg-bg-panel p-5">
         <h2 className="mb-3 text-sm font-semibold text-text-primary">Quick actions</h2>
         <div className="flex flex-wrap gap-2">
-          <button
+          {can(profile, "documents.manage") && <button
             type="button"
             onClick={() => navigate("/agent/documents")}
             className="flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-bg-app hover:opacity-95"
           >
             <Upload size={15} /> Upload document
-          </button>
-          <button
+          </button>}
+          {can(profile, "courses.manage") && <button
             type="button"
             onClick={() => navigate("/agent/courses")}
             className="flex items-center gap-2 rounded-xl border border-border-subtle px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-bg-panel-alt"
           >
             <BookOpen size={15} /> Add course
-          </button>
-          <button
+          </button>}
+          {can(profile, "cbt.manage") && <button
             type="button"
             onClick={() => navigate("/agent/cbt-builder")}
             className="flex items-center gap-2 rounded-xl border border-border-subtle px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-bg-panel-alt"
           >
             <ClipboardList size={15} /> CBT Builder
-          </button>
+          </button>}
           <button
             type="button"
             onClick={() => navigate("/agent/staff-chat")}
@@ -144,7 +151,7 @@ export default function AgentDashboard() {
           >
             <MessageSquare size={15} /> Staff HQ
           </button>
-          {(isAgent(profile) || isAlpha(profile) || isAdmin(profile)) && (
+          {(isAgent(profile) || isAlpha(profile) || isAdmin(profile)) && can(profile, "courses.manage") && (
             <button
               type="button"
               onClick={() => setShowAiImport(true)}

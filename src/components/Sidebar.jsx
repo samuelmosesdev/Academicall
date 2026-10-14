@@ -15,6 +15,9 @@ import {
   Bell,
   GraduationCap,
   Newspaper,
+  ShieldCheck,
+  FolderArchive,
+  Feather,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import SidebarFooter from "./SidebarFooter";
@@ -25,6 +28,7 @@ const NAV_ITEMS = [
   { label: "Work email", icon: Mail, to: "/admin/mail" },
   { label: "Dept Feeds", icon: Megaphone, to: "/admin/feeds" },
   { label: "Users", icon: Users, to: "/admin/users" },
+  { label: "Staff access", icon: ShieldCheck, to: "/admin/access" },
   { label: "Activity", icon: ScrollText, to: "/admin/activity" },
   { label: "Governance", icon: UserCog, to: "/admin/governance" },
   { label: "Academic catalog", icon: GraduationCap, to: "/admin/governance/academic-catalog" },
@@ -32,6 +36,7 @@ const NAV_ITEMS = [
   { label: "Notifications", icon: Bell, to: "/admin/notifications" },
   { label: "Agents", icon: UserCog, to: "/admin/agents" },
   { label: "Documents", icon: FileText, to: "/admin/documents" },
+  { label: "Document Center", icon: FolderArchive, to: "/admin/files" },
   { label: "Courses", icon: BookOpen, to: "/admin/courses" },
   { label: "CBT Builder", icon: ClipboardList, to: "/admin/cbt-builder" },
   { label: "Requests", icon: ClipboardCheck, to: "/admin/requests" },
@@ -39,6 +44,7 @@ const NAV_ITEMS = [
   { label: "Payments & Subscription", icon: Wallet, to: "/admin/payments" },
   { label: "Announcements", icon: Megaphone, to: "/admin/announcements" },
   { label: "News desk", icon: Newspaper, to: "/news/desk" },
+  { label: "Secretariat", icon: Feather, to: "/secretariat" },
   { label: "Settings", icon: Settings, to: "/admin/settings" },
 ];
 

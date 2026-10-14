@@ -1,4 +1,5 @@
 import {
+  Feather,
   LayoutDashboard,
   BookOpen,
   ClipboardCheck,
@@ -19,6 +20,7 @@ import {
   PenSquare,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { isNewsAgent, isSecretary } from "../lib/roles";
 import { useAuth } from "../context/AuthContext";
 import { isPro } from "../lib/subscription";
 import { useUserDashboardData } from "../hooks/useUserDashboardData";
@@ -35,6 +37,7 @@ const NAV_ITEMS = [
   { label: "Vault", icon: ShieldCheck, to: "/dashboard/vault" },
   { label: "News", icon: Newspaper, to: "/news" },
   { label: "News desk", icon: PenSquare, to: "/news/desk", newsAgentOnly: true },
+  { label: "Secretariat", icon: Feather, to: "/secretariat", secretaryOnly: true },
   { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice" },
   { label: "Reading Hub", icon: Library, to: "/dashboard/reading-hub" },
   { label: "Reference", icon: BookMarked, to: "/dashboard/reference" },
@@ -71,7 +74,8 @@ export default function UserSidebar({ onNavigate }) {
       <nav className="flex-1">
         {NAV_ITEMS.filter((item) => {
           if (item.courseRepOnly) return isRep;
-          if (item.newsAgentOnly) return profile?.role === "newsAgent";
+          if (item.newsAgentOnly) return isNewsAgent(profile);
+          if (item.secretaryOnly) return isSecretary(profile);
           return true;
         }).map((item) => {
           if (item.section) return <p key={item.section} className="nav-section">{item.section}</p>;

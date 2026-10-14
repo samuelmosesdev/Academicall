@@ -40,6 +40,17 @@ function getToken() {
   return localStorage.getItem("academicall_token");
 }
 
+function handleAccessSignals(status, data) {
+  if (typeof window === "undefined") return;
+  const path = window.location.pathname;
+  if (status === 401 && data?.code === "session_revoked") {
+    localStorage.removeItem("academicall_token");
+    if (!path.startsWith("/login")) window.location.assign("/login?signedOut=1");
+  } else if (status === 403 && data?.code === "password_change_required" && path !== "/change-password") {
+    window.location.assign("/change-password");
+  }
+}
+
 export async function api(endpoint, options = {}) {
   const token = getToken();
 
@@ -62,6 +73,7 @@ export async function api(endpoint, options = {}) {
 
     if (!res.ok) {
       console.error("API Error Response:", data);
+      handleAccessSignals(res.status, data);
       const details = Array.isArray(data.error)
         ? data.error.map((item) => item.message || item.path?.join(".")).filter(Boolean).join(", ")
         : data.reason || data.error;
@@ -96,11 +108,14 @@ export const authApi = {
 export const usersApi = {
   me: () => api("/users/me"),
   updateMe: (body) => api("/users/me", { method: "PATCH", body }),
-  list: () => api("/users"),
+  list: () => api("/users?limit=500"),
   get: (id) => api(`/users/${id}`),
   update: (id, body) => api(`/users/${id}`, { method: "PATCH", body }),
   remove: (id) => api(`/users/${id}`, { method: "DELETE" }),
   resetPassword: (id) => api(`/users/${id}/reset-password`, { method: "POST" }),
+  forcePasswordChange: (id, signOut = true) => api(`/users/${id}/force-password-change`, { method: "POST", body: { signOut } }),
+  signOutEverywhere: (id) => api(`/users/${id}/sign-out`, { method: "POST" }),
+  updateAccess: (id, body) => api(`/users/${id}/access`, { method: "PUT", body }),
   createAgent: (body) => api("/users/agents", { method: "POST", body }),
   courseRepStatus: (program, level) =>
     api(
@@ -161,6 +176,8 @@ export const notificationsApi = {
   registerFcmToken: (body) => api("/notifications/fcm-token", { method: "POST", body }),
   removeFcmToken: (body) => api("/notifications/fcm-token", { method: "DELETE", body }),
 };
+
+export const STUDENT_NOTIFICATIONS_UPDATED_EVENT = "student-notifications-updated";
 
 export const departmentApi = {
   join: (body) => api("/department/join", { method: "POST", body }),

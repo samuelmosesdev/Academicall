@@ -42,7 +42,12 @@ const CATEGORIES = [
   {
     id: "newsAgents",
     label: "News Agents",
-    match: (u) => u.role === "newsAgent",
+    match: (u) => (u.staffTags || []).includes("news") || u.role === "newsAgent",
+  },
+  {
+    id: "secretaries",
+    label: "Secretaries",
+    match: (u) => (u.staffTags || []).includes("secretary"),
   },
   {
     id: "agents",
@@ -131,11 +136,12 @@ export default function AdminUsers() {
   }, [users, category, faculty, department, program, level, search]);
 
   const counts = useMemo(() => {
-    const c = { students: 0, courseReps: 0, newsAgents: 0, agents: 0, all: users.length };
+    const c = { students: 0, courseReps: 0, newsAgents: 0, secretaries: 0, agents: 0, all: users.length };
     users.forEach((u) => {
       if (!u.role || u.role === "user") c.students += 1;
       if (u.role === "courseRep") c.courseReps += 1;
-      if (u.role === "newsAgent") c.newsAgents += 1;
+      if ((u.staffTags || []).includes("news") || u.role === "newsAgent") c.newsAgents += 1;
+      if ((u.staffTags || []).includes("secretary")) c.secretaries += 1;
       if (u.role === "agent" || u.role === "alphaAgent") c.agents += 1;
     });
     return c;

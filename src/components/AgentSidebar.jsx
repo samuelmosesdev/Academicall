@@ -7,20 +7,37 @@ import {
   Megaphone,
   MessageSquare,
   Mail,
+  Users,
+  FolderArchive,
+  ClipboardCheck,
+  Wallet,
+  ScrollText,
+  Newspaper,
+  Feather,
+  ShieldCheck,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { canAny, hasTag } from "../lib/roles";
 import SidebarFooter from "./SidebarFooter";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/agent" },
   { label: "Staff HQ", icon: MessageSquare, to: "/agent/staff-chat" },
   { label: "Work email", icon: Mail, to: "/agent/mail" },
-  { label: "Feed & Posts", icon: Megaphone, to: "/agent/announcements" },
+  { label: "Users", icon: Users, to: "/agent/users", caps: ["users.view"] },
+  { label: "Staff access", icon: ShieldCheck, to: "/agent/access", caps: ["users.news", "users.secretary"] },
+  { label: "Feed & Posts", icon: Megaphone, to: "/agent/announcements", caps: ["announcements.publish"] },
   { label: "Dept Feeds", icon: Megaphone, to: "/agent/feeds" },
-  { label: "Documents", icon: FileText, to: "/agent/documents" },
-  { label: "Courses", icon: BookOpen, to: "/agent/courses" },
-  { label: "CBT Builder", icon: ClipboardList, to: "/agent/cbt-builder" },
+  { label: "Documents", icon: FileText, to: "/agent/documents", caps: ["documents.review", "documents.manage"] },
+  { label: "Document Center", icon: FolderArchive, to: "/agent/files", caps: ["files.center"] },
+  { label: "Courses", icon: BookOpen, to: "/agent/courses", caps: ["courses.manage"] },
+  { label: "CBT Builder", icon: ClipboardList, to: "/agent/cbt-builder", caps: ["cbt.manage"] },
+  { label: "Requests", icon: ClipboardCheck, to: "/agent/requests", caps: ["requests.review"] },
+  { label: "Payments", icon: Wallet, to: "/agent/payments", caps: ["payments.review"] },
+  { label: "Activity log", icon: ScrollText, to: "/agent/activity-log", caps: ["activity.view"] },
+  { label: "News desk", icon: Newspaper, to: "/news/desk", duty: "news" },
+  { label: "Secretariat", icon: Feather, to: "/secretariat", duty: "secretary" },
 ];
 
 export default function AgentSidebar({ onNavigate }) {
@@ -53,7 +70,7 @@ export default function AgentSidebar({ onNavigate }) {
       </div>
 
       <nav className="flex-1 space-y-1">
-        {NAV_ITEMS.map(({ label, icon: Icon, to }) => {
+        {NAV_ITEMS.filter((item) => (!item.caps || canAny(profile, ...item.caps)) && (!item.duty || hasTag(profile, item.duty))).map(({ label, icon: Icon, to }) => {
           const isActive =
             to === "/agent"
               ? location.pathname === "/agent"

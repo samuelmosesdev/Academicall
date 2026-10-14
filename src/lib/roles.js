@@ -18,15 +18,38 @@ export const ROLE_LABELS = {
   user: "Student",
 };
 
-/** Roles an Admin may assign */
+/** Roles an Admin may assign (News and Secretary are duties, not roles) */
 export const ADMIN_ASSIGNABLE = [
   "user",
   "courseRep",
-  "newsAgent",
   "agent",
   "alphaAgent",
   "admin",
 ];
+
+/** Add-on duties any user can hold on top of their role */
+export const DUTY_LABELS = { news: "News Agent", secretary: "Secretary" };
+
+export function hasTag(profile, tag) {
+  return Array.isArray(profile?.staffTags) && profile.staffTags.includes(tag);
+}
+
+/**
+ * Capability check. The API computes each person's capabilities (the admin
+ * chooses them per agent); admins always have all of them.
+ */
+export function can(profile, cap) {
+  if (roleOf(profile) === "admin") return true;
+  return Array.isArray(profile?.capabilities) && profile.capabilities.includes(cap);
+}
+export function canAny(profile, ...caps) {
+  return caps.some((c) => can(profile, c));
+}
+
+/** Runs the Secretariat */
+export function isSecretary(profile) {
+  return roleOf(profile) === "admin" || hasTag(profile, "secretary");
+}
 
 /** Roles an Alpha Agent may assign (never admin) */
 export const ALPHA_ASSIGNABLE = ["user", "courseRep"];
@@ -52,7 +75,7 @@ export function isCourseRep(profile) {
 }
 
 export function isNewsAgent(profile) {
-  return roleOf(profile) === ROLES.NEWS_AGENT;
+  return hasTag(profile, "news") || roleOf(profile) === ROLES.NEWS_AGENT;
 }
 
 export function isStaff(profile) {
@@ -62,8 +85,7 @@ export function isStaff(profile) {
 
 /** Can write and publish Academicall News */
 export function canWriteNews(profile) {
-  const r = roleOf(profile);
-  return r === ROLES.NEWS_AGENT || r === ROLES.ADMIN;
+  return roleOf(profile) === ROLES.ADMIN || isNewsAgent(profile);
 }
 
 /** Can approve requests */
@@ -114,6 +136,10 @@ export function nextOnboardingPath(profile) {
 export function matchesRequiredRole(profile, requiredRole) {
   if (!requiredRole) return true;
   const r = roleOf(profile);
+  if (typeof requiredRole === "string" && requiredRole.startsWith("cap:")) {
+    return requiredRole.slice(4).split("|").some((c) => can(profile, c));
+  }
+  if (requiredRole === "secretariat") return isSecretary(profile);
   if (Array.isArray(requiredRole)) return requiredRole.includes(r);
   if (requiredRole === "staff") return isStaff(profile);
   if (requiredRole === "approver") return canApprove(profile);

@@ -64,6 +64,9 @@ import StudentVault from "./pages/StudentVault";
 import NewsHome from "./pages/NewsHome";
 import NewsArticle from "./pages/NewsArticle";
 import NewsDesk from "./pages/NewsDesk";
+import AdminStaffAccess from "./pages/AdminStaffAccess";
+import DocumentCenter from "./pages/DocumentCenter";
+import { SecretariatLayout, SecretariatOverview, SecretariatRecords, SecretariatRecord, SecretariatJournal } from "./pages/Secretariat";
 const StudentGroups = lazy(() => import("./pages/StudentGroups"));
 const StudyGroupJoin = lazy(() => import("./pages/StudyGroupJoin"));
 const StudyInviteRedirect = lazy(() =>
@@ -83,12 +86,25 @@ export default function App() {
             <Route
               path="/news/desk"
               element={
-                <ProtectedRoute requiredRole={["newsAgent", "admin"]}>
+                <ProtectedRoute requiredRole="newsDesk">
                   <NewsDesk />
                 </ProtectedRoute>
               }
             />
             <Route path="/news/:slug" element={<NewsArticle />} />
+            <Route
+              path="/secretariat"
+              element={
+                <ProtectedRoute requiredRole="secretariat">
+                  <SecretariatLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<SecretariatOverview />} />
+              <Route path="records" element={<SecretariatRecords />} />
+              <Route path="records/:id" element={<SecretariatRecord />} />
+              <Route path="journal" element={<SecretariatJournal />} />
+            </Route>
             <Route path="/login" element={<Login />} />
             <Route path="/login-redirect" element={<LoginRedirect />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -130,6 +146,8 @@ export default function App() {
             >
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="access" element={<AdminStaffAccess />} />
+              <Route path="files" element={<DocumentCenter />} />
               <Route path="users/:userId" element={<AdminUserDetail />} />
               <Route path="users/:userId/activity" element={<AdminUserActivity />} />
               <Route path="activity" element={<AdminActivity />} />
@@ -161,11 +179,70 @@ export default function App() {
               }
             >
               <Route index element={<AgentDashboard />} />
-              <Route path="documents" element={<AdminDocuments />} />
-              <Route path="courses" element={<AdminCourses />} />
-              <Route path="cbt-builder" element={<AdminCbtBuilder />} />
-              <Route path="requests" element={<AdminRequests />} />
-              <Route path="announcements" element={<AdminAnnouncements />} />
+              <Route
+                path="documents"
+                element={
+                  <ProtectedRoute requiredRole="cap:documents.review|documents.manage">
+                    <AdminDocuments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="courses"
+                element={
+                  <ProtectedRoute requiredRole="cap:courses.manage">
+                    <AdminCourses />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="cbt-builder"
+                element={
+                  <ProtectedRoute requiredRole="cap:cbt.manage">
+                    <AdminCbtBuilder />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="requests"
+                element={
+                  <ProtectedRoute requiredRole="cap:requests.review">
+                    <AdminRequests />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="announcements"
+                element={
+                  <ProtectedRoute requiredRole="cap:announcements.publish">
+                    <AdminAnnouncements />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="files"
+                element={
+                  <ProtectedRoute requiredRole="cap:files.center">
+                    <DocumentCenter />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="payments"
+                element={
+                  <ProtectedRoute requiredRole="cap:payments.review">
+                    <AdminPayments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="access"
+                element={
+                  <ProtectedRoute requiredRole="cap:users.news|users.secretary">
+                    <AdminStaffAccess />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="feeds" element={<StaffFeedPage />} />
               <Route path="staff-chat" element={<StaffChat />} />
               <Route path="settings" element={<AgentSettings />} />
@@ -173,7 +250,7 @@ export default function App() {
               <Route
                 path="users"
                 element={
-                  <ProtectedRoute requiredRole="approver">
+                  <ProtectedRoute requiredRole="cap:users.view">
                     <AdminUsers />
                   </ProtectedRoute>
                 }
@@ -181,7 +258,7 @@ export default function App() {
               <Route
                 path="users/:userId"
                 element={
-                  <ProtectedRoute requiredRole="approver">
+                  <ProtectedRoute requiredRole="cap:users.view">
                     <AdminUserDetail />
                   </ProtectedRoute>
                 }
@@ -189,7 +266,7 @@ export default function App() {
               <Route
                 path="activity-log"
                 element={
-                  <ProtectedRoute requiredRole="approver">
+                  <ProtectedRoute requiredRole="cap:activity.view">
                     <AdminActivityLog />
                   </ProtectedRoute>
                 }

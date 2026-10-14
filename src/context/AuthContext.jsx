@@ -59,8 +59,9 @@ export function AuthProvider({ children }) {
       photoUrl: details.photoURL || details.photoUrl || null,
       profileComplete: true,
     });
-    setUser(data.user);
-    setProfile(data.user);
+    const nextUser = { ...data.user, uid: data.user.id };
+    setUser(nextUser);
+    setProfile(nextUser);
     return data.user.uniqueId;
   };
 

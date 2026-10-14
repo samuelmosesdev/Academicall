@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { LoadingState } from "./ui";
+import { matchesRequiredRole } from "../lib/roles";
 
 function homeForRole(role) {
   if (role === "admin") return "/admin";
@@ -57,16 +58,8 @@ export default function ProtectedRoute({ children, requiredRole }) {
     return <Navigate to={homeForRole(role)} replace />;
   }
 
-  if (requiredRole) {
-    const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    // Special: approver
-    if (requiredRole === "approver") {
-      if (!(role === "admin" || role === "alphaAgent")) {
-        return <Navigate to={homeForRole(role)} replace />;
-      }
-    } else if (!allowed.includes(role)) {
-      return <Navigate to={homeForRole(role)} replace />;
-    }
+  if (requiredRole && !matchesRequiredRole(profile || { role }, requiredRole)) {
+    return <Navigate to={homeForRole(role)} replace />;
   }
 
   // Suspended agents
