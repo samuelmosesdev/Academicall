@@ -14,6 +14,9 @@ import {
   Building2,
   FolderOpen,
   MessagesSquare,
+  ShieldCheck,
+  Newspaper,
+  PenSquare,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -29,6 +32,9 @@ const NAV_ITEMS = [
   { label: "Programme", icon: Building2, to: "/dashboard/department", badgeKey: "dept" },
   { label: "Groups", icon: MessagesSquare, to: "/dashboard/groups", badgeKey: "groups" },
   { label: "Materials", icon: FolderOpen, to: "/dashboard/materials" },
+  { label: "Vault", icon: ShieldCheck, to: "/dashboard/vault" },
+  { label: "News", icon: Newspaper, to: "/news" },
+  { label: "News desk", icon: PenSquare, to: "/news/desk", newsAgentOnly: true },
   { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice" },
   { label: "Reading Hub", icon: Library, to: "/dashboard/reading-hub" },
   { label: "Reference", icon: BookMarked, to: "/dashboard/reference" },
@@ -63,7 +69,11 @@ export default function UserSidebar({ onNavigate }) {
       </button>
 
       <nav className="flex-1">
-        {NAV_ITEMS.filter((item) => (item.courseRepOnly ? isRep : true)).map((item) => {
+        {NAV_ITEMS.filter((item) => {
+          if (item.courseRepOnly) return isRep;
+          if (item.newsAgentOnly) return profile?.role === "newsAgent";
+          return true;
+        }).map((item) => {
           if (item.section) return <p key={item.section} className="nav-section">{item.section}</p>;
           const { label, icon: Icon, to, proOnly, badgeKey } = item;
           const isActive =

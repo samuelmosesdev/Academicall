@@ -59,6 +59,11 @@ import StudentDepartment from "./pages/StudentDepartment";
 import StudentMaterials from "./pages/StudentMaterials";
 import StudentMaterialFolder from "./pages/StudentMaterialFolder";
 import StudentMaterialsLibrary from "./pages/StudentMaterialsLibrary";
+import StudentDocumentsComingSoon from "./pages/StudentDocumentsComingSoon";
+import StudentVault from "./pages/StudentVault";
+import NewsHome from "./pages/NewsHome";
+import NewsArticle from "./pages/NewsArticle";
+import NewsDesk from "./pages/NewsDesk";
 const StudentGroups = lazy(() => import("./pages/StudentGroups"));
 const StudyGroupJoin = lazy(() => import("./pages/StudyGroupJoin"));
 const StudyInviteRedirect = lazy(() =>
@@ -74,6 +79,16 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/news" element={<NewsHome />} />
+            <Route
+              path="/news/desk"
+              element={
+                <ProtectedRoute requiredRole={["newsAgent", "admin"]}>
+                  <NewsDesk />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/news/:slug" element={<NewsArticle />} />
             <Route path="/login" element={<Login />} />
             <Route path="/login-redirect" element={<LoginRedirect />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -184,7 +199,7 @@ export default function App() {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute requiredRole={["user", "courseRep"]}>
+                <ProtectedRoute requiredRole={["user", "courseRep", "newsAgent"]}>
                   <UserLayout />
                 </ProtectedRoute>
               }
@@ -205,9 +220,11 @@ export default function App() {
               <Route path="groups/:groupId" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudentGroups /></Suspense>} />
               <Route path="groups/join/:code" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudyGroupJoin /></Suspense>} />
               <Route path="materials" element={<StudentMaterials />} />
-              <Route path="documents" element={<Navigate to="/dashboard/materials" replace />} />
+              <Route path="documents" element={<StudentDocumentsComingSoon />} />
               <Route path="materials/folder/:courseCode" element={<StudentMaterialFolder />} />
               <Route path="materials/library" element={<StudentMaterialsLibrary />} />
+              <Route path="vault" element={<StudentVault />} />
+              <Route path="vault/:folderId" element={<StudentVault />} />
               <Route path="settings" element={<StudentSettings />} />
               <Route
                 path="course-rep"

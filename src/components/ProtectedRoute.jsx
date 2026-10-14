@@ -26,7 +26,7 @@ export default function ProtectedRoute({ children, requiredRole }) {
     return <Navigate to="/complete-profile" replace />;
   }
 
-  const isStudentSide = role === "user" || role === "courseRep";
+  const isStudentSide = role === "user" || role === "courseRep" || role === "newsAgent";
   const verified = Boolean((profile && profile.emailVerified) || (user && user.emailVerified));
   const needsEmailVerification = isStudentSide && !verified;
   const needsProfileSetup = isStudentSide && verified && !(profile && profile.profileComplete);

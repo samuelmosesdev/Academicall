@@ -14,6 +14,7 @@ import {
   Mail,
   Bell,
   GraduationCap,
+  Newspaper,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import SidebarFooter from "./SidebarFooter";
@@ -37,6 +38,7 @@ const NAV_ITEMS = [
   { label: "Activity log", icon: ScrollText, to: "/admin/activity-log" },
   { label: "Payments & Subscription", icon: Wallet, to: "/admin/payments" },
   { label: "Announcements", icon: Megaphone, to: "/admin/announcements" },
+  { label: "News desk", icon: Newspaper, to: "/news/desk" },
   { label: "Settings", icon: Settings, to: "/admin/settings" },
 ];
 

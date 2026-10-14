@@ -5,6 +5,7 @@ export const ROLES = {
   ALPHA: "alphaAgent",
   AGENT: "agent",
   COURSE_REP: "courseRep",
+  NEWS_AGENT: "newsAgent",
   USER: "user",
 };
 
@@ -13,6 +14,7 @@ export const ROLE_LABELS = {
   alphaAgent: "Agent Alpha (Elevated)",
   agent: "Agent (Beta)",
   courseRep: "Course Rep",
+  newsAgent: "News Agent",
   user: "Student",
 };
 
@@ -20,6 +22,7 @@ export const ROLE_LABELS = {
 export const ADMIN_ASSIGNABLE = [
   "user",
   "courseRep",
+  "newsAgent",
   "agent",
   "alphaAgent",
   "admin",
@@ -48,9 +51,19 @@ export function isCourseRep(profile) {
   return roleOf(profile) === ROLES.COURSE_REP;
 }
 
+export function isNewsAgent(profile) {
+  return roleOf(profile) === ROLES.NEWS_AGENT;
+}
+
 export function isStaff(profile) {
   const r = roleOf(profile);
   return r === ROLES.ADMIN || r === ROLES.ALPHA || r === ROLES.AGENT;
+}
+
+/** Can write and publish Academicall News */
+export function canWriteNews(profile) {
+  const r = roleOf(profile);
+  return r === ROLES.NEWS_AGENT || r === ROLES.ADMIN;
 }
 
 /** Can approve requests */
@@ -83,7 +96,7 @@ export function nextOnboardingPath(profile) {
   if (!profile) return null;
   if (profile.mustChangePassword) return "/change-password";
   const r = roleOf(profile);
-  const isStudentSide = r === ROLES.USER || r === ROLES.COURSE_REP;
+  const isStudentSide = r === ROLES.USER || r === ROLES.COURSE_REP || r === ROLES.NEWS_AGENT;
   if (isStudentSide) {
     if (!profile.emailVerified) return "/verify-email";
     if (!profile.profileComplete) return "/complete-profile";
@@ -104,7 +117,8 @@ export function matchesRequiredRole(profile, requiredRole) {
   if (Array.isArray(requiredRole)) return requiredRole.includes(r);
   if (requiredRole === "staff") return isStaff(profile);
   if (requiredRole === "approver") return canApprove(profile);
-  if (requiredRole === "user") return r === "user" || r === "courseRep";
+  if (requiredRole === "user") return r === "user" || r === "courseRep" || r === "newsAgent";
+  if (requiredRole === "newsDesk") return canWriteNews(profile);
   if (requiredRole === "agent") return r === "agent" || r === "alphaAgent";
   return r === requiredRole;
 }

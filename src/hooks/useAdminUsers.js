@@ -37,7 +37,7 @@ export function useAdminUsers() {
     // Firestore "in" supports up to 30 values.
     const q = query(
       collection(db, "users"),
-      where("role", "in", ["user", "courseRep", "agent", "alphaAgent"]),
+      where("role", "in", ["user", "courseRep", "newsAgent", "agent", "alphaAgent"]),
       limit(500)
     );
 
@@ -71,6 +71,7 @@ export function useAdminUsers() {
                 return (
                   r === "user" ||
                   r === "courseRep" ||
+                  r === "newsAgent" ||
                   r === "agent" ||
                   r === "alphaAgent"
                 );

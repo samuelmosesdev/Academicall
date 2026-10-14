@@ -40,6 +40,11 @@ const CATEGORIES = [
     match: (u) => u.role === "courseRep",
   },
   {
+    id: "newsAgents",
+    label: "News Agents",
+    match: (u) => u.role === "newsAgent",
+  },
+  {
     id: "agents",
     label: "Agents",
     match: (u) => u.role === "agent" || u.role === "alphaAgent",
@@ -98,13 +103,13 @@ export default function AdminUsers() {
     }
   }, [highlightedUserId]);
 
-  const departments = useMemo(() => departmentsFor(faculty), [faculty]);
-  const programs = useMemo(() => programsFor(department), [department]);
+  const departments = useMemo(() => departmentsFor(faculty), [departmentsFor, faculty]);
+  const programs = useMemo(() => programsFor(department), [department, programsFor]);
   const repDepartments = useMemo(
     () => departmentsFor(repFaculty),
-    [repFaculty]
+    [departmentsFor, repFaculty]
   );
-  const repPrograms = useMemo(() => programsFor(repDepartment), [repDepartment]);
+  const repPrograms = useMemo(() => programsFor(repDepartment), [programsFor, repDepartment]);
 
   const filtered = useMemo(() => {
     const cat = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
@@ -126,10 +131,11 @@ export default function AdminUsers() {
   }, [users, category, faculty, department, program, level, search]);
 
   const counts = useMemo(() => {
-    const c = { students: 0, courseReps: 0, agents: 0, all: users.length };
+    const c = { students: 0, courseReps: 0, newsAgents: 0, agents: 0, all: users.length };
     users.forEach((u) => {
       if (!u.role || u.role === "user") c.students += 1;
       if (u.role === "courseRep") c.courseReps += 1;
+      if (u.role === "newsAgent") c.newsAgents += 1;
       if (u.role === "agent" || u.role === "alphaAgent") c.agents += 1;
     });
     return c;

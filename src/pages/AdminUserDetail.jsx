@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Ban, CheckCircle2, GraduationCap, KeyRound } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, GraduationCap, KeyRound, Newspaper } from "lucide-react";
 import { usersApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { logActivity } from "../lib/activityLog";
-import { ROLE_LABELS } from "../lib/roles";
+import { isAdmin, ROLE_LABELS } from "../lib/roles";
 import { LEVELS } from "../data/facultyData";
 import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
+import { appConfirm } from "../lib/dialogs";
 
 const fieldClass = "rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary";
 
@@ -48,8 +49,8 @@ export default function AdminUserDetail() {
 
   useEffect(() => { load(); }, [load]);
 
-  const repDepartments = useMemo(() => departmentsFor(repFaculty), [repFaculty]);
-  const repPrograms = useMemo(() => programsFor(repDepartment), [repDepartment]);
+  const repDepartments = useMemo(() => departmentsFor(repFaculty), [departmentsFor, repFaculty]);
+  const repPrograms = useMemo(() => programsFor(repDepartment), [programsFor, repDepartment]);
   const actorId = adminUser?.uid || adminUser?.id;
 
   async function makeCourseRep() {
@@ -121,6 +122,38 @@ export default function AdminUserDetail() {
       await load();
     } catch (err) {
       setActionError(err.message || "Failed to remove Course Rep.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setNewsAgent(on) {
+    const role = on ? "newsAgent" : "user";
+    const message = on
+      ? `Make ${user.name || user.email} a News Agent? They'll be able to write and publish Academicall News.`
+      : "Remove the News Agent role?";
+    if (!(await appConfirm(message))) return;
+    setBusy(true);
+    setActionError("");
+    try {
+      const response = await usersApi.update(userId, {
+        role,
+        courseRepMeta: null,
+        assignedBy: actorId,
+        assignedAt: new Date().toISOString(),
+      });
+      await logActivity({
+        actorUid: actorId,
+        actorName: adminProfile?.name || adminUser?.email,
+        action: "role.change",
+        targetUid: userId,
+        targetName: user.name || user.email,
+        meta: { from: user.role || "user", to: role },
+      });
+      setUser((previous) => ({ ...previous, ...(response.user || response), role }));
+      await load();
+    } catch (err) {
+      setActionError(err.message || "Couldn't change the News Agent role.");
     } finally {
       setBusy(false);
     }
@@ -209,6 +242,15 @@ export default function AdminUserDetail() {
         <button type="button" disabled={busy} onClick={resetPassword} className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm"><KeyRound size={15} /> Reset password</button>
       </div>
       {resetResult && <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">Temp password for <strong>{resetResult.email}</strong>: <code className="font-mono font-bold">{resetResult.tempPassword}</code><p className="mt-1 text-xs text-text-muted">Shown once. Share securely.</p></div>}
+      {isAdmin(adminProfile) && ["user", "newsAgent"].includes(user.role || "user") && (
+        <div className="rounded-xl border border-border-subtle bg-bg-panel p-5">
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold"><Newspaper size={16} /> News Agent</h2>
+          <p className="mb-3 text-sm text-text-muted">News Agents write, publish and moderate Academicall News. They keep their student dashboard.</p>
+          {user.role === "newsAgent"
+            ? <button type="button" disabled={busy} onClick={() => setNewsAgent(false)} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Remove News Agent role</button>
+            : <button type="button" disabled={busy} onClick={() => setNewsAgent(true)} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">Assign as News Agent</button>}
+        </div>
+      )}
       <div className="rounded-xl border border-border-subtle bg-bg-panel p-5"><h2 className="mb-3 flex items-center gap-2 text-sm font-semibold"><GraduationCap size={16} /> Course Rep</h2>{user.role === "courseRep" ? <button type="button" disabled={busy} onClick={removeCourseRep} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Remove Course Rep role</button> : <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><select value={repFaculty} onChange={(event) => { setRepFaculty(event.target.value); setRepDepartment(""); setRepProgram(""); }} className={fieldClass}><option value="">Faculty</option>{faculties.map((faculty) => <option key={faculty.name} value={faculty.name}>{faculty.name}</option>)}</select><select value={repDepartment} onChange={(event) => { setRepDepartment(event.target.value); setRepProgram(""); }} className={fieldClass} disabled={!repFaculty}><option value="">Department</option>{repDepartments.map((department) => <option key={department} value={department}>{department}</option>)}</select><select value={repProgram} onChange={(event) => setRepProgram(event.target.value)} className={fieldClass} disabled={!repDepartment || repPrograms.length === 0}><option value="">{repPrograms.length ? "Program *" : "No programs configured"}</option>{repPrograms.map((program) => <option key={program} value={program}>{program}</option>)}</select><select value={repLevel} onChange={(event) => setRepLevel(event.target.value)} className={fieldClass}><option value="">Level *</option>{LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}</select></div><button type="button" disabled={busy || !repProgram || !repLevel} onClick={makeCourseRep} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60">Assign as Course Rep</button></div>}</div>
     </div>
   );
