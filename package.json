@@ -12,7 +12,7 @@
   "dependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.1.1",
-    "@capacitor/cli": "^8.5.0",
+    "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.0",
     "@capacitor/network": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.2",
@@ -20,11 +20,11 @@
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
-    "@prisma/client": "6.19.0",
+    "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "firebase": "^12.17.1",
+    "firebase": "^12.19.0",
     "google-auth-library": "^11.0.2",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
@@ -35,7 +35,7 @@
     "react-pdf": "^11.0.0",
     "react-router-dom": "^7.18.2",
     "recharts": "^3.10.1",
-    "xlsx": "^0.18.5",
+    "xlsx": "npm:@e965/xlsx@^0.20.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -49,12 +49,20 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "autoprefixer": "^10.5.4",
-    "firebase-tools": "^15.28.1",
+    "firebase-tools": "^15.33.0",
     "oxlint": "^1.71.0",
     "postcss": "^8.5.25",
-    "prisma": "6.19.0",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vite": "^8.1.1"
+  },
+  "overrides": {
+    "@google-cloud/pubsub": "^6.1.0",
+    "@grpc/grpc-js": "^1.13.6",
+    "basic-ftp": "^6.2.3",
+    "chokidar": "^4.0.3",
+    "deepmerge-ts": "^8.0.2",
+    "uuid": "^11.1.1"
   }
 }

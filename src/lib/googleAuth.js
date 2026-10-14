@@ -1,4 +1,7 @@
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  // Keep this public web client ID in sync with Academicall-api/render.yaml.
+  "307015602920-v39vhisv32vb15sjastrftuc3s4siq95.apps.googleusercontent.com";
 const GIS_SCRIPT_URL = "https://accounts.google.com/gsi/client";
 let gisScriptPromise;
 
