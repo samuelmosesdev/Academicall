@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, ExternalLink, FileText, Crown, Lock } from "lucide-react";
+import { ArrowLeft, BookOpen, FileText, Crown, Lock } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useStudentDocuments } from "../hooks/useStudentDocuments";
 import { FREE_LIMITS, isPro } from "../lib/subscription";

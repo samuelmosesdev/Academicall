@@ -1,9 +1,11 @@
 import {
+  GraduationCap,
   LayoutDashboard,
   FileText,
   ClipboardList,
   BookOpen,
   Settings,
+  LogOut,
   Megaphone,
   MessageSquare,
   Mail,
@@ -19,8 +21,8 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { canAny, hasTag } from "../lib/roles";
-import SidebarFooter from "./SidebarFooter";
 
+/** Each item shows only when the admin has given this agent the permission. */
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/agent" },
   { label: "Staff HQ", icon: MessageSquare, to: "/agent/staff-chat" },
@@ -31,6 +33,7 @@ const NAV_ITEMS = [
   { label: "Dept Feeds", icon: Megaphone, to: "/agent/feeds" },
   { label: "Documents", icon: FileText, to: "/agent/documents", caps: ["documents.review", "documents.manage"] },
   { label: "Document Center", icon: FolderArchive, to: "/agent/files", caps: ["files.center"] },
+  { label: "Academics", icon: GraduationCap, to: "/agent/academics", caps: ["academics.manage"] },
   { label: "Courses", icon: BookOpen, to: "/agent/courses", caps: ["courses.manage"] },
   { label: "CBT Builder", icon: ClipboardList, to: "/agent/cbt-builder", caps: ["cbt.manage"] },
   { label: "Requests", icon: ClipboardCheck, to: "/agent/requests", caps: ["requests.review"] },
@@ -43,7 +46,7 @@ const NAV_ITEMS = [
 export default function AgentSidebar({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, logout } = useAuth();
   const roleLabel =
     profile?.role === "alphaAgent"
       ? "Alpha Agent"
@@ -53,6 +56,12 @@ export default function AgentSidebar({ onNavigate }) {
 
   function go(to) {
     navigate(to);
+    onNavigate?.();
+  }
+
+  async function handleLogout() {
+    await logout();
+    navigate("/", { replace: true });
     onNavigate?.();
   }
 
@@ -101,7 +110,14 @@ export default function AgentSidebar({ onNavigate }) {
         <Settings size={17} />
         Settings
       </button>
-      <SidebarFooter onNavigate={onNavigate} />
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.87rem] text-text-secondary hover:bg-bg-panel-alt hover:text-status-danger"
+      >
+        <LogOut size={17} />
+        Log out
+      </button>
     </aside>
   );
 }

@@ -10,7 +10,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { useEffect } from "react";
-import { Bell, CheckCheck, Megaphone, UserPlus, AlertCircle } from "lucide-react";
+import { Bell, CheckCheck, Megaphone, UserPlus } from "lucide-react";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { notificationsApi } from "../lib/api";

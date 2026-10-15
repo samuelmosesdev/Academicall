@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { X, Sparkles, Loader2, AlertCircle } from "lucide-react";
+import {
+  X,
+  Loader2,
+  AlertCircle,
+  ListChecks,
+} from "lucide-react";
 import { generateQuestionsFromPdf } from "../lib/geminiGenerate";
 import { questionsApi, quizzesApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -128,7 +133,7 @@ export default function StudentGenerateQuizModal({
         <div className="flex items-center justify-between border-b border-border-light px-5 py-4">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal/15 text-teal">
-              <Sparkles size={16} />
+              <ListChecks size={16} />
             </span>
             <div>
               <h2 className="text-base font-semibold text-ink">Generate Quiz</h2>
@@ -218,7 +223,7 @@ export default function StudentGenerateQuizModal({
               </>
             ) : (
               <>
-                <Sparkles size={16} />
+                <ListChecks size={16} />
                 Generate & open in Practice
               </>
             )}

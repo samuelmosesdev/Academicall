@@ -8,6 +8,7 @@ import {
   Wallet,
   Megaphone,
   Settings,
+  LogOut,
   ClipboardCheck,
   ScrollText,
   MessageSquare,
@@ -20,7 +21,7 @@ import {
   Feather,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import SidebarFooter from "./SidebarFooter";
+import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/admin" },
@@ -31,13 +32,13 @@ const NAV_ITEMS = [
   { label: "Staff access", icon: ShieldCheck, to: "/admin/access" },
   { label: "Activity", icon: ScrollText, to: "/admin/activity" },
   { label: "Governance", icon: UserCog, to: "/admin/governance" },
-  { label: "Academic catalog", icon: GraduationCap, to: "/admin/governance/academic-catalog" },
   { label: "Audit Log", icon: ScrollText, to: "/admin/audit-log" },
   { label: "Notifications", icon: Bell, to: "/admin/notifications" },
   { label: "Agents", icon: UserCog, to: "/admin/agents" },
   { label: "Documents", icon: FileText, to: "/admin/documents" },
   { label: "Document Center", icon: FolderArchive, to: "/admin/files" },
-  { label: "Courses", icon: BookOpen, to: "/admin/courses" },
+  { label: "Academics", icon: GraduationCap, to: "/admin/academics" },
+  { label: "Course import", icon: BookOpen, to: "/admin/courses" },
   { label: "CBT Builder", icon: ClipboardList, to: "/admin/cbt-builder" },
   { label: "Requests", icon: ClipboardCheck, to: "/admin/requests" },
   { label: "Activity log", icon: ScrollText, to: "/admin/activity-log" },
@@ -51,8 +52,16 @@ const NAV_ITEMS = [
 export default function Sidebar({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
   function go(to) {
     navigate(to);
+    onNavigate?.();
+  }
+
+  async function handleLogout() {
+    await logout();
+    navigate("/", { replace: true });
     onNavigate?.();
   }
 
@@ -86,7 +95,14 @@ export default function Sidebar({ onNavigate }) {
         })}
       </nav>
 
-      <SidebarFooter onNavigate={onNavigate} />
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.87rem] text-[#ff9d95] hover:bg-white/5"
+      >
+        <LogOut size={17} />
+        Log out
+      </button>
     </aside>
   );
 }

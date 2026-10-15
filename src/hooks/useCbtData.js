@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, limit, onSnapshot, query } from "firebase/firestore";
+import { collection, getDocs, limit, query } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { coursesApi } from "../lib/api";
@@ -18,10 +18,7 @@ import { questionsApi } from "../lib/api";
  *
  * COST NOTES — this hook is imported by nine pages, so its defaults matter:
  *
- *  1. `courses` uses ONE shared listener, ref-counted across every mount, with a
- *     short grace period before teardown. Nine components on a page used to mean
- *     nine independent listeners, and every route change re-billed the whole
- *     collection.
+ *  1. `courses` are loaded through the API and shared between mounted consumers.
  *  2. `cbtQuestions` is opt-in (`{ withQuestions: true }`) and is fetched once
  *     per session with getDocs, not streamed. It used to be an unbounded live
  *     listener that every page paid for — including the five that only ever read
@@ -30,7 +27,6 @@ import { questionsApi } from "../lib/api";
  * Pass `withQuestions: true` only if you read `questions` or `practiceSets`.
  */
 
-const COURSES_LIMIT = 500;
 const QUESTIONS_LIMIT = 5000;
 let apiCoursesState = { data: [], loading: true };
 const apiCoursesSubscribers = new Set();
@@ -46,52 +42,6 @@ async function loadApiCourses() {
 export function refreshCbtCourses() {
   return loadApiCourses();
 }
-// Keep the shared listener warm briefly so navigating between two pages that
-// both use it doesn't tear down and re-attach (which re-bills every document).
-const TEARDOWN_GRACE_MS = 30_000;
-
-// ---------- shared `courses` listener ----------
-
-let coursesState = { data: [], loading: true };
-const coursesSubscribers = new Set();
-let coursesUnsub = null;
-let coursesTeardownTimer = null;
-
-function emitCourses(next) {
-  coursesState = next;
-  coursesSubscribers.forEach((fn) => fn(coursesState));
-}
-
-function acquireCourses(onChange) {
-  coursesSubscribers.add(onChange);
-  if (coursesTeardownTimer) {
-    clearTimeout(coursesTeardownTimer);
-    coursesTeardownTimer = null;
-  }
-  if (!coursesUnsub) {
-    coursesUnsub = onSnapshot(
-      query(collection(db, "courses"), limit(COURSES_LIMIT)),
-      (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        list.sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
-        emitCourses({ data: list, loading: false });
-      },
-      () => emitCourses({ data: [], loading: false })
-    );
-  }
-  onChange(coursesState);
-
-  return () => {
-    coursesSubscribers.delete(onChange);
-    if (coursesSubscribers.size > 0) return;
-    coursesTeardownTimer = setTimeout(() => {
-      coursesUnsub?.();
-      coursesUnsub = null;
-      coursesTeardownTimer = null;
-    }, TEARDOWN_GRACE_MS);
-  };
-}
-
 // ---------- session-cached `cbtQuestions` ----------
 
 let questionsCache = null;
@@ -141,8 +91,8 @@ export function refreshCbtQuestions(authMode) {
 
 export function useCbtData({ withQuestions = false } = {}) {
   const { authMode } = useAuth();
-  const [courses, setCourses] = useState(coursesState.data);
-  const [coursesLoading, setCoursesLoading] = useState(coursesState.loading);
+  const [courses, setCourses] = useState(apiCoursesState.data);
+  const [coursesLoading, setCoursesLoading] = useState(apiCoursesState.loading);
   const [questions, setQuestions] = useState(questionsCache || []);
   const [questionsLoading, setQuestionsLoading] = useState(withQuestions && !questionsCache);
 

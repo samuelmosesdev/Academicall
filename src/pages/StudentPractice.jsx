@@ -89,7 +89,6 @@ export default function StudentPractice() {
     department,
     level,
     pro,
-    profile?.faculty,
     profile,
   ]);
 

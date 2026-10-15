@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -9,16 +9,15 @@ import {
   Download,
   FileText,
   Loader2,
-  Sparkles,
   X,
+  ListChecks,
 } from "lucide-react";
 import { documentsApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { recordMaterialOpen, recordDailyActivity } from "../lib/activity";
 import { isPro } from "../lib/subscription";
-import { withDownloadFlag } from "../lib/cloudinaryUpload";
-import { isPdfFile } from "../lib/pdfUtils";
 import PdfReader from "../components/reader/PdfReader";
+import { downloadFile } from "../lib/download";
 import { generateQuestionsFromDocument } from "../lib/geminiGenerate";
 import { isNativeApp } from "../lib/platform";
 import {
@@ -27,9 +26,15 @@ import {
   removeMaterialOffline,
   getOfflineObjectUrl,
 } from "../lib/offlineMaterials";
+import { appAlert } from "../lib/dialogs";
+
+function getExtension(name = "", url = "") {
+  const source = name || url;
+  const match = source.split("?")[0].match(/\.([a-zA-Z0-9]+)$/);
+  return match ? match[1].toLowerCase() : "";
+}
 
 function useDocumentRecord(docId) {
-  const { authMode } = useAuth();
   const [record, setRecord] = useState(undefined);
   useEffect(() => {
     if (!docId) return;
@@ -39,7 +44,7 @@ function useDocumentRecord(docId) {
       .then(({ document }) => alive && setRecord(document || null))
       .catch(() => alive && setRecord(null));
     return () => { alive = false; };
-  }, [authMode, docId]);
+  }, [docId]);
   return record;
 }
 
@@ -61,7 +66,7 @@ export default function DocumentReader() {
       recordMaterialOpen(user, docId, profile);
       if (profile) recordDailyActivity(user, profile);
     }
-  }, [user, profile, docId]);
+  }, [user, docId, profile]);
 
   // App only: detect offline copy & prefer local blob when online file blocked
   useEffect(() => {
@@ -100,6 +105,7 @@ export default function DocumentReader() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [quiz, setQuiz] = useState(null); // { questions, index, answers, submitted }
+  const viewerRef = useRef(null);
   const [offlineReady, setOfflineReady] = useState(false);
   const [offlineBusy, setOfflineBusy] = useState(false);
   const [offlineUrl, setOfflineUrl] = useState(null);
@@ -217,11 +223,9 @@ export default function DocumentReader() {
     );
   }
 
-  const isPdf = isPdfFile(record);
-  const downloadUrl = withDownloadFlag(
-    record.fileUrl,
-    record.fileName || record.title
-  );
+  const ext = getExtension(record.fileName, record.fileUrl);
+  const isPdf = ext === "pdf" || (record.fileUrl || "").toLowerCase().includes(".pdf");
+
   // In-app PDF viewer — prefer native embed; Google viewer as fallback for office docs
   async function toggleOffline() {
     if (!native || !record?.fileUrl || !docId || docId === "external") return;
@@ -245,16 +249,18 @@ export default function DocumentReader() {
         setOfflineReady(true);
       }
     } catch (e) {
-      alert(e.message || "Offline save failed. Need network once to download.");
+      appAlert(e.message || "Offline save failed. Need network once to download.");
     } finally {
       setOfflineBusy(false);
     }
   }
 
   const effectiveUrl = offlineUrl || record.fileUrl;
-  const viewerSrc = offlineUrl
-    ? effectiveUrl
-    : `https://docs.google.com/viewer?url=${encodeURIComponent(record.fileUrl)}&embedded=true`;
+  const viewerSrc = isPdf
+    ? `${effectiveUrl}#toolbar=1&navpanes=0`
+    : offlineUrl
+      ? effectiveUrl
+      : `https://docs.google.com/viewer?url=${encodeURIComponent(record.fileUrl)}&embedded=true`;
 
   const currentQ = quiz?.questions?.[quiz.index];
 
@@ -284,13 +290,13 @@ export default function DocumentReader() {
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <a
-            href={downloadUrl || record.fileUrl}
-            download
+          <button
+            type="button"
+            onClick={() => downloadFile(offlineUrl || record.fileUrl, record.fileName || record.title)}
             className="hidden h-9 items-center gap-1.5 rounded-xl border border-border-light px-2.5 text-xs font-medium text-ink hover:border-teal sm:inline-flex"
           >
             <Download size={14} /> Download
-          </a>
+          </button>
           <button
             type="button"
             onClick={() => setPanelOpen((v) => !v)}
@@ -300,7 +306,7 @@ export default function DocumentReader() {
                 : "bg-teal text-white shadow-sm"
             }`}
           >
-            <Sparkles size={14} />
+            <ListChecks size={14} />
             <span className="hidden sm:inline">Practice with AI</span>
             <span className="sm:hidden">AI</span>
             {!pro && <Crown size={12} className="opacity-90" />}
@@ -310,9 +316,9 @@ export default function DocumentReader() {
 
       <div className="relative flex min-h-0 flex-1">
         {/* Reader */}
-        <div className="relative min-w-0 flex-1 bg-[#1a1f1c]">
+        <div className="relative flex min-w-0 flex-1 flex-col bg-[#ece8df] dark:bg-[#0b0220]">
           {native && docId && docId !== "external" && record?.fileUrl && (
-            <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border-light bg-card-light px-3 py-2">
               <button
                 type="button"
                 disabled={offlineBusy}
@@ -339,12 +345,15 @@ export default function DocumentReader() {
           )}
 
           {isPdf ? (
-            <PdfReader key={effectiveUrl} src={effectiveUrl} title={record.title} />
+            <div className="min-h-0 flex-1">
+              <PdfReader key={docId} src={effectiveUrl} title={record.title} />
+            </div>
           ) : (
             <iframe
+              ref={viewerRef}
               title={record.title || "Document viewer"}
               src={viewerSrc}
-              className="h-full w-full border-0 bg-white"
+              className="min-h-0 w-full flex-1 border-0 bg-white"
               allow="fullscreen"
             />
           )}
@@ -356,7 +365,7 @@ export default function DocumentReader() {
             <div className="flex items-center justify-between border-b border-border-light px-4 py-3">
               <div>
                 <p className="font-display text-sm font-semibold text-ink flex items-center gap-1.5">
-                  <Sparkles size={15} className="text-teal" /> Practice with AI
+                  <ListChecks size={15} className="text-teal" /> Practice with AI
                 </p>
                 <p className="text-[11px] text-ink-muted">
                   Generate a quiz from this material
@@ -474,7 +483,7 @@ export default function DocumentReader() {
                       </>
                     ) : (
                       <>
-                        <Sparkles size={16} /> Generate quiz
+                        <ListChecks size={16} /> Generate quiz
                       </>
                     )}
                   </button>

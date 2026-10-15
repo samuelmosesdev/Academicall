@@ -4,7 +4,7 @@ import {
   Search,
   BookOpen,
   ChevronRight,
-  Sparkles,
+  ListChecks,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useStudentDocuments } from "../hooks/useStudentDocuments";
@@ -14,28 +14,27 @@ import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 import { Link } from "react-router-dom";
 import { FREE_LIMITS, isPro } from "../lib/subscription";
 import StudentGenerateQuizModal from "../components/StudentGenerateQuizModal";
-import { getAcademicScope, matchesAcademicProgram } from "../lib/academicScope";
 
 export default function StudentDocuments() {
   const { profile } = useAuth();
   const { documents, loading } = useStudentDocuments();
   const { courses } = useCbtData();
-  const { programsForFaculty } = useAcademicCatalog();
+  const { departmentsFor } = useAcademicCatalog();
 
   const [search, setSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [faculty, setFaculty] = useState(profile?.faculty || "");
-  const [department, setDepartment] = useState(() => getAcademicScope(profile));
+  const [department, setDepartment] = useState(profile?.department || "");
   const [courseCode, setCourseCode] = useState("");
   const [level, setLevel] = useState(profile?.level || "");
   const [quizMaterial, setQuizMaterial] = useState(null);
 
-  const departments = useMemo(() => programsForFaculty(faculty), [faculty, programsForFaculty]);
+  const departments = useMemo(() => departmentsFor(faculty), [faculty]);
 
   const courseOptions = useMemo(() => {
     let list = courses;
     if (faculty) list = list.filter((c) => c.faculty === faculty);
-    if (department) list = list.filter((c) => matchesAcademicProgram(c.program || c.department, department));
+    if (department) list = list.filter((c) => c.department === department);
     if (level) list = list.filter((c) => !c.level || c.level === level);
     return [...list].sort((a, b) =>
       String(a.code || "").localeCompare(String(b.code || ""))
@@ -64,7 +63,7 @@ export default function StudentDocuments() {
           .some((f) => f.toLowerCase().includes(q));
       const matchesFaculty = !faculty || !d.faculty || d.faculty === faculty;
       const matchesDepartment =
-        !d.department || (department && matchesAcademicProgram(d.program || d.department, department));
+        !department || !d.department || d.department === department;
       const matchesLevel = !level || !d.level || d.level === level;
       const matchesCourse = !courseCode || d.courseCode === courseCode;
       return (
@@ -189,10 +188,10 @@ export default function StudentDocuments() {
             className={fieldClass}
             disabled={!faculty}
           >
-            <option value="">All programs</option>
-            {departments.map((programOption) => (
-              <option key={programOption} value={programOption}>
-                {programOption}
+            <option value="">All departments</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>
+                {d}
               </option>
             ))}
           </select>
@@ -320,7 +319,7 @@ export default function StudentDocuments() {
                       onClick={() => setQuizMaterial(d)}
                       className="flex items-center gap-1.5 rounded-lg border border-teal/40 bg-teal/10 px-3 py-1.5 text-xs font-semibold text-teal hover:bg-teal/20"
                     >
-                      <Sparkles size={13} /> Generate Quiz
+                      <ListChecks size={13} /> Generate Quiz
                     </button>
                   </div>
                 </div>

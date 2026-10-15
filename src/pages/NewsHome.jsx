@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, Loader2, Search, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Loader2,
+  Search,
+  BookOpenText,
+} from "lucide-react";
 import NewsShell from "../components/news/NewsShell";
 import { Byline, Cover, Engagement, StoryCard } from "../components/news/NewsBits";
 import { NEWS_CATEGORIES, newsApi } from "../lib/newsApi";
@@ -58,7 +63,7 @@ export default function NewsHome() {
 
       {!user && (
         <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl bg-midnight px-5 py-4 text-white">
-          <Sparkles size={18} className="text-lemon" />
+          <BookOpenText size={18} className="text-lemon" />
           <p className="flex-1 text-sm text-white/80"><span className="font-semibold text-white">Read every story in full.</span> Sign in to keep reading, react and join the conversation.</p>
           <Link to="/login" state={{ from: location }} className="rounded-full bg-lemon px-4 py-2 text-sm font-semibold text-midnight">Sign in</Link>
         </div>

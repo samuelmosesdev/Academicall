@@ -7,7 +7,7 @@ export default function ContinueCard({ title, subtitle, progressPct = 0, onClick
       onClick={onClick}
       className="group flex w-full items-center gap-4 rounded-3xl border border-border-subtle bg-bg-panel p-4 text-left shadow-sm transition-all hover:border-accent/30 hover:shadow-md active:scale-[0.99]"
     >
-      <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5">
+      <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-violet-soft">
         <div className="absolute inset-0 flex items-center justify-center">
           <div
             className="h-10 w-10 rounded-full border-[3px] border-accent/20"

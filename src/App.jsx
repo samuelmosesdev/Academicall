@@ -3,7 +3,6 @@ import { lazy, Suspense } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import NativeBootstrap from "./native/NativeBootstrap";
 import Landing from "./pages/Landing";
 import Privacy from "./pages/Privacy";
 import Login from "./pages/Login";
@@ -34,6 +33,7 @@ import AdminActivityLog from "./pages/AdminActivityLog";
 import AdminUserActivity from "./pages/AdminUserActivity";
 import AdminActivity from "./pages/AdminActivity";
 import AdminGovernance from "./pages/AdminGovernance";
+import AdminAcademics from "./pages/AdminAcademics";
 import AdminAcademicCatalog from "./pages/AdminAcademicCatalog";
 import AdminAuditLog from "./pages/AdminAuditLog";
 import AdminNotifications from "./pages/AdminNotifications";
@@ -59,6 +59,8 @@ import StudentDepartment from "./pages/StudentDepartment";
 import StudentMaterials from "./pages/StudentMaterials";
 import StudentMaterialFolder from "./pages/StudentMaterialFolder";
 import StudentMaterialsLibrary from "./pages/StudentMaterialsLibrary";
+import StudentGroups from "./pages/StudentGroups";
+import StudyGroupJoin, { StudyInviteRedirect } from "./pages/StudyGroupJoin";
 import StudentDocumentsComingSoon from "./pages/StudentDocumentsComingSoon";
 import StudentVault from "./pages/StudentVault";
 import NewsHome from "./pages/NewsHome";
@@ -67,18 +69,12 @@ import NewsDesk from "./pages/NewsDesk";
 import AdminStaffAccess from "./pages/AdminStaffAccess";
 import DocumentCenter from "./pages/DocumentCenter";
 import { SecretariatLayout, SecretariatOverview, SecretariatRecords, SecretariatRecord, SecretariatJournal } from "./pages/Secretariat";
-const StudentGroups = lazy(() => import("./pages/StudentGroups"));
-const StudyGroupJoin = lazy(() => import("./pages/StudyGroupJoin"));
-const StudyInviteRedirect = lazy(() =>
-  import("./pages/StudyGroupJoin").then((module) => ({ default: module.StudyInviteRedirect }))
-);
 
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
-          <NativeBootstrap />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/privacy" element={<Privacy />} />
@@ -118,7 +114,7 @@ export default function App() {
               }
             />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/study/:code" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudyInviteRedirect /></Suspense>} />
+            <Route path="/study/:code" element={<StudyInviteRedirect />} />
             <Route
               path="/verify-email"
               element={
@@ -159,6 +155,7 @@ export default function App() {
               <Route path="agents/:agentId" element={<AdminAgentActivity />} />
               <Route path="documents" element={<AdminDocuments />} />
               <Route path="courses" element={<AdminCourses />} />
+              <Route path="academics" element={<AdminAcademics />} />
               <Route path="cbt-builder" element={<AdminCbtBuilder />} />
               <Route path="payments" element={<AdminPayments />} />
               <Route path="requests" element={<AdminRequests />} />
@@ -192,6 +189,14 @@ export default function App() {
                 element={
                   <ProtectedRoute requiredRole="cap:courses.manage">
                     <AdminCourses />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="academics"
+                element={
+                  <ProtectedRoute requiredRole="cap:academics.manage">
+                    <AdminAcademics />
                   </ProtectedRoute>
                 }
               />
@@ -293,13 +298,13 @@ export default function App() {
               <Route path="notifications/archived" element={<ArchivedNotifications />} />
               <Route path="courses" element={<StudentCourses />} />
               <Route path="department" element={<StudentDepartment />} />
-              <Route path="groups" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudentGroups /></Suspense>} />
-              <Route path="groups/:groupId" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudentGroups /></Suspense>} />
-              <Route path="groups/join/:code" element={<Suspense fallback={<div className="p-4">Loading…</div>}><StudyGroupJoin /></Suspense>} />
               <Route path="materials" element={<StudentMaterials />} />
-              <Route path="documents" element={<StudentDocumentsComingSoon />} />
               <Route path="materials/folder/:courseCode" element={<StudentMaterialFolder />} />
               <Route path="materials/library" element={<StudentMaterialsLibrary />} />
+              <Route path="groups" element={<StudentGroups />} />
+              <Route path="groups/join/:code" element={<StudyGroupJoin />} />
+              <Route path="groups/:groupId" element={<StudentGroups />} />
+              <Route path="documents" element={<StudentDocumentsComingSoon />} />
               <Route path="vault" element={<StudentVault />} />
               <Route path="vault/:folderId" element={<StudentVault />} />
               <Route path="settings" element={<StudentSettings />} />

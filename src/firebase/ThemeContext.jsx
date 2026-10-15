@@ -33,11 +33,6 @@ export function ThemeProvider({ children }) {
     }
   }, [theme]);
 
-  // Apply immediately on first paint (avoid flash)
-  useEffect(() => {
-    applyTheme(theme);
-  }, []);
-
   const setTheme = useCallback((next) => {
     setThemeState((prev) => {
       const value = typeof next === "function" ? next(prev) : next;

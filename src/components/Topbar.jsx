@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Search,
   Bell,
@@ -23,14 +23,14 @@ import { useStaffChatUnread } from "../hooks/useStaffChatUnread";
 import { useTheme } from "../context/ThemeContext";
 import { db } from "../firebase/config";
 import BackButton from "./BackButton";
-import { isAdmin, isAlpha, isStaff } from "../lib/roles";
+import { isAdmin, isAlpha } from "../lib/roles";
 import { activityApi, usersApi } from "../lib/api";
 
 export default function Topbar({ search, onSearchChange, onMenu }) {
-  const { profile, user, logout, authMode } = useAuth();
+  const { profile, logout, authMode } = useAuth();
   const { unreadCount } = useNotifications();
   const { unread: staffUnread } = useStaffChatUnread();
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const [q, setQ] = useState(search || "");
   const [hits, setHits] = useState([]);

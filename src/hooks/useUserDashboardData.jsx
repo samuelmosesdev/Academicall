@@ -1,6 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { coursesApi, enrollmentsApi, notificationsApi } from "../lib/api";
+import {
+  coursesApi,
+  enrollmentsApi,
+  notificationsApi,
+  STUDENT_NOTIFICATIONS_UPDATED_EVENT,
+} from "../lib/api";
 
 const EMPTY = {
   profile: null,
@@ -21,9 +26,23 @@ export function UserDashboardDataProvider({ children }) {
   const [recommended, setRecommended] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const unreadRequestId = useRef(0);
+
+  const refreshUnreadCount = useCallback(async () => {
+    const requestId = ++unreadRequestId.current;
+    if (!user || authMode !== "api") {
+      setUnreadCount(0);
+      return;
+    }
+    const { notifications = [] } = await notificationsApi.list();
+    if (requestId === unreadRequestId.current) {
+      setUnreadCount(notifications.filter((item) => item.readByUser !== true).length);
+    }
+  }, [user, authMode]);
 
   useEffect(() => {
     if (!user || authMode !== "api") {
+      unreadRequestId.current += 1;
       setEnrollments([]);
       setAllEnrollments([]);
       setRecommended([]);
@@ -33,19 +52,35 @@ export function UserDashboardDataProvider({ children }) {
     }
     let alive = true;
     setLoading(true);
-    Promise.all([enrollmentsApi.list(), coursesApi.list(), notificationsApi.list()])
-      .then(([enrollmentData, courseData, notificationData]) => {
+    setUnreadCount(0);
+    Promise.all([enrollmentsApi.list(), coursesApi.list()])
+      .then(([enrollmentData, courseData]) => {
         if (!alive) return;
         const list = enrollmentData.enrollments || [];
         setAllEnrollments(list);
         setEnrollments(list.slice(0, 5));
         setRecommended(courseData.courses || []);
-        setUnreadCount((notificationData.notifications || []).filter((item) => item.readByUser !== true).length);
       })
       .catch(() => alive && setLoading(false))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [user, authMode]);
+
+  useEffect(() => {
+    if (authMode !== "api" || !user) return undefined;
+    const refresh = () => {
+      refreshUnreadCount().catch((error) => {
+        console.error("Failed to refresh student notification count", error);
+      });
+    };
+    refresh();
+    window.addEventListener(STUDENT_NOTIFICATIONS_UPDATED_EVENT, refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener(STUDENT_NOTIFICATIONS_UPDATED_EVENT, refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [authMode, user, refreshUnreadCount]);
 
   useEffect(() => {
     if (authMode !== "api" || !user) return undefined;

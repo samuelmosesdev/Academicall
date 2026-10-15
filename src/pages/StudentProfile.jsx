@@ -23,12 +23,11 @@ import {
   Building2,
   GraduationCap,
   Hash,
-  Sparkles,
+  UserRound,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import ImageCropModal from "../components/ImageCropModal";
-import { FACULTIES, departmentsFor } from "../data/facultyData";
-import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
+import { useInstitutionTree, institutionLabel, prettyName } from "../hooks/useInstitutions";
 import { fileToCompressedDataUrl } from "../lib/imageUtils";
 import { uploadImageToCloudinary } from "../lib/cloudinaryUpload";
 import UniqueIdBadge from "../components/UniqueIdBadge";
@@ -59,7 +58,14 @@ const fieldClass =
 
 export default function StudentProfile() {
   const { user, profile, authMode, refreshProfile } = useAuth();
-  const { departmentsFor: catalogDepartmentsFor, programsFor } = useAcademicCatalog();
+  // Choices come from the student's own institution (UofA for existing accounts).
+  const { tree: institutionTree } = useInstitutionTree(profile?.institutionId || "uofa");
+  const treeFaculties = institutionTree?.faculties || [];
+  const FACULTIES = treeFaculties.map((f) => ({ name: f.name }));
+  const departmentsFor = (facultyName) =>
+    (treeFaculties.find((f) => f.name === facultyName)?.departments || []).map((d) => d.name);
+  const programsFor = (departmentName) =>
+    treeFaculties.flatMap((f) => f.departments || []).find((d) => d.name === departmentName)?.programs?.map((p) => p.name) || [];
 
   const [bio, setBio] = useState("");
   const [interests, setInterests] = useState("");
@@ -151,11 +157,13 @@ export default function StudentProfile() {
 
   const requestDeptOptions = useMemo(
     () => departmentsFor(reqFaculty || profile?.faculty || ""),
-    [reqFaculty, profile?.faculty]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reqFaculty, profile?.faculty, institutionTree]
   );
   const requestProgramOptions = useMemo(
     () => programsFor(reqDepartment || profile?.department || ""),
-    [programsFor, reqDepartment, profile?.department]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reqDepartment, profile?.department, institutionTree]
   );
 
   function handlePhotoChange(e) {
@@ -403,6 +411,15 @@ export default function StudentProfile() {
           </div>
         </div>
 
+        {profile?.institution && (
+          <div className="mb-3 flex items-center gap-3 rounded-xl border border-border-light bg-surface-light px-3.5 py-3">
+            <Building2 size={16} className="shrink-0 text-teal" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-ink-muted">Institution</p>
+              <p className="truncate text-sm font-semibold text-ink">{institutionLabel(profile.institution)}</p>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {LOCKED_FIELDS.map(({ key, label, icon: Icon }) => {
             const pending = pendingByField[key];
@@ -471,7 +488,7 @@ export default function StudentProfile() {
         className="space-y-4 rounded-2xl border border-border-light bg-card-light p-5 shadow-sm sm:p-6"
       >
         <div className="flex items-center gap-2">
-          <Sparkles size={16} className="text-teal" />
+          <UserRound size={16} className="text-teal" />
           <h2 className="text-sm font-semibold text-ink">Public profile</h2>
           <span className="text-xs text-ink-muted">(you can edit these anytime)</span>
         </div>
@@ -644,7 +661,7 @@ export default function StudentProfile() {
                     <option value="">Select faculty</option>
                     {FACULTIES.map((f) => (
                       <option key={f.name} value={f.name}>
-                        {f.name}
+                        {prettyName(f.name)}
                       </option>
                     ))}
                   </select>
@@ -658,7 +675,7 @@ export default function StudentProfile() {
                     className={fieldClass}
                   >
                     <option value="">Select program</option>
-                    {requestProgramOptions.map((program) => <option key={program} value={program}>{program}</option>)}
+                    {requestProgramOptions.map((program) => <option key={program} value={program}>{prettyName(program)}</option>)}
                   </select>
                   <p className="mt-1 text-[11px] text-ink-muted">Programs shown are for your current department. Change department first if needed.</p>
                 </div>
@@ -675,7 +692,7 @@ export default function StudentProfile() {
                     <option value="">Select department</option>
                     {requestDeptOptions.map((d) => (
                       <option key={d} value={d}>
-                        {d}
+                        {prettyName(d)}
                       </option>
                     ))}
                   </select>

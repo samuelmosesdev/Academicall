@@ -1,4 +1,8 @@
-import { Crown, Lock, X, Sparkles } from "lucide-react";
+import {
+  Crown,
+  Lock,
+  X,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 /**
@@ -17,7 +21,7 @@ export default function SubscribeGateModal({ open, onClose, feature = "this feat
         onClick={onClose}
       />
       <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-border-light bg-card-light shadow-2xl">
-        <div className="bg-gradient-to-br from-[#0F0326] via-[#2F33B8] to-[#454ADE] px-6 pb-10 pt-6 text-white">
+        <div className="bg-midnight px-6 pb-10 pt-6 text-white">
           <button
             type="button"
             onClick={onClose}
@@ -38,7 +42,7 @@ export default function SubscribeGateModal({ open, onClose, feature = "this feat
         <div className="-mt-5 space-y-3 px-6 pb-6">
           <div className="rounded-2xl border border-border-light bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-              <Sparkles size={16} className="text-teal" />
+              <Crown size={16} className="text-teal" />
               From ₦500 / week · ₦4,000 / year
             </div>
             <p className="mt-1 text-xs text-ink-muted">

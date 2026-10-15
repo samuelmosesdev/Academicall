@@ -6,35 +6,37 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  ExternalLink,
   FileText,
   Folder,
   FolderOpen,
   ListTree,
   Loader2,
-  Sparkles,
   X,
+  ListChecks,
 } from "lucide-react";
 import useMaterialSaves, { fileExtension, materialKey } from "../hooks/useMaterialSaves";
-import { isPdfFile } from "../lib/pdfUtils";
-import PdfReader from "../components/reader/PdfReader";
 import { useAuth } from "../context/AuthContext";
 import { recordDailyActivity, recordMaterialOpen } from "../lib/activity";
-import { withDownloadFlag } from "../lib/cloudinaryUpload";
 import { isNativeApp } from "../lib/platform";
 import { getOfflineObjectUrl, isOfflineAvailable } from "../lib/offlineMaterials";
+import PdfReader from "../components/reader/PdfReader";
+import { downloadFile } from "../lib/download";
+import { isPdfFile } from "../lib/pdfUtils";
 
 function viewerFor(item, offlineUrl) {
   if (!item?.fileUrl) return "";
-  const extension = fileExtension(item);
+  const ext = fileExtension(item);
   if (offlineUrl) return offlineUrl;
-  if (isPdfFile(item)) return item.fileUrl;
-  if (["png", "jpg", "jpeg", "webp", "gif"].includes(extension)) return item.fileUrl;
+  if (["png", "jpg", "jpeg", "webp", "gif"].includes(ext)) return item.fileUrl;
   return `https://docs.google.com/viewer?url=${encodeURIComponent(item.fileUrl)}&embedded=true`;
 }
 
+/**
+ * The reading room: every saved material in one place.
+ * Folders on the left, the open material on the right, previous / next across all of them.
+ */
 export default function StudentMaterialsLibrary() {
-  const { folders, saves, loading, error } = useMaterialSaves();
+  const { folders, saves, loading } = useMaterialSaves();
   const { user, profile } = useAuth();
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
@@ -43,53 +45,54 @@ export default function StudentMaterialsLibrary() {
   const [openFolders, setOpenFolders] = useState(() => new Set());
   const [offlineUrl, setOfflineUrl] = useState(null);
 
-  const ordered = useMemo(() => folders.flatMap((folder) => folder.items), [folders]);
+  // Reading order: folder by folder, so "next" walks through every material.
+  const ordered = useMemo(() => folders.flatMap((f) => f.items), [folders]);
   const currentKey = search.get("m");
-  const foundIndex = ordered.findIndex((item) => materialKey(item) === currentKey);
-  const index = foundIndex < 0 ? 0 : foundIndex;
+  const index = Math.max(0, ordered.findIndex((i) => materialKey(i) === currentKey));
   const current = ordered[index];
   const currentFolder = String(current?.courseCode || "GENERAL").toUpperCase();
-  const pdf = isPdfFile(current);
 
+  // Keep the current material's folder expanded
   useEffect(() => {
     if (!current) return;
-    setOpenFolders((previous) =>
-      previous.has(currentFolder) ? previous : new Set(previous).add(currentFolder)
-    );
+    setOpenFolders((prev) => (prev.has(currentFolder) ? prev : new Set(prev).add(currentFolder)));
   }, [current, currentFolder]);
 
+  // Normalise the URL to the material on screen
   useEffect(() => {
     if (current && materialKey(current) !== currentKey) {
       setSearch({ m: materialKey(current) }, { replace: true });
     }
   }, [current, currentKey, setSearch]);
 
+  // Count the open toward activity + streak (only real documents have a materialId)
   useEffect(() => {
     if (user && current?.materialId) {
       recordMaterialOpen(user, current.materialId, profile);
       if (profile) recordDailyActivity(user, profile);
     }
-  }, [user, profile, current?.materialId]);
+  }, [user, current?.materialId, profile]);
 
+  // App only: prefer the offline copy when one exists
   useEffect(() => {
-    let objectUrl = null;
+    let made = null;
     let cancelled = false;
     setOfflineUrl(null);
     const id = current?.materialId || current?.id;
     if (!native || !id) return undefined;
     isOfflineAvailable(id)
-      .then(async (available) => {
-        if (!available || cancelled) return;
+      .then(async (ok) => {
+        if (!ok || cancelled) return;
         const url = await getOfflineObjectUrl(id);
         if (!cancelled && url) {
-          objectUrl = url;
+          made = url;
           setOfflineUrl(url);
         }
       })
-      .catch((err) => console.error("Could not load the offline material:", err));
+      .catch(() => {});
     return () => {
       cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (made) URL.revokeObjectURL(made);
     };
   }, [native, current?.id, current?.materialId]);
 
@@ -99,11 +102,11 @@ export default function StudentMaterialsLibrary() {
   }
 
   function toggleFolder(code) {
-    setOpenFolders((previous) => {
-      const next = new Set(previous);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
-      return next;
+    setOpenFolders((prev) => {
+      const n = new Set(prev);
+      if (n.has(code)) n.delete(code);
+      else n.add(code);
+      return n;
     });
   }
 
@@ -115,29 +118,22 @@ export default function StudentMaterialsLibrary() {
     );
   }
 
-  if (error) {
-    return (
-      <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-        {error}
-      </div>
-    );
-  }
-
   if (!saves.length) {
     return (
       <div className="rounded-3xl border border-dashed border-border-strong bg-card-light px-6 py-16 text-center">
         <p className="font-display text-xl text-ink">Nothing to read yet</p>
-        <p className="mt-2 text-sm text-ink-muted">Save materials from your Programme page and they will appear here.</p>
-        <Link to="/dashboard/department" className="btn-primary mt-6 inline-flex px-5 py-2.5 text-sm">
-          Browse programme materials
+        <p className="mt-2 text-sm text-ink-muted">Save materials from your Department feed and they all appear here.</p>
+        <Link to="/dashboard/materials" className="btn-primary mt-6 inline-flex px-5 py-2.5 text-sm">
+          Back to Materials
         </Link>
       </div>
     );
   }
 
-  const previous = index > 0 ? ordered[index - 1] : null;
+  const prev = index > 0 ? ordered[index - 1] : null;
   const next = index < ordered.length - 1 ? ordered[index + 1] : null;
-  const source = viewerFor(current, offlineUrl);
+  const pdf = isPdfFile(current);
+  const src = pdf ? offlineUrl || current?.fileUrl : viewerFor(current, offlineUrl);
 
   const shelf = (
     <div className="flex h-full flex-col">
@@ -167,10 +163,8 @@ export default function StudentMaterialsLibrary() {
                 onClick={() => toggleFolder(folder.courseCode)}
                 className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left hover:bg-bg-panel-alt"
               >
-                <span
-                  className={`folder-dot folder-tone-${folder.tone} flex h-7 w-7 items-center justify-center rounded-lg`}
-                  style={{ background: "var(--folder-bg)" }}
-                >
+                <span className={`folder-dot folder-tone-${folder.tone} flex h-7 w-7 items-center justify-center rounded-lg`}
+                  style={{ background: "var(--folder-bg)" }}>
                   {isOpen ? <FolderOpen size={14} className="text-midnight" /> : <Folder size={14} className="text-midnight" />}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -240,8 +234,8 @@ export default function StudentMaterialsLibrary() {
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
-            disabled={!previous}
-            onClick={() => previous && go(previous)}
+            disabled={!prev}
+            onClick={() => prev && go(prev)}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-light text-ink disabled:opacity-30"
             aria-label="Previous material"
           >
@@ -257,31 +251,20 @@ export default function StudentMaterialsLibrary() {
             <ChevronRight size={16} />
           </button>
           {current?.fileUrl && (
-            <a
-              href={current.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Open material in a new tab"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border-light px-2.5 text-xs font-medium text-ink hover:border-teal"
-            >
-              <ExternalLink size={14} /> <span className="hidden sm:inline">Open file</span>
-            </a>
-          )}
-          {current?.fileUrl && (
-            <a
-              href={withDownloadFlag(current.fileUrl, current.fileName || current.title) || current.fileUrl}
-              download
+            <button
+              type="button"
+              onClick={() => downloadFile(offlineUrl || current.fileUrl, current.fileName || current.title)}
               className="hidden h-9 items-center gap-1.5 rounded-xl border border-border-light px-2.5 text-xs font-medium text-ink hover:border-teal sm:inline-flex"
             >
               <Download size={14} /> Download
-            </a>
+            </button>
           )}
           {current?.materialId && (
             <Link
               to={`/dashboard/reading-hub/doc/${current.materialId}`}
               className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-teal px-3 text-xs font-semibold text-white"
             >
-              <Sparkles size={14} /> <span className="hidden sm:inline">Practice with AI</span>
+              <ListChecks size={14} /> <span className="hidden sm:inline">Practice with AI</span>
               <span className="sm:hidden">AI</span>
             </Link>
           )}
@@ -294,23 +277,18 @@ export default function StudentMaterialsLibrary() {
         {listOpen && (
           <div className="fixed inset-0 z-50 flex lg:hidden">
             <div className="w-[85%] max-w-sm bg-card-light shadow-2xl">{shelf}</div>
-            <button
-              type="button"
-              className="flex-1 bg-midnight/40"
-              aria-label="Close"
-              onClick={() => setListOpen(false)}
-            />
+            <button type="button" className="flex-1 bg-midnight/40" aria-label="Close" onClick={() => setListOpen(false)} />
           </div>
         )}
 
         <div className="relative min-w-0 flex-1 bg-[#ece8df] dark:bg-[#0b0220]">
-          {source && pdf ? (
-            <PdfReader key={current?.id} src={source} title={current?.title} />
-          ) : source ? (
+          {pdf && src ? (
+            <PdfReader key={current?.id} src={src} title={current?.title} />
+          ) : src ? (
             <iframe
               key={current?.id}
               title={current?.title || "Material viewer"}
-              src={source}
+              src={src}
               className="h-full w-full border-0 bg-white"
               allow="fullscreen"
             />

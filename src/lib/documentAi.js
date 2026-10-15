@@ -2,7 +2,7 @@
 
 export function titleFromFilename(fileName = "") {
   let base = String(fileName).replace(/\.[^.]+$/, "");
-  base = base.replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim();
+  base = base.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
   // Title Case-ish
   base = base
     .split(" ")

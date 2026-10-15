@@ -34,7 +34,7 @@ export async function listOfflineMaterials() {
   const db = await openDb();
   const tx = db.transaction(STORE, "readonly");
   const all = await idbReq(tx.objectStore(STORE).getAll());
-  return (all || []).map(({ blob, ...meta }) => meta);
+  return (all || []).map(({ blob: _blob, ...meta }) => meta);
 }
 
 export async function getOfflineMaterial(id) {

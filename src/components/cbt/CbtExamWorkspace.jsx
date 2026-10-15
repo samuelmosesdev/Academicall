@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -410,10 +410,8 @@ export default function CbtExamWorkspace({
           <PalettePanel
             questions={questions}
             answers={answers}
-            flagged={flagged}
             currentIdx={currentIdx}
             submitted={submitted}
-            score={score}
             paletteFilter={paletteFilter}
             setPaletteFilter={setPaletteFilter}
             filteredPalette={filteredPalette}
@@ -480,10 +478,8 @@ export default function CbtExamWorkspace({
             <PalettePanel
               questions={questions}
               answers={answers}
-              flagged={flagged}
               currentIdx={currentIdx}
               submitted={submitted}
-              score={score}
               paletteFilter={paletteFilter}
               setPaletteFilter={setPaletteFilter}
               filteredPalette={filteredPalette}
@@ -515,10 +511,8 @@ export default function CbtExamWorkspace({
 function PalettePanel({
   questions,
   answers,
-  flagged,
   currentIdx,
   submitted,
-  score,
   paletteFilter,
   setPaletteFilter,
   filteredPalette,

@@ -9,11 +9,11 @@ import {
   Settings,
   Save,
   LogOut,
-  Sparkles,
   Wallet,
   Shield,
   Link2,
   Building2,
+  FileScan,
 } from "lucide-react";
 import { db } from "../firebase/config";
 import { useNavigate } from "react-router-dom";
@@ -184,7 +184,7 @@ export default function AdminSettings() {
         {/* AI document features */}
         <section className="space-y-4 rounded-xl border border-border-subtle bg-bg-panel p-5">
           <div className="flex items-center gap-2">
-            <Sparkles size={18} className="text-accent" />
+            <FileScan size={18} className="text-accent" />
             <h2 className="text-sm font-semibold text-text-primary">AI · Document upload</h2>
           </div>
           <p className="text-xs text-text-muted">

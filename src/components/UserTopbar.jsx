@@ -34,13 +34,6 @@ export default function UserTopbar({ profile, unreadCount, search, onSearchChang
   }
 
   const firstName = profile?.nickname || profile?.nickName || profile?.name?.split(" ")[0] || "there";
-  const initials = (profile?.name || "U")
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   const iconBtn =
     "relative flex h-10 w-10 items-center justify-center rounded-full border border-border-light bg-card-light text-ink-muted transition hover:border-border-strong hover:text-ink";

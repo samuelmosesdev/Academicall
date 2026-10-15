@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, orderBy, onSnapshot, writeBatch, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, writeBatch, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { notificationsApi } from "../lib/api";

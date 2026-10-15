@@ -8,6 +8,34 @@
     ],
     "rewrites": [
       {
+        "source": "/news",
+        "function": {
+          "functionId": "ogPage",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/news/**",
+        "function": {
+          "functionId": "ogPage",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/study/**",
+        "function": {
+          "functionId": "ogPage",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/og/**",
+        "function": {
+          "functionId": "ogPage",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

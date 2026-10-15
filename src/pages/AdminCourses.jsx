@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -11,8 +11,8 @@ import {
   FileSpreadsheet,
   ChevronDown,
   ChevronRight,
-  Sparkles,
   FolderOpen,
+  FileScan,
 } from "lucide-react";
 import AiCourseImportModal from "../components/AiCourseImportModal";
 import { useAuth } from "../context/AuthContext";
@@ -25,6 +25,7 @@ import {
   validateCourseRow,
   normalizeCoursePayload,
 } from "../lib/courseImport";
+import { appAlert, appConfirm } from "../lib/dialogs";
 
 const LEVELS = ["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "Postgraduate", "General"];
 
@@ -439,14 +440,14 @@ export default function AdminCourses() {
   }
 
   async function handleDelete(c) {
-    const ok = window.confirm(
+    const ok = await appConfirm(
       `Remove course ${c.code} — ${c.title}? Existing questions with this code will still work, but the dropdown will no longer list it.`
     );
     if (!ok) return;
     try {
       await coursesApi.remove(c.id);
     } catch (err) {
-      alert(err.message || "Delete failed.");
+      appAlert(err.message || "Delete failed.");
     }
   }
 
@@ -548,7 +549,7 @@ export default function AdminCourses() {
             onClick={() => setShowAiImport(true)}
             className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-elevated"
           >
-            <Sparkles size={15} /> AI import (image/PDF)
+            <FileScan size={15} /> AI import (image/PDF)
           </button>
           <button
             type="button"

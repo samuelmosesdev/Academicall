@@ -13,7 +13,7 @@ export default function RecommendedCard({ title, code, thumbnailUrl, onClick }) 
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-accent/15 to-status-info/10">
+          <div className="flex h-full w-full items-center justify-center bg-violet-soft">
             <span className="text-2xl font-bold text-accent/40">{(code || title || "?")[0]}</span>
           </div>
         )}

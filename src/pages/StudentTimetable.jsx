@@ -24,11 +24,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCbtData } from "../hooks/useCbtData";
+import { useMyCourses } from "../hooks/useMyCourses";
 import { isPro } from "../lib/subscription";
 import SubscribeGateModal from "../components/SubscribeGateModal";
 import { db } from "../firebase/config";
 import { classEventsApi, timetableApi } from "../lib/api";
-import { matchesAcademicScope } from "../lib/academicScope";
+import { appAlert, appConfirm } from "../lib/dialogs";
 
 const DAYS = [
   { id: 1, short: "Mon", label: "Monday" },
@@ -165,13 +166,16 @@ export default function StudentTimetable() {
     typeof Notification !== "undefined" ? Notification.permission : "denied"
   );
 
+  const { courses: enrolled } = useMyCourses();
   const myCourses = useMemo(() => {
+    // The student's own list (server) first; fall back to the catalogue when it's empty.
+    if (enrolled.length) return enrolled.map((c) => ({ id: c.courseId || c.id, code: c.code, title: c.title }));
     const ids = profile?.selectedCourseIds || [];
     if (!ids.length) return courses;
     const set = new Set(ids);
     const picked = courses.filter((c) => set.has(c.id));
     return picked.length ? picked : courses;
-  }, [courses, profile?.selectedCourseIds]);
+  }, [courses, enrolled, profile?.selectedCourseIds]);
 
   // Personal timetableEvents + Course Rep classEvents
   useEffect(() => {
@@ -229,7 +233,7 @@ export default function StudentTimetable() {
       Promise.all([timetableApi.list(), classEventsApi.list()]).then(([personalData, sharedData]) => {
         if (cancelled) return;
         personal = (personalData.events || []).map((event) => ({ ...event, source: "personal" }));
-        shared = (sharedData.events || []).filter((event) => matchesAcademicScope(event.program || event.department, profile));
+        shared = (sharedData.events || []).filter((event) => event.department === (profile?.department || profile?.program));
         merge();
       }).catch(() => setLoading(false));
       return () => { cancelled = true; };
@@ -257,7 +261,7 @@ export default function StudentTimetable() {
         );
 
         shared = all.filter((ev) => {
-          if (matchesAcademicScope(ev.program || ev.department, profile)) {
+          if (profile?.department && ev.department === profile.department) {
             return true;
           }
           if (ev.courseCode && myCodes.has(ev.courseCode)) return true;
@@ -279,10 +283,7 @@ export default function StudentTimetable() {
     authMode,
     pro,
     weekAnchor,
-    profile?.department,
-    profile?.program,
-    profile?.faculty,
-    profile?.selectedCourseIds,
+    profile,
     courses,
   ]);
 
@@ -349,7 +350,7 @@ export default function StudentTimetable() {
 
   async function enableReminders() {
     if (typeof Notification === "undefined") {
-      alert("Notifications are not supported in this browser.");
+      appAlert("Notifications are not supported in this browser.");
       return;
     }
     const p = await Notification.requestPermission();
@@ -438,15 +439,15 @@ export default function StudentTimetable() {
 
   async function removeEvent(id) {
     if (String(id).startsWith("cr-")) {
-      alert("This class was posted by your Course Rep and can’t be deleted here.");
+      appAlert("This class was posted by your Course Rep and can’t be deleted here.");
       return;
     }
-    if (!window.confirm("Remove this class from your timetable?")) return;
+    if (!await appConfirm("Remove this class from your timetable?")) return;
     try {
       if (authMode === "api") await timetableApi.remove(id);
       else await deleteDoc(doc(db, "timetableEvents", id));
     } catch (err) {
-      alert(err.message);
+      appAlert(err.message);
     }
   }
 

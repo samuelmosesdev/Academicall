@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Sparkles, Upload, X, Loader2, Check } from "lucide-react";
+import {
+  Upload,
+  X,
+  Loader2,
+  Check,
+  FileScan,
+} from "lucide-react";
 import { coursesApi, requestsApi } from "../lib/api";
 // Static import — dynamic import broke on production (chunk fetch failed)
 import {
@@ -10,9 +16,8 @@ import { useAuth } from "../context/AuthContext";
 import { extractCoursesFromFile } from "../lib/geminiGenerate";
 
 /**
- * mode: "direct" = write to courses (staff)
- * mode: "courseRep" = publish into the Course Rep's assigned program
- * mode: "request" = legacy Course Rep approval request
+ * mode: "direct" = write to courses (admin/agent)
+ * mode: "request" = Course Rep → requests for admin approval
  */
 export default function AiCourseImportModal({
   open,
@@ -20,7 +25,6 @@ export default function AiCourseImportModal({
   mode = "direct",
   defaultFaculty = "",
   defaultDepartment = "",
-  defaultLevel = "",
   onDone,
   onImported,
   studentMode = false,
@@ -44,12 +48,11 @@ export default function AiCourseImportModal({
     try {
       let list = await extractCoursesFromFile(file);
       // Course Rep: force their department
-      if ((mode === "request" || mode === "courseRep") && defaultDepartment) {
+      if (mode === "request" && defaultDepartment) {
         list = list.map((r) => ({
           ...r,
-          department: defaultDepartment,
+          department: r.department || defaultDepartment,
           faculty: r.faculty || defaultFaculty || "",
-          ...(mode === "courseRep" && defaultLevel ? { level: defaultLevel } : {}),
         }));
       }
       setRows(list);
@@ -86,17 +89,10 @@ export default function AiCourseImportModal({
       }
       await Promise.all(valid.map((payload) => coursesApi.create({
         ...payload,
-        ...(mode === "courseRep"
-          ? {
-              department: defaultDepartment,
-              faculty: defaultFaculty || payload.faculty,
-              level: defaultLevel || payload.level,
-            }
-          : {}),
         published: true,
-        source: mode === "courseRep" ? "courseRep" : "ai-import",
+        source: "ai-import",
       })));
-      setMsg(`Published ${valid.length} course(s).`);
+      setMsg(`Imported ${valid.length} course(s).`);
       onDone?.();
       setTimeout(onClose, 1200);
     } catch (e) {
@@ -173,7 +169,7 @@ export default function AiCourseImportModal({
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-subtle bg-bg-panel p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
-            <Sparkles size={18} className="text-accent" /> AI import courses
+            <FileScan size={18} className="text-accent" /> AI import courses
           </h2>
           <button type="button" onClick={onClose} className="text-text-muted">
             <X size={18} />

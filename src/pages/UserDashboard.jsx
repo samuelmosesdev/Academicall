@@ -29,7 +29,7 @@ import { useCbtData } from "../hooks/useCbtData";
 import { useAuth } from "../context/AuthContext";
 import { recordDailyActivity } from "../lib/activity";
 import { feedApi } from "../lib/api";
-import { getAcademicScope } from "../lib/academicScope";
+import { appAlert } from "../lib/dialogs";
 
 
 const REACTIONS = [
@@ -49,11 +49,6 @@ function countReactions(list) {
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
 
-function feedAuthorName(post, fallback) {
-  const name = post.authorName || post.createdByName;
-  return name && !name.includes("@") ? name : fallback;
-}
-
 export default function UserDashboard() {
   const navigate = useNavigate();
   const { user, profile, authMode } = useAuth();
@@ -69,7 +64,7 @@ export default function UserDashboard() {
   const [expanded, setExpanded] = useState({});
   const [anonComment, setAnonComment] = useState({});
 
-  const department = getAcademicScope(profile);
+  const department = profile?.department || profile?.program || "";
   const level = profile?.level || "";
   const firstName =
     profile?.nickname ||
@@ -82,7 +77,7 @@ export default function UserDashboard() {
       if (!department) { setDeptPosts([]); setFeedLoading(false); return; }
       setFeedLoading(true);
       feedApi
-        .list("course", `program=${encodeURIComponent(department)}`)
+        .list("course", `department=${encodeURIComponent(department)}`)
         .then(({ posts = [] }) =>
           setDeptPosts(
             posts
@@ -152,7 +147,7 @@ export default function UserDashboard() {
       if (authMode === "api") await feedApi.update(collectionName === "generalPosts" ? "general" : "course", postId, { reactions });
       else await updateDoc(doc(db, collectionName, postId), { reactions });
     } catch (e) {
-      alert(e.message || "Could not react.");
+      appAlert(e.message || "Could not react.");
     }
   }
 
@@ -185,10 +180,10 @@ export default function UserDashboard() {
         authorRole: asAnonymous ? "user" : profile?.role || "user",
         authorPlan: asAnonymous ? null : profile?.plan || null,
         authorSubscription: asAnonymous ? null : profile?.subscription || null,
-        authorProgram: asAnonymous
+        authorDepartment: asAnonymous
           ? null
           : profile?.showDepartment !== false
-            ? profile?.program || null
+            ? profile?.department || null
             : null,
         authorPhone: asAnonymous
           ? null
@@ -212,7 +207,7 @@ export default function UserDashboard() {
       setAnonComment((p) => ({ ...p, [postId]: false }));
       setExpanded((p) => ({ ...p, [postId]: true }));
     } catch (e) {
-      alert(e.message || "Could not comment.");
+      appAlert(e.message || "Could not comment.");
     } finally {
       setCommentBusy((p) => ({ ...p, [postId]: false }));
     }
@@ -331,7 +326,7 @@ export default function UserDashboard() {
               >
                 <div className="flex items-start gap-3">
                   <UserAvatar
-                    name={feedAuthorName(post, "Course Rep")}
+                    name={post.authorName || post.createdByName || "Author"}
                     photoURL={post.authorPhoto}
                     role={post.authorRole}
                     size={40}
@@ -340,7 +335,7 @@ export default function UserDashboard() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm text-ink">
                         <NameWithBadge
-                          name={feedAuthorName(post, feedTab === "general" ? "Academicall Team" : "Course Rep")}
+                          name={post.authorName || post.createdByName || "Author"}
                           role={post.authorRole || (feedTab === "general" ? "admin" : "courseRep")}
                           plan={post.authorPlan}
                           subscription={post.authorSubscription}
@@ -357,9 +352,6 @@ export default function UserDashboard() {
                         </span>
                       )}
                     </div>
-                    {post.authorEmail && (
-                      <p className="text-[10px] text-ink-muted">{post.authorEmail}</p>
-                    )}
                     <p className="text-[11px] text-ink-muted">
                       {post.createdAt?.toDate
                         ? post.createdAt.toDate().toLocaleString()
@@ -443,7 +435,7 @@ export default function UserDashboard() {
                                 name={c.authorName}
                                 nickname={c.authorNickname}
                                 photoURL={c.authorPhoto}
-                                program={c.authorProgram}
+                                department={c.authorDepartment}
                                 phone={c.authorPhone}
                                 role={c.authorRole}
                                 plan={c.authorPlan}

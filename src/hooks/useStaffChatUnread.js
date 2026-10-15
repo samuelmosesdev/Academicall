@@ -89,7 +89,7 @@ export function useStaffChatUnread() {
       () => setUnread(0)
     );
     return unsub;
-  }, [user?.uid, localLastReadAt, authMode]);
+  }, [user?.uid, localLastReadAt, lastReadMs, authMode]);
 
   useEffect(() => {
     const syncReadState = (event) => {

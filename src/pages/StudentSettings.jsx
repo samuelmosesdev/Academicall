@@ -12,7 +12,6 @@ import {
   ExternalLink,
   Moon,
   Sun,
-  Monitor,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -33,7 +32,7 @@ const DEFAULT_PREFS = {
 };
 
 export default function StudentSettings() {
-  const { user, profile, authMode, logout, refreshProfile } = useAuth();
+  const { user, profile, logout, refreshProfile } = useAuth();
   const { theme, setTheme, isDark, fontScale, setFontScale, fontScales } = useTheme();
   const navigate = useNavigate();
   const pro = isPro(profile);

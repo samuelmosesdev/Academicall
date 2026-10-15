@@ -18,6 +18,7 @@ import { isAdmin, isAlpha } from "../lib/roles";
 import { logActivity } from "../lib/activityLog";
 import { activityApi, usersApi } from "../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { appAlert } from "../lib/dialogs";
 
 export default function AdminActivityLog() {
   const { profile, authMode } = useAuth();
@@ -37,9 +38,9 @@ export default function AdminActivityLog() {
         const activity = response.activities || response.activity || [];
         setLogs(activity.map((item) => ({
           ...item,
-          actorName: item.meta?.actorName || item.userName || item.user?.name,
-          targetUid: item.meta?.targetUid,
-          targetName: item.meta?.targetName,
+          actorName: item.meta?.actorName || item.actorName || item.userName || item.user?.name,
+          targetUid: item.meta?.targetUid || item.targetUid,
+          targetName: item.meta?.targetName || item.targetName,
         })));
         setLoading(false);
       }).catch(() => alive && setLoading(false));
@@ -87,7 +88,7 @@ export default function AdminActivityLog() {
           targetUid: uid,
           meta: { status },
         });
-        alert("Status updated");
+        appAlert("Status updated");
         return;
       }
       const uref = doc(db, "users", uid);
@@ -102,14 +103,14 @@ export default function AdminActivityLog() {
         targetUid: uid,
         meta: { status },
       });
-      alert("Status updated");
+      appAlert("Status updated");
     } catch (e) {
-      alert(e.message || "Could not update status");
+      appAlert(e.message || "Could not update status");
     }
   }
 
   async function doRevertRole(l) {
-    if (!l.targetUid || !l.meta?.from) return alert("No previous role recorded");
+    if (!l.targetUid || !l.meta?.from) return appAlert("No previous role recorded");
     try {
       if (authMode === "api") {
         await usersApi.update(l.targetUid, { role: l.meta.from });
@@ -119,7 +120,7 @@ export default function AdminActivityLog() {
           targetName: l.targetName || null,
           meta: { from: l.meta.to, to: l.meta.from },
         });
-        alert("Role reverted");
+        appAlert("Role reverted");
         return;
       }
       await updateDoc(doc(db, "users", l.targetUid), { role: l.meta.from });
@@ -131,15 +132,15 @@ export default function AdminActivityLog() {
         targetName: l.targetName || null,
         meta: { from: l.meta.to, to: l.meta.from },
       });
-      alert("Role reverted");
+      appAlert("Role reverted");
     } catch (e) {
-      alert(e.message || "Could not revert role");
+      appAlert(e.message || "Could not revert role");
     }
   }
 
   async function doCancelClass(l) {
-    if (!l.reference) return alert("No class reference recorded");
-    if (authMode === "api") return alert("Class cancellation is not available in the API yet.");
+    if (!l.reference) return appAlert("No class reference recorded");
+    if (authMode === "api") return appAlert("Class cancellation is not available in the API yet.");
     try {
       await deleteDoc(doc(db, "classEvents", l.reference));
       await logActivity({
@@ -149,9 +150,9 @@ export default function AdminActivityLog() {
         reference: l.reference,
         meta: { viaAdmin: true },
       });
-      alert("Class cancelled");
+      appAlert("Class cancelled");
     } catch (e) {
-      alert(e.message || "Could not cancel class");
+      appAlert(e.message || "Could not cancel class");
     }
   }
 

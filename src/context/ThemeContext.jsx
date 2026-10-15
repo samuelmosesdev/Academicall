@@ -69,12 +69,6 @@ export function ThemeProvider({ children }) {
     }
   }, [fontScale]);
 
-  // Apply immediately on first paint (avoid flash)
-  useEffect(() => {
-    applyTheme(theme);
-    applyFontScale(fontScale);
-  }, []);
-
   const setTheme = useCallback((next) => {
     setThemeState((prev) => {
       const value = typeof next === "function" ? next(prev) : next;

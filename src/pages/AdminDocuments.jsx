@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Upload, Trash2, Search, ExternalLink, Sparkles } from "lucide-react";
+import {
+  FileText,
+  Upload,
+  Trash2,
+  Search,
+  ExternalLink,
+  FileScan,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { documentsApi, settingsApi } from "../lib/api";
 import { useAdminDocuments } from "../hooks/useAdminDocuments";
@@ -7,6 +14,7 @@ import { useCbtData } from "../hooks/useCbtData";
 import { uploadDocumentToCloudinary } from "../lib/cloudinaryUpload";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 import { titleFromFilename, suggestTags, suggestDescription } from "../lib/documentAi";
+import { appAlert, appConfirm } from "../lib/dialogs";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none";
@@ -147,12 +155,12 @@ export default function AdminDocuments() {
   }
 
   async function handleDelete(docItem) {
-    const ok = window.confirm(`Remove "${docItem.title}"? This only removes it from the app list.`);
+    const ok = await appConfirm(`Remove "${docItem.title}"? This only removes it from the app list.`);
     if (!ok) return;
     try {
       await documentsApi.remove(docItem.id);
     } catch (err) {
-      alert(err.message || "Delete failed.");
+      appAlert(err.message || "Delete failed.");
     }
   }
 
@@ -161,7 +169,7 @@ export default function AdminDocuments() {
       await documentsApi.approve(id, { status });
       await retry?.();
     } catch (err) {
-      alert(err.message || `Could not ${status} document.`);
+      appAlert(err.message || `Could not ${status} document.`);
     }
   }
 
@@ -275,7 +283,7 @@ export default function AdminDocuments() {
           {aiSettings.aiAssistEnabled && (
             <div className="space-y-2 rounded-lg border border-accent/30 bg-accent-soft/40 p-3">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-accent">
-                <Sparkles size={13} /> AI assist
+                <FileScan size={13} /> AI assist
               </div>
               <p className="text-[11px] text-text-muted">
                 Title auto-fills from the PDF name. Tags follow the selected course. Edit before upload.

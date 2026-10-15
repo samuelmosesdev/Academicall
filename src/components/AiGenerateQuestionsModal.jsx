@@ -1,13 +1,13 @@
 import { useMemo, useRef, useState } from "react";
 import {
   X,
-  Sparkles,
   Upload,
   FileText,
   Loader2,
   Check,
   Trash2,
   AlertCircle,
+  ListChecks,
 } from "lucide-react";
 import { generateQuestionsFromPdf } from "../lib/geminiGenerate";
 import { refreshCbtQuestions } from "../hooks/useCbtData";
@@ -190,7 +190,7 @@ export default function AiGenerateQuestionsModal({
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent">
-              <Sparkles size={16} />
+              <ListChecks size={16} />
             </span>
             <div>
               <h2 className="text-base font-semibold text-text-primary">
@@ -350,7 +350,7 @@ export default function AiGenerateQuestionsModal({
                 </>
               ) : (
                 <>
-                  <Sparkles size={16} />
+                  <ListChecks size={16} />
                   Generate {count} questions with AI
                 </>
               )}

@@ -4,42 +4,17 @@ export const API_BASE = (
     ? "http://localhost:4000/api/v1"
     : "https://academicall-api-1.onrender.com/api/v1")
 ).replace(/\/$/, "");
-const API_TIMEOUT_MS = 60000;
-const AUTH_RETRYABLE_ENDPOINTS = new Set(["/auth/login", "/auth/google"]);
-
-async function fetchWithRetry(url, config, endpoint) {
-  const attempts = AUTH_RETRYABLE_ENDPOINTS.has(endpoint) && !config.signal ? 2 : 1;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-    try {
-      return await fetch(url, {
-        ...config,
-        signal: config.signal || controller.signal,
-      });
-    } catch (error) {
-      const retryable = error instanceof TypeError || error.name === "AbortError";
-      if (attempt + 1 < attempts && retryable) {
-        await new Promise((resolve) => window.setTimeout(resolve, 1000));
-        continue;
-      }
-      if (error.name === "AbortError") {
-        throw new Error("The sign-in server is taking too long to respond. Please try again in a moment.");
-      }
-      if (error instanceof TypeError) {
-        throw new Error("Unable to reach the sign-in server. Check your connection and try again.");
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
-}
+const API_TIMEOUT_MS = 15000;
+export const STUDENT_NOTIFICATIONS_UPDATED_EVENT = "student-notifications-updated";
 
 function getToken() {
   return localStorage.getItem("academicall_token");
 }
 
+/**
+ * Staff can sign someone out everywhere or force a password change. When the
+ * API says so, send the person to sign in again / to the change-password page.
+ */
 function handleAccessSignals(status, data) {
   if (typeof window === "undefined") return;
   const path = window.location.pathname;
@@ -53,9 +28,12 @@ function handleAccessSignals(status, data) {
 
 export async function api(endpoint, options = {}) {
   const token = getToken();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
   const config = {
     ...options,
+    signal: options.signal || controller.signal,
     headers: {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -68,7 +46,7 @@ export async function api(endpoint, options = {}) {
   }
 
   try {
-    const res = await fetchWithRetry(`${API_BASE}${endpoint}`, config, endpoint);
+    const res = await fetch(`${API_BASE}${endpoint}`, config);
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -87,7 +65,12 @@ export async function api(endpoint, options = {}) {
     return data;
   } catch (err) {
     console.error("Network / Fetch Error:", err);
+    if (err.name === "AbortError") {
+      throw new Error("The server took too long to respond. Please try again.");
+    }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -117,15 +100,14 @@ export const usersApi = {
   signOutEverywhere: (id) => api(`/users/${id}/sign-out`, { method: "POST" }),
   updateAccess: (id, body) => api(`/users/${id}/access`, { method: "PUT", body }),
   createAgent: (body) => api("/users/agents", { method: "POST", body }),
-  courseRepStatus: (program, level) =>
+  courseRepStatus: (department, level) =>
     api(
-      `/users/course-rep-status?program=${encodeURIComponent(program)}&level=${encodeURIComponent(level)}`
+      `/users/course-rep-status?department=${encodeURIComponent(department)}&level=${encodeURIComponent(level)}`
     ),
 };
 
 export const documentsApi = {
   list: () => api("/documents"),
-  mine: () => api("/documents/mine"),
   get: (id) => api(`/documents/${id}`),
   create: (body) => api("/documents", { method: "POST", body }),
   update: (id, body) => api(`/documents/${id}`, { method: "PATCH", body }),
@@ -177,15 +159,13 @@ export const notificationsApi = {
   removeFcmToken: (body) => api("/notifications/fcm-token", { method: "DELETE", body }),
 };
 
-export const STUDENT_NOTIFICATIONS_UPDATED_EVENT = "student-notifications-updated";
-
 export const departmentApi = {
   join: (body) => api("/department/join", { method: "POST", body }),
-  me: (program) =>
-    api(`/department/me${program ? `?program=${encodeURIComponent(program)}` : ""}`),
-  members: ({ program, status } = {}) => {
+  me: (department) =>
+    api(`/department/me${department ? `?department=${encodeURIComponent(department)}` : ""}`),
+  members: ({ department, status } = {}) => {
     const params = new URLSearchParams();
-    if (program) params.set("program", program);
+    if (department) params.set("department", department);
     if (status) params.set("status", status);
     return api(`/department/members${params.toString() ? `?${params}` : ""}`);
   },
@@ -243,25 +223,24 @@ export const chatApi = {
 };
 
 export const classEventsApi = {
+  comment: (id, text) => api(`/class-events/${id}/comments`, { method: "POST", body: { text } }),
+  react: (id, type) => api(`/class-events/${id}/reactions`, { method: "POST", body: { type } }),
+  reactComment: (id, commentId, type) => api(`/class-events/${id}/comments/${commentId}/reactions`, { method: "POST", body: { type } }),
   list: () => api("/class-events"),
   create: (body) => api("/class-events", { method: "POST", body }),
   update: (id, body) => api(`/class-events/${id}`, { method: "PATCH", body }),
   remove: (id) => api(`/class-events/${id}`, { method: "DELETE" }),
-  addComment: (id, body) => api(`/class-events/${id}/comments`, { method: "POST", body }),
-  deleteComment: (id, commentId) => api(`/class-events/${id}/comments/${commentId}`, { method: "DELETE" }),
-  react: (id, type) => api(`/class-events/${id}/reactions`, { method: "POST", body: { type } }),
-  reactComment: (id, commentId, type) => api(`/class-events/${id}/comments/${commentId}/reactions`, { method: "POST", body: { type } }),
 };
 
 export const feedApi = {
+  comment: (kind, id, text) => api(`/feed/${kind}/${id}/comments`, { method: "POST", body: { text } }),
+  deleteComment: (kind, id, commentId) => api(`/feed/${kind}/${id}/comments/${commentId}`, { method: "DELETE" }),
+  react: (kind, id, type) => api(`/feed/${kind}/${id}/reactions`, { method: "POST", body: { type } }),
+  reactComment: (kind, id, commentId, type) => api(`/feed/${kind}/${id}/comments/${commentId}/reactions`, { method: "POST", body: { type } }),
   list: (kind, params = "") => api(`/feed/${kind}${params ? `?${params}` : ""}`),
   create: (kind, body) => api(`/feed/${kind}`, { method: "POST", body }),
   update: (kind, id, body) => api(`/feed/${kind}/${id}`, { method: "PATCH", body }),
   remove: (kind, id) => api(`/feed/${kind}/${id}`, { method: "DELETE" }),
-  addComment: (kind, id, body) => api(`/feed/${kind}/${id}/comments`, { method: "POST", body }),
-  deleteComment: (kind, id, commentId) => api(`/feed/${kind}/${id}/comments/${commentId}`, { method: "DELETE" }),
-  react: (kind, id, type) => api(`/feed/${kind}/${id}/reactions`, { method: "POST", body: { type } }),
-  reactComment: (kind, id, commentId, type) => api(`/feed/${kind}/${id}/comments/${commentId}/reactions`, { method: "POST", body: { type } }),
 };
 
 export const subscriptionsApi = {
@@ -285,6 +264,66 @@ export const quizzesApi = {
   listMaterialQuestions: (materialId) =>
     api(`/questions?materialId=${encodeURIComponent(materialId)}`),
 };
+// Institutions → faculties → departments → programmes
+const qs = (params = {}) => {
+  const u = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== "") u.set(k, String(v)); });
+  const t = u.toString();
+  return t ? `?${t}` : "";
+};
+
+/** A student's own course list (Enrollment rows) and the suggestions for their programme. */
+export const myCoursesApi = {
+  list: () => api("/me/courses"),
+  suggestions: ({ legacy = false } = {}) => api(`/me/courses/suggestions${legacy ? "?legacy=1" : ""}`),
+  add: (body) => api("/me/courses", { method: "POST", body }),
+  addMany: (body) => api("/me/courses/bulk", { method: "POST", body }),
+  remove: (id) => api(`/me/courses/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  searchCatalog: (params) => api(`/catalog/courses${qs(params)}`),
+};
+
+/** Admin: institutions → faculties → departments → programmes, courses and curricula. */
+const A = "/admin/academics";
+export const academicsApi = {
+  summary: () => api(`${A}/summary`),
+  institutions: (params) => api(`${A}/institutions${qs(params)}`),
+  institution: (id) => api(`${A}/institutions/${encodeURIComponent(id)}`),
+  createInstitution: (body) => api(`${A}/institutions`, { method: "POST", body }),
+  updateInstitution: (id, body) => api(`${A}/institutions/${encodeURIComponent(id)}`, { method: "PATCH", body }),
+  deleteInstitution: (id) => api(`${A}/institutions/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  faculties: (instId) => api(`${A}/institutions/${encodeURIComponent(instId)}/faculties`),
+  createFaculty: (instId, body) => api(`${A}/institutions/${encodeURIComponent(instId)}/faculties`, { method: "POST", body }),
+  updateFaculty: (id, body) => api(`${A}/faculties/${encodeURIComponent(id)}`, { method: "PATCH", body }),
+  deleteFaculty: (id) => api(`${A}/faculties/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  departments: (facId) => api(`${A}/faculties/${encodeURIComponent(facId)}/departments`),
+  createDepartment: (facId, body) => api(`${A}/faculties/${encodeURIComponent(facId)}/departments`, { method: "POST", body }),
+  updateDepartment: (id, body) => api(`${A}/departments/${encodeURIComponent(id)}`, { method: "PATCH", body }),
+  deleteDepartment: (id) => api(`${A}/departments/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  programmes: (depId) => api(`${A}/departments/${encodeURIComponent(depId)}/programmes`),
+  createProgramme: (depId, body) => api(`${A}/departments/${encodeURIComponent(depId)}/programmes`, { method: "POST", body }),
+  updateProgramme: (id, body) => api(`${A}/programmes/${encodeURIComponent(id)}`, { method: "PATCH", body }),
+  deleteProgramme: (id) => api(`${A}/programmes/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  linkCurriculum: (progId, curriculumId) => api(`${A}/programmes/${encodeURIComponent(progId)}/curricula`, { method: "POST", body: { curriculumId } }),
+  unlinkCurriculum: (progId, curId) => api(`${A}/programmes/${encodeURIComponent(progId)}/curricula/${encodeURIComponent(curId)}`, { method: "DELETE" }),
+  departmentCourses: (depId) => api(`${A}/departments/${encodeURIComponent(depId)}/courses`),
+  assignCourse: (depId, body) => api(`${A}/departments/${encodeURIComponent(depId)}/courses`, { method: "POST", body }),
+  unassignCourse: (depId, linkId) => api(`${A}/departments/${encodeURIComponent(depId)}/courses/${encodeURIComponent(linkId)}`, { method: "DELETE" }),
+  courses: (params) => api(`${A}/courses${qs(params)}`),
+  course: (id) => api(`${A}/courses/${encodeURIComponent(id)}`),
+  createCourse: (body) => api(`${A}/courses`, { method: "POST", body }),
+  updateCourse: (id, body) => api(`${A}/courses/${encodeURIComponent(id)}`, { method: "PATCH", body }),
+  archiveCourse: (id) => api(`${A}/courses/${encodeURIComponent(id)}/archive`, { method: "POST" }),
+  restoreCourse: (id) => api(`${A}/courses/${encodeURIComponent(id)}/restore`, { method: "POST" }),
+  deleteCourse: (id) => api(`${A}/courses/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  curricula: (params) => api(`${A}/curricula${qs(params)}`),
+  curriculum: (id) => api(`${A}/curricula/${encodeURIComponent(id)}`),
+  updateCurriculum: (id, body) => api(`${A}/curricula/${encodeURIComponent(id)}`, { method: "PATCH", body }),
+};
+
+/** Paginated, sortable staff user directory. */
+export const directoryApi = {
+  list: (params) => api(`/users${qs({ page: 1, ...params })}`),
+};
 
 export const institutionsApi = {
   search: ({ q = "", limit = 25, offset = 0, state = "" } = {}) => {
@@ -299,6 +338,7 @@ export const institutionsApi = {
   tree: (id) => api(`/institutions/${encodeURIComponent(id)}/tree`),
 };
 
+// Study groups
 export const groupsApi = {
   list: () => api("/groups"),
   discover: () => api("/groups/discover"),
@@ -313,7 +353,7 @@ export const groupsApi = {
   transfer: (id, userId) => api(`/groups/${id}/transfer`, { method: "POST", body: { userId } }),
   markRead: (id) => api(`/groups/${id}/read`, { method: "POST" }),
   inviteScope: (id) => api(`/groups/${id}/invite-scope`, { method: "POST" }),
-  members: (id, status = "active") => api(`/groups/${id}/members?status=${encodeURIComponent(status)}`),
+  members: (id, status = "active") => api(`/groups/${id}/members?status=${status}`),
   review: (id, userId, action) => api(`/groups/${id}/members/${userId}/review`, { method: "POST", body: { action } }),
   setRole: (id, userId, role) => api(`/groups/${id}/members/${userId}/role`, { method: "POST", body: { role } }),
   removeMember: (id, userId) => api(`/groups/${id}/members/${userId}`, { method: "DELETE" }),

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   addDoc,
   collection,
@@ -19,7 +19,7 @@ import {
   Users,
   BookOpen,
   Inbox,
-  Sparkles,
+  FileScan,
 } from "lucide-react";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
@@ -31,8 +31,7 @@ import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
 import { displayLabel } from "../components/UserAvatar";
 import { classEventsApi, departmentApi, requestsApi, coursesApi, documentsApi } from "../lib/api";
-import { refreshCbtCourses } from "../hooks/useCbtData";
-import { getAcademicDepartment, getAcademicScope, getCourseRepProgram } from "../lib/academicScope";
+import { appAlert, appConfirm, appPrompt } from "../lib/dialogs";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -52,13 +51,19 @@ export default function CourseRepPanel() {
   const allowed =
     isCourseRep(profile) || isAdmin(profile) || isAlpha(profile);
 
-  const department = profile?.role === "courseRep"
-    ? getCourseRepProgram(profile)
-    : getAcademicScope(profile);
-  const academicDepartment = getAcademicDepartment(profile);
-  const level = profile?.role === "courseRep"
-    ? profile?.courseRepMeta?.level || ""
-    : profile?.level || "";
+  const department =
+    profile?.courseRepMeta?.department ||
+    profile?.department ||
+    profile?.courseRepMeta?.program ||
+    profile?.program ||
+    profile?.courseRepDepartment ||
+    profile?.department ||
+    "";
+  const level =
+    profile?.courseRepMeta?.level ||
+    profile?.courseRepLevel ||
+    profile?.level ||
+    "";
   const faculty =
     profile?.courseRepMeta?.faculty || profile?.faculty || "";
 
@@ -71,10 +76,10 @@ export default function CourseRepPanel() {
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Add a course to the assigned program
+  // Request course
   const [cCode, setCCode] = useState("");
   const [cTitle, setCTitle] = useState("");
-  const [cLevel, setCLevel] = useState(level || "100 Level");
+  const [cLevel, setCLevel] = useState("100 Level");
   const [cDesc, setCDesc] = useState("");
   const [cBusy, setCBusy] = useState(false);
 
@@ -105,44 +110,40 @@ export default function CourseRepPanel() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [showAnnounce, setShowAnnounce] = useState(false);
 
-  useEffect(() => {
-    if (level) setCLevel(level);
-  }, [level]);
-
-  async function loadMembers() {
+  const loadMembers = useCallback(async () => {
     if (authMode !== "api" || !department) return;
     setMembersLoading(true);
     try {
-      const response = await departmentApi.members({ program: department, status: memberTab });
+      const response = await departmentApi.members({ department, status: memberTab });
       setMembers(response.members || []);
     } catch {
       setMembers([]);
     } finally {
       setMembersLoading(false);
     }
-  }
+  }, [authMode, department, memberTab]);
 
   useEffect(() => {
     loadMembers();
-  }, [authMode, department, memberTab]);
+  }, [loadMembers]);
 
   async function handleMemberAction(action, id) {
     try {
       if (action === "admit") await departmentApi.admit(id);
       if (action === "reject") {
-        const reason = window.prompt("Why are you rejecting this admission?")?.trim();
+        const reason = (await appPrompt("Why are you rejecting this admission?", { required: true }))?.trim();
         if (!reason) return;
         await departmentApi.reject(id, reason);
       }
       if (action === "withdraw") {
         const reason = withdrawReason[id]?.trim();
-        if (!reason) return alert("Please enter a reason for withdrawal");
+        if (!reason) return appAlert("Please enter a reason for withdrawal");
         await departmentApi.requestWithdraw(id, reason);
         setWithdrawReason((previous) => ({ ...previous, [id]: "" }));
       }
       await loadMembers();
     } catch (error) {
-      alert(error.message || "Could not update member");
+      appAlert(error.message || "Could not update member");
     }
   }
 
@@ -212,7 +213,7 @@ export default function CourseRepPanel() {
       coursesApi.list().then(({ courses = [] }) => {
         if (!alive) return;
         setDeptCourses(courses
-          .filter((course) => deptsMatch(course.department, department) && (!level || !course.level || levelsMatch(course.level, level)))
+          .filter((course) => course.department === department && (!level || !course.level || course.level === level))
           .sort((a, b) => String(a.code || "").localeCompare(String(b.code || ""))));
       }).catch(() => alive && setDeptCourses([]));
       return () => { alive = false; };
@@ -228,9 +229,9 @@ export default function CourseRepPanel() {
           .map((d) => ({ id: d.id, ...d.data() }))
           .filter(
             (c) =>
-              deptsMatch(c.department, department) &&
+              c.department === department &&
               c.published !== false &&
-              (!level || !c.level || levelsMatch(c.level, level))
+              (!level || !c.level || c.level === level)
           )
           .sort((a, b) =>
             String(a.code || "").localeCompare(String(b.code || ""))
@@ -239,7 +240,7 @@ export default function CourseRepPanel() {
       },
       () => setDeptCourses([])
     );
-  }, [department, authMode]);
+  }, [department, level, authMode]);
 
   useEffect(() => {
     if (authMode !== "api" || !user?.uid) return undefined;
@@ -250,12 +251,12 @@ export default function CourseRepPanel() {
     return () => { alive = false; };
   }, [authMode, user?.uid]);
 
-  async function deletePublishedMaterial(document) {
-    if (!window.confirm(`Delete "${document.title}"? Students will no longer see it.`)) return;
+  async function requestMaterialDelete(document) {
+    const reason = (await appPrompt(`Why should "${document.title}" be removed?`, { required: true }))?.trim();
+    if (!reason) return;
     try {
-      await documentsApi.remove(document.id);
-      setRepMaterials((current) => current.filter((item) => item.id !== document.id));
-      setMsg("Material deleted.");
+      await documentsApi.requestDelete(document.id, reason);
+      setMsg("Delete request sent to staff for approval.");
     } catch (error) {
       setErr(error.message || "Could not request material deletion.");
     }
@@ -297,7 +298,9 @@ export default function CourseRepPanel() {
     setMsg("");
     setErr("");
     if (!department || !level) {
-      return setErr("No program/level on your Course Rep assignment. Ask an administrator to assign both.");
+      return setErr(
+        "No department/level on your Course Rep profile. Ask Admin to assign you with a department AND level."
+      );
     }
     if (!title.trim() || !startsAt) {
       return setErr("Title and start time are required.");
@@ -313,8 +316,7 @@ export default function CourseRepPanel() {
             title: title.trim(), courseCode: courseCode.trim().toUpperCase() || null,
             venue: venue.trim() || null, notes: notes.trim() || null,
             startsAt: start.toISOString(), endsAt: end ? end.toISOString() : null,
-            faculty: faculty || null, department: academicDepartment || null,
-            program: department, level: level || null,
+            faculty: faculty || null, department, level: level || null,
             createdByName: profile?.name || user.email,
           })
         : { event: await addDoc(collection(db, "classEvents"), {
@@ -331,15 +333,6 @@ export default function CourseRepPanel() {
         createdByName: profile?.name || user.email,
         createdAt: serverTimestamp(),
       }) };
-      const when = start.toLocaleString();
-      const body = [
-        courseCode && courseCode.trim().toUpperCase(),
-        venue.trim() || "Venue TBA",
-        when,
-        notes.trim(),
-      ]
-        .filter(Boolean)
-        .join(" · ");
       await logActivity({
         actorUid: user.uid,
         actorName: profile?.name || user.email,
@@ -367,17 +360,13 @@ export default function CourseRepPanel() {
   }
 
   async function cancelClass(ev) {
-    const ok = window.confirm(
+    const ok = await appConfirm(
       `Cancel "${ev.title}"? Students in ${department} · ${level || "your level"} will be notified.`
     );
     if (!ok) return;
     try {
       if (authMode === "api") await classEventsApi.remove(ev.id);
       else await deleteDoc(doc(db, "classEvents", ev.id));
-      const when =
-        (ev.startsAt?.toDate?.() || ev.startsAt) &&
-        new Date(ev.startsAt?.toDate?.() || ev.startsAt).toLocaleString();
-
       await logActivity({
         actorUid: user.uid,
         actorName: profile?.name || user.email,
@@ -398,7 +387,7 @@ export default function CourseRepPanel() {
     }
   }
 
-  async function addCourse(e) {
+  async function requestAddCourse(e) {
     e.preventDefault();
     setMsg("");
     setErr("");
@@ -410,48 +399,38 @@ export default function CourseRepPanel() {
     }
     setCBusy(true);
     try {
-      const payload = {
-        code: cCode.trim().toUpperCase(),
-        title: cTitle.trim(),
-        description: cDesc.trim() || null,
-        level: cLevel || level,
-        faculty: faculty || null,
-        department,
-        source: "courseRep",
-        published: true,
-      };
-      const course = authMode === "api"
-        ? (await coursesApi.create(payload)).course
-        : {
-            id: (await addDoc(collection(db, "courses"), {
-              ...payload,
-              createdAt: serverTimestamp(),
-            })).id,
-            ...payload,
-          };
-      setDeptCourses((current) => [course, ...current.filter((item) => item.id !== course.id)]);
-      if (authMode === "api") {
-        refreshCbtCourses().catch((refreshError) => {
-          setErr(refreshError.message || "Course published, but the course list could not be refreshed.");
-        });
-      }
+      await requestsApi.create({
+        type: "course",
+        status: "pending",
+        title: `Add course ${cCode.trim().toUpperCase()} — ${cTitle.trim()}`,
+        details: cDesc.trim() || null,
+        requesterUid: user.uid,
+        requesterName: profile?.name || user.email,
+        requesterEmail: user.email,
+        requesterRole: "courseRep",
+        payload: {
+          courseDraft: {
+            code: cCode.trim().toUpperCase(),
+            title: cTitle.trim(),
+            description: cDesc.trim() || null,
+            level: cLevel || level,
+            faculty: faculty || null,
+            department,
+            published: false,
+          },
+        },
+      });
       setCCode("");
       setCTitle("");
       setCDesc("");
-      setMsg(`${course.code} has been published and is now available to students.`);
+      setMsg(
+        "Course request sent. It will appear under Admin → Requests → Course Reps."
+      );
     } catch (error) {
-      setErr(error.message || "Could not publish course.");
+      setErr(error.message || "Request failed — check Firestore rules for requests.");
     } finally {
       setCBusy(false);
     }
-  }
-
-  async function refreshRepCourses() {
-    await refreshCbtCourses();
-    const { courses = [] } = await coursesApi.list();
-    setDeptCourses(courses
-      .filter((course) => deptsMatch(course.department, department) && (!level || !course.level || levelsMatch(course.level, level)))
-      .sort((a, b) => String(a.code || "").localeCompare(String(b.code || ""))));
   }
 
   async function uploadMaterial(e) {
@@ -477,7 +456,7 @@ export default function CourseRepPanel() {
       const url = res.secure_url || res.url;
       const bytes = res.bytes || matFile.size;
 
-      const { document } = await documentsApi.create({
+      await documentsApi.create({
         title: matTitle.trim(),
         fileUrl: url,
         fileSize: bytes || matFile.size,
@@ -486,20 +465,12 @@ export default function CourseRepPanel() {
         courseCode: course?.code || null,
         courseTitle: course?.title || null,
         faculty: course?.faculty || faculty || null,
-        department: academicDepartment || null,
-        program: department || null,
+        department: department || null,
         level: course?.level || level || null,
         source: "courseRep",
         status: "approved",
       });
 
-      setRepMaterials((current) => [
-        {
-          ...document,
-          course: course ? { id: course.id, code: course.code, title: course.title } : null,
-        },
-        ...current.filter((item) => item.id !== document.id),
-      ]);
       setMatTitle("");
       setMatFile(null);
       setMatScope("course");
@@ -507,7 +478,7 @@ export default function CourseRepPanel() {
       setMsg(
         matScope === "course"
           ? "Material published to the selected course."
-          : "Material published to your programme group."
+          : "Material published to the department group."
       );
     } catch (ex) {
       setErr(ex.message || "Upload failed");
@@ -533,10 +504,10 @@ export default function CourseRepPanel() {
         <p className="text-sm text-ink-muted">
           You represent{" "}
           <strong className="text-ink">
-            {department || "— no program set —"}
+            {department || "— no department set —"}
           </strong>
-            {faculty ? ` · ${faculty}` : ""}. Schedule classes, publish courses and materials
-            for your assigned program, and manage program members.
+          {faculty ? ` · ${faculty}` : ""}. Schedule classes, request new courses
+          for approval, and track your requests.
         </p>
       </div>
 
@@ -577,7 +548,7 @@ export default function CourseRepPanel() {
             onClick={() => setShowAiImport(true)}
             className="inline-flex items-center gap-2 rounded-xl border border-teal/40 bg-teal-soft px-3 py-2 text-sm font-semibold text-teal"
           >
-            <Sparkles size={15} /> AI import courses
+            <FileScan size={15} /> AI import courses
           </button>
         </div>
       </div>
@@ -606,11 +577,11 @@ export default function CourseRepPanel() {
       {/* Department courses (read-only) */}
       <div className="rounded-2xl border border-border-light bg-card-light p-5">
         <h2 className="mb-3 text-sm font-semibold text-ink">
-          Courses for {department || "your program"}
+          Courses for {department || "your department"}
         </h2>
         {deptCourses.length === 0 ? (
           <p className="text-sm text-ink-muted">
-            No courses are listed yet. Add one below to publish it immediately to your assigned program.
+            No published courses yet. Request one below for admin approval.
           </p>
         ) : (
           <ul className="space-y-1.5">
@@ -630,17 +601,18 @@ export default function CourseRepPanel() {
         )}
       </div>
 
-      {/* Add a course directly to the assigned program */}
+      {/* Request new course */}
       <form
-        onSubmit={addCourse}
+        onSubmit={requestAddCourse}
         className="space-y-3 rounded-2xl border border-border-light bg-card-light p-5"
       >
         <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <BookOpen size={16} className="text-teal" /> Add a course
+          <BookOpen size={16} className="text-teal" /> Request new course
         </h2>
         <p className="text-xs text-ink-muted">
-          Courses are published immediately for students in{" "}
-          <strong>{department || "your program"}</strong>.
+          Admin must approve. After approval, students in{" "}
+          <strong>{department || "your department"}</strong> get this as a free
+          department course.
         </p>
         <input
           value={cCode}
@@ -660,7 +632,6 @@ export default function CourseRepPanel() {
           value={cLevel}
           onChange={(e) => setCLevel(e.target.value)}
           className={field}
-          disabled={profile?.role === "courseRep"}
         >
           {LEVELS.map((l) => (
             <option key={l} value={l}>
@@ -685,14 +656,14 @@ export default function CourseRepPanel() {
           ) : (
             <Send size={15} />
           )}
-          {cBusy ? "Publishing…" : "Publish course"}
+          Submit course for admin approval
         </button>
       </form>
 
       {/* Upload material for a course or the department group */}
       <form onSubmit={uploadMaterial} className="space-y-3 rounded-2xl border border-border-light bg-card-light p-5">
-        <h2 className="text-sm font-semibold text-ink">Upload material to a course or programme group</h2>
-        <p className="text-xs text-ink-muted">Publish a file directly to a course, or share it with students in your assigned programme, {department || "your programme"}.</p>
+        <h2 className="text-sm font-semibold text-ink">Upload material to a course or department group</h2>
+        <p className="text-xs text-ink-muted">Publish a file directly to a course, or post it to your department group so all students in {department || "this department"} can access it.</p>
 
         <div className="flex flex-wrap gap-2 text-xs font-medium">
           <button
@@ -707,7 +678,7 @@ export default function CourseRepPanel() {
             onClick={() => setMatScope("department")}
             className={`rounded-lg px-3 py-1.5 ${matScope === "department" ? "bg-teal-soft text-teal" : "bg-surface-light text-ink-muted"}`}
           >
-            Programme group
+            Department group
           </button>
         </div>
 
@@ -729,7 +700,7 @@ export default function CourseRepPanel() {
         <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={(e) => setMatFile(e.target.files?.[0] || null)} />
         {matProgress > 0 && matProgress < 100 && <p className="text-xs">Upload {matProgress}%</p>}
         <button type="submit" disabled={matBusy} className="inline-flex items-center gap-2 rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-          {matBusy ? "Uploading…" : matScope === "course" ? "Publish material" : "Publish to programme group"}
+          {matBusy ? "Uploading…" : matScope === "course" ? "Publish material" : "Publish to department group"}
         </button>
       </form>
 
@@ -739,7 +710,7 @@ export default function CourseRepPanel() {
           {repMaterials.map((document) => (
             <div key={document.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-light bg-surface-light px-3 py-2">
               <div><p className="text-sm font-medium text-ink">{document.title}</p><p className="text-xs text-ink-muted">{document.course?.code || "Unassigned"} · {document.status || "approved"}</p></div>
-              <button type="button" onClick={() => deletePublishedMaterial(document)} className="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600">Delete</button>
+              <button type="button" onClick={() => requestMaterialDelete(document)} className="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600">Request delete</button>
             </div>
           ))}
         </section>
@@ -911,8 +882,7 @@ export default function CourseRepPanel() {
           setShowSchedule(false);
           if (ok) setMsg("Class scheduled. Students in your level will see it.");
         }}
-        department={academicDepartment || department}
-        program={department}
+        department={department}
         level={level}
         faculty={faculty}
         user={user}
@@ -925,8 +895,7 @@ export default function CourseRepPanel() {
           setShowAnnounce(false);
           if (ok) setMsg("Announcement posted to your department feed.");
         }}
-        department={academicDepartment || department}
-        program={department}
+        department={department}
         level={level}
         faculty={faculty}
         user={user}
@@ -935,11 +904,9 @@ export default function CourseRepPanel() {
       <AiCourseImportModal
         open={showAiImport}
         onClose={() => setShowAiImport(false)}
-        mode="courseRep"
+        mode="request"
         defaultFaculty={faculty}
         defaultDepartment={department}
-        defaultLevel={level}
-        onDone={() => refreshRepCourses().catch((error) => setErr(error.message || "Could not refresh courses."))}
       />
     </div>
   );

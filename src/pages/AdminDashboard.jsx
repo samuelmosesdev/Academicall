@@ -46,7 +46,7 @@ export default function AdminDashboard() {
       <button
         type="button"
         onClick={() => navigate("/admin/staff-chat")}
-        className="group relative w-full overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent-soft/80 via-bg-panel to-bg-panel p-5 text-left shadow-sm transition hover:border-accent/50 hover:shadow-md sm:p-6"
+        className="group relative w-full overflow-hidden rounded-2xl border border-accent/25 bg-bg-panel p-5 text-left shadow-sm transition hover:border-accent/50 hover:shadow-md sm:p-6"
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-start gap-4">

@@ -1,6 +1,8 @@
+import ShareMenu from "../components/ShareMenu";
+import { usePageMeta } from "../hooks/usePageMeta";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { ArrowLeft, Eye, Link2, Loader2, Lock, MessageCircle, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Eye, Loader2, Lock, MessageCircle, Send, Trash2 } from "lucide-react";
 import NewsShell from "../components/news/NewsShell";
 import { Byline, Prose, StoryCard } from "../components/news/NewsBits";
 import { REACTIONS, longDate, newsApi, timeAgo } from "../lib/newsApi";
@@ -19,6 +21,11 @@ export default function NewsArticle() {
     catch (e) { setErr(e.message); }
   }, [slug]);
   useEffect(() => { load(); }, [load, user]);
+  usePageMeta(data?.post ? {
+    title: `${data.post.title} · Academicall News`,
+    description: data.post.excerpt || undefined,
+    canonical: `https://academicall.site/news/${data.post.slug}`,
+  } : {});
 
   if (err) {
     return (
@@ -49,7 +56,7 @@ export default function NewsArticle() {
           <Byline post={post} />
           <div className="flex items-center gap-3 text-xs text-ink-muted">
             <span className="inline-flex items-center gap-1"><Eye size={13} /> <span className="num">{post.viewCount.toLocaleString()}</span></span>
-            <button type="button" onClick={() => { navigator.clipboard?.writeText(window.location.href); notify.success("Link copied"); }} className="inline-flex items-center gap-1 hover:text-ink"><Link2 size={13} /> Share</button>
+            <ShareMenu url={`https://academicall.site/news/${post.slug}`} title={post.title} text={post.excerpt || post.title} />
           </div>
         </div>
 
@@ -80,8 +87,6 @@ function SignInGate() {
   return (
     <div className="news-gate">
       <div className="relative overflow-hidden rounded-[1.75rem] bg-midnight px-6 py-9 text-center text-white sm:px-10">
-        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-violet/40 blur-2xl" aria-hidden />
-        <div className="absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-aqua/20 blur-2xl" aria-hidden />
         <div className="relative">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-lemon text-midnight"><Lock size={20} /></span>
           <h2 className="mt-4 font-display text-[1.7rem] leading-tight">Sign in to <span className="serif-i text-lemon">keep reading</span></h2>
@@ -181,7 +186,7 @@ function Comments({ post }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 text-xs">
                 <span className="font-semibold text-ink">{c.author.name}</span>
-                {c.author.role === "newsAgent" && <span className="rounded-full bg-lemon px-1.5 py-0.5 text-[10px] font-semibold text-midnight">News team</span>}
+                {(c.author.newsTeam || c.author.role === "newsAgent") && <span className="rounded-full bg-lemon px-1.5 py-0.5 text-[10px] font-semibold text-midnight">News team</span>}
                 <span className="text-ink-muted">{timeAgo(c.createdAt)}</span>
                 {c.canDelete && <button type="button" onClick={() => remove(c)} className="ml-auto text-ink-muted opacity-0 transition hover:text-status-danger group-hover:opacity-100" aria-label="Delete comment"><Trash2 size={13} /></button>}
               </div>

@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Clock, Loader2, MessagesSquare, Plus, Search, Sparkles, Users } from "lucide-react";
+import {
+  Clock,
+  Loader2,
+  MessagesSquare,
+  Plus,
+  Search,
+  Users,
+  GraduationCap,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { groupsApi } from "../lib/api";
 import { notify } from "../lib/dialogs";
@@ -162,7 +170,7 @@ export default function StudentGroups() {
                   )}
                   {discover.length > 0 && !query && (
                     <div className="mt-5 px-2">
-                      <p className="eyebrow mb-2 flex items-center gap-1.5 px-1 text-text-muted"><Sparkles size={12} /> For your class</p>
+                      <p className="eyebrow mb-2 flex items-center gap-1.5 px-1 text-text-muted"><GraduationCap size={12} /> For your class</p>
                       <ul className="space-y-2">
                         {discover.map((g) => (
                           <li key={g.id} className="flex items-center gap-3 rounded-2xl border border-dashed border-border-strong px-3 py-2.5">
@@ -228,7 +236,7 @@ export default function StudentGroups() {
         isCourseRep={profile?.role === "courseRep"}
         onSaved={(g) => {
           if (g) {
-            upsertGroup({ ...g, unreadCount: 0 }, user?.uid);
+            upsertGroup({ ...g, unreadCount: 0 });
             navigate(`/dashboard/groups/${g.id}`);
           }
           refreshGroups();

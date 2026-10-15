@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Check,
   Crown,
-  Sparkles,
   ExternalLink,
   Shield,
   Loader2,
@@ -104,11 +103,10 @@ export default function StudentUpgrade() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-teal/20 bg-gradient-to-br from-[#0F0326] via-[#2F33B8] to-[#454ADE] p-6 text-white shadow-lg sm:p-10">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+      <section className="relative overflow-hidden rounded-3xl border border-teal/20 bg-midnight p-6 text-white shadow-lg sm:p-10">
         <div className="relative">
           <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
-            <Sparkles size={13} />
+            <Crown size={13} />
             {pro ? "You're on Pro" : "Choose a plan"}
           </div>
           <h1 className="max-w-xl text-2xl font-bold tracking-tight sm:text-3xl">

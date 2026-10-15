@@ -8,7 +8,7 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { Megaphone, Plus, Trash2, Pin, MessageCircle, Globe } from "lucide-react";
+import { Plus, Trash2, Pin, MessageCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { announcementsApi, feedApi } from "../lib/api";
 

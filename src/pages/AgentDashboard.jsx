@@ -5,10 +5,10 @@ import {
   BookOpen,
   ClipboardList,
   Upload,
-  Sparkles,
   MessageSquare,
   ArrowRight,
   Megaphone,
+  FileScan,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import AiCourseImportModal from "../components/AiCourseImportModal";
@@ -80,7 +80,7 @@ export default function AgentDashboard() {
       <button
         type="button"
         onClick={() => navigate("/agent/staff-chat")}
-        className="group relative w-full overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent-soft/70 via-bg-panel to-bg-panel p-5 text-left shadow-sm transition hover:border-accent/45 hover:shadow-md"
+        className="group relative w-full overflow-hidden rounded-2xl border border-accent/25 bg-bg-panel p-5 text-left shadow-sm transition hover:border-accent/45 hover:shadow-md"
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -157,7 +157,7 @@ export default function AgentDashboard() {
               onClick={() => setShowAiImport(true)}
               className="flex items-center gap-2 rounded-xl border border-border-subtle px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-bg-panel-alt"
             >
-              <Sparkles size={15} /> AI import courses
+              <FileScan size={15} /> AI import courses
             </button>
           )}
         </div>

@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { collection, limit, onSnapshot, query, where } from "firebase/firestore";
-import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { notificationsApi } from "../lib/api";
 

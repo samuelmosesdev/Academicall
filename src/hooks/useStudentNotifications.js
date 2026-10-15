@@ -14,7 +14,11 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
-import { announcementsApi, notificationsApi } from "../lib/api";
+import {
+  announcementsApi,
+  notificationsApi,
+  STUDENT_NOTIFICATIONS_UPDATED_EVENT,
+} from "../lib/api";
 import { matchesAcademicScope } from "../lib/academicScope";
 
 /**
@@ -153,6 +157,7 @@ export function useStudentNotifications() {
     if (authMode === "api") {
       await announcementsApi.markRead(announcementId);
       setReadMap((current) => ({ ...current, [announcementId]: true }));
+      window.dispatchEvent(new Event(STUDENT_NOTIFICATIONS_UPDATED_EVENT));
       return;
     }
     const id = `${user.uid}_${announcementId}`;
@@ -167,6 +172,7 @@ export function useStudentNotifications() {
     if (authMode === "api") {
       await notificationsApi.markRead(notifId);
       setSystemNotifs((items) => items.map((item) => item.id === notifId ? { ...item, readByUser: true } : item));
+      window.dispatchEvent(new Event(STUDENT_NOTIFICATIONS_UPDATED_EVENT));
       return;
     }
     await updateDoc(doc(db, "notifications", notifId), {
@@ -184,6 +190,7 @@ export function useStudentNotifications() {
         ...current,
         ...Object.fromEntries(relevantAnnouncements.map((item) => [item.id, true])),
       }));
+      window.dispatchEvent(new Event(STUDENT_NOTIFICATIONS_UPDATED_EVENT));
       return;
     }
     const batch = writeBatch(db);

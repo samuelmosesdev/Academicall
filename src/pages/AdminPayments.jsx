@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   collection,
-  doc,
   onSnapshot,
   query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
   where,
 } from "firebase/firestore";
 import { Wallet, Link2, Crown, Search, UserMinus, Save, CheckCircle2 } from "lucide-react";

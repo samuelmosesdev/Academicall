@@ -163,7 +163,7 @@ function VaultUser({ userId, onBack }) {
   useEffect(() => { load(); }, [load]);
 
   async function open(file) {
-    const reason = await appPrompt(`Why do you need to open “${file.name}”? The student will see this reason.`, { title: "Open a vault file", required: true, placeholder: "e.g. Student lost their phone and asked for their WAEC result", confirmLabel: "Open file" });
+    const reason = await appPrompt(`Why do you need to open “${file.name}”? The reason is kept in the audit log.`, { title: "Open a vault file", required: true, placeholder: "e.g. Student lost their phone and asked for their WAEC result", confirmLabel: "Open file" });
     if (!reason) return;
     try {
       const blob = await filesApi.openVaultFile(file.id, reason);
@@ -173,12 +173,7 @@ function VaultUser({ userId, onBack }) {
     } catch (e) { notify.error(e.message); }
   }
   async function restore(file) {
-    try {
-      const result = await filesApi.restoreVaultFile(file.id);
-      if (result.notificationSent === false) notify.error("File restored, but the student notification could not be sent.");
-      else notify.success("Restored to their vault. They've been notified.");
-      load();
-    } catch (e) { notify.error(e.message); }
+    try { await filesApi.restoreVaultFile(file.id); notify.success("Restored to their vault. They've been notified."); load(); } catch (e) { notify.error(e.message); }
   }
 
   if (error) return <ErrorState message={error} onRetry={load} />;
@@ -193,7 +188,7 @@ function VaultUser({ userId, onBack }) {
         <FolderLock size={20} />
         <div className="min-w-0 flex-1"><p className="font-display text-xl">{data.user.name || data.user.email}</p><p className="text-xs opacity-75">{data.user.email} · {data.files.filter((f) => !f.deletedAt).length} files · {formatBytes(data.files.filter((f) => !f.deletedAt).reduce((a, f) => a + f.size, 0))}</p></div>
       </div>
-      <p className="flex items-start gap-2 rounded-xl bg-lemon-soft px-3 py-2 text-xs text-midnight"><ShieldAlert size={14} className="mt-0.5 shrink-0" /> You see names only. Opening a file asks for a reason, is logged, and the student gets a notification.</p>
+      <p className="flex items-start gap-2 rounded-xl bg-lemon-soft px-3 py-2 text-xs text-midnight"><ShieldAlert size={14} className="mt-0.5 shrink-0" /> You see names only. Opening a file asks for a reason and is written to the audit log (who, when, which file, why).</p>
       {byFolder.length === 0 && <EmptyState icon={FolderLock} title="Empty vault" description="This student hasn't added anything yet." />}
       {byFolder.map((f) => (
         <section key={f.id} className="acx-card">
@@ -252,7 +247,7 @@ function Vaults() {
               </div>
               {r.trash > 0 && <span className="acx-chip-sm is-lemon">{r.trash} in trash</span>}
               {r.locked && (
-                <button type="button" className="acx-btn-ghost !py-1 !text-xs" onClick={async (e) => { e.stopPropagation(); if (await appConfirm(`Unlock ${r.user.name || "this student"}'s vault now? They still need their PIN.`, { confirmLabel: "Unlock" })) { try { await filesApi.unlockVault(r.user.id); notify.success("Lockout cleared"); load(); } catch (error) { notify.error(error.message || "Couldn't clear the lockout."); } } }}>
+                <button type="button" className="acx-btn-ghost !py-1 !text-xs" onClick={async (e) => { e.stopPropagation(); if (await appConfirm(`Unlock ${r.user.name || "this student"}'s vault now? They still need their PIN.`, { confirmLabel: "Unlock" })) { await filesApi.unlockVault(r.user.id); notify.success("Lockout cleared"); load(); } }}>
                   <Unlock size={13} /> Clear lockout
                 </button>
               )}

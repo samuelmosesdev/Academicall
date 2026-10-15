@@ -1,648 +1,204 @@
-import { useMemo, useState, useEffect, useRef } from "react";
-import { useLocation, Link } from "react-router-dom";
-import {
-  Search,
-  Eye,
-  Pencil,
-  Ban,
-  CheckCircle2,
-  Trash2,
-  Users,
-  GraduationCap,
-  BadgeCheck,
-  KeyRound,
-} from "lucide-react";
-import { useAdminUsers } from "../hooks/useAdminUsers";
-import EditUserModal from "../components/EditUserModal";
-import ViewProfileModal from "../components/ViewProfileModal";
-import {
-  PageHeader,
-  LoadingState,
-  EmptyState,
-  ErrorState,
-} from "../components/ui";
-import { LEVELS } from "../data/facultyData";
-import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Ban, CheckCircle2, ChevronRight, Download, KeyRound, Newspaper, Feather, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { directoryApi, usersApi } from "../lib/api";
+import { appConfirm, notify } from "../lib/dialogs";
+import { can, roleOf, ROLE_LABELS } from "../lib/roles";
 import { logActivity } from "../lib/activityLog";
-import { ROLE_LABELS } from "../lib/roles";
-import { usersApi } from "../lib/api";
+import { PageHeader, ErrorState, EmptyState, SearchField, SortTh, Pager, SkeletonRows } from "../components/ui";
 
-const CATEGORIES = [
-  {
-    id: "students",
-    label: "Students",
-    match: (u) => !u.role || u.role === "user",
-  },
-  {
-    id: "courseReps",
-    label: "Course Reps",
-    match: (u) => u.role === "courseRep",
-  },
-  {
-    id: "newsAgents",
-    label: "News Agents",
-    match: (u) => (u.staffTags || []).includes("news") || u.role === "newsAgent",
-  },
-  {
-    id: "secretaries",
-    label: "Secretaries",
-    match: (u) => (u.staffTags || []).includes("secretary"),
-  },
-  {
-    id: "agents",
-    label: "Agents",
-    match: (u) => u.role === "agent" || u.role === "alphaAgent",
-  },
-  { id: "all", label: "All", match: () => true },
+/**
+ * Users: the staff directory. Server-side search, filters, sorting and
+ * pagination (GET /users?page=…). Opening a row goes to the full profile,
+ * where the sensitive actions live behind their own permissions.
+ */
+const GROUPS = [
+  { id: "students", label: "Students" },
+  { id: "courseReps", label: "Course Reps" },
+  { id: "news", label: "News" },
+  { id: "secretaries", label: "Secretaries" },
+  { id: "agents", label: "Agents" },
+  { id: "admins", label: "Admins" },
+  { id: "all", label: "Everyone" },
 ];
+const RANK = { admin: 4, alphaAgent: 3, agent: 2 };
+const rank = (r) => RANK[r] || 1;
 
-const fieldClass =
-  "rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none";
+function timeAgo(d) {
+  if (!d) return "Never";
+  const s = Math.max(1, Math.round((Date.now() - new Date(d).getTime()) / 1000));
+  if (s < 60) return "Just now";
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  if (s < 86400 * 30) return `${Math.round(s / 86400)} d ago`;
+  return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function Avatar({ u }) {
+  return u.photoUrl
+    ? <img src={u.photoUrl} alt="" className="h-9 w-9 shrink-0 rounded-xl object-cover" />
+    : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-soft text-sm font-semibold text-accent">{(u.name || u.email || "?").charAt(0).toUpperCase()}</span>;
+}
 
 export default function AdminUsers() {
-  const { user: adminUser, profile: adminProfile } = useAuth();
-  const { faculties, departmentsFor, programsFor } = useAcademicCatalog();
-  const { users, loading, error, retry } = useAdminUsers();
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("students");
-  const [faculty, setFaculty] = useState("");
-  const [department, setDepartment] = useState("");
-  const [program, setProgram] = useState("");
-  const [level, setLevel] = useState("");
-  const [editing, setEditing] = useState(null);
-  const [viewing, setViewing] = useState(null);
-  const [busyId, setBusyId] = useState(null);
-  const [actionError, setActionError] = useState("");
-  const [resetResult, setResetResult] = useState(null);
-  const [repTarget, setRepTarget] = useState(null);
-  const [repFaculty, setRepFaculty] = useState("");
-  const [repDepartment, setRepDepartment] = useState("");
-  const [repProgram, setRepProgram] = useState("");
-  const [repLevel, setRepLevel] = useState("");
-  const [highlightedUserId, setHighlightedUserId] = useState(null);
-  const rowRefs = useRef({});
-
+  const { user: me, profile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const base = location.pathname.startsWith("/agent") ? "/agent" : "/admin";
+  const [params, setParams] = useState({ group: "students", page: 1, pageSize: 25, sort: "createdAt", dir: "desc", q: "", status: "", plan: "", level: "", department: "" });
+  const [data, setData] = useState({ users: [], total: 0, counts: {} });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(null);
+
+  // Old links (?uid=…) open the profile straight away.
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const uid = params.get("uid");
-    if (uid) setHighlightedUserId(uid);
-  }, [location.search]);
+    const uid = new URLSearchParams(location.search).get("uid");
+    if (uid) navigate(`${base}/users/${uid}`, { replace: true });
+  }, [location.search, base, navigate]);
 
-  useEffect(() => {
-    if (!highlightedUserId) return;
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      const el = rowRefs.current[highlightedUserId];
-      if (el && el.scrollIntoView) {
-        el.scrollIntoView({ block: "center", behavior: "smooth" });
-        // Add a temporary highlight class then remove it
-        el.classList.add("highlight-row");
-        setTimeout(() => {
-          try { el.classList.remove("highlight-row"); } catch { /* ignore */ }
-        }, 2000);
-      }
+      setData(await directoryApi.list(params));
     } catch (err) {
-      // swallow DOM errors to avoid crashing the admin UI
-      console.warn("Auto-focus failed:", err?.message || err);
-    }
-  }, [highlightedUserId]);
-
-  const departments = useMemo(() => departmentsFor(faculty), [departmentsFor, faculty]);
-  const programs = useMemo(() => programsFor(department), [department, programsFor]);
-  const repDepartments = useMemo(
-    () => departmentsFor(repFaculty),
-    [departmentsFor, repFaculty]
-  );
-  const repPrograms = useMemo(() => programsFor(repDepartment), [programsFor, repDepartment]);
-
-  const filtered = useMemo(() => {
-    const cat = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
-    const q = search.trim().toLowerCase();
-
-    return users.filter((u) => {
-      if (!cat.match(u)) return false;
-      if (category !== "agents") {
-        if (faculty && u.faculty !== faculty) return false;
-        if (department && u.department !== department) return false;
-        if (program && (u.program || u.courseRepMeta?.program) !== program) return false;
-        if (level && u.level !== level) return false;
-      }
-      if (!q) return true;
-      return [u.name, u.email, u.uniqueId, u.faculty, u.department, u.role]
-        .filter(Boolean)
-        .some((field) => String(field).toLowerCase().includes(q));
-    });
-  }, [users, category, faculty, department, program, level, search]);
-
-  const counts = useMemo(() => {
-    const c = { students: 0, courseReps: 0, newsAgents: 0, secretaries: 0, agents: 0, all: users.length };
-    users.forEach((u) => {
-      if (!u.role || u.role === "user") c.students += 1;
-      if (u.role === "courseRep") c.courseReps += 1;
-      if ((u.staffTags || []).includes("news") || u.role === "newsAgent") c.newsAgents += 1;
-      if ((u.staffTags || []).includes("secretary")) c.secretaries += 1;
-      if (u.role === "agent" || u.role === "alphaAgent") c.agents += 1;
-    });
-    return c;
-  }, [users]);
-
-  async function handleSaveEdit(updates) {
-    setBusyId(editing.id);
-    setActionError("");
-    try {
-      await usersApi.update(editing.id, updates);
-      setEditing(null);
-    } catch (err) {
-      setActionError(err.message || "Couldn't save changes.");
+      setError(err.message || "Couldn't load users");
     } finally {
-      setBusyId(null);
+      setLoading(false);
     }
-  }
+  }, [params]);
+  useEffect(() => { load(); }, [load]);
+  const set = (patch) => setParams((p) => ({ ...p, ...patch, page: patch.page ?? 1 }));
+  const sort = { key: params.sort, dir: params.dir };
+  const onSort = (s) => set({ sort: s.key, dir: s.dir });
+
+  const canSuspend = can(profile, "users.suspend");
+  const myRank = rank(roleOf(profile));
 
   async function toggleSuspend(u) {
-    setBusyId(u.id);
-    setActionError("");
-    try {
-      const next = u.status === "suspended" ? "active" : "suspended";
-      await usersApi.update(u.id, { status: next });
-      await logActivity({
-        actorUid: adminUser.uid,
-        actorName: adminProfile?.name || adminUser.email,
-        action: next === "suspended" ? "user.suspend" : "user.reactivate",
-        targetUid: u.id,
-        targetName: u.name || u.email,
-      });
-      await retry?.();
-    } catch (err) {
-      setActionError(err.message || "Couldn't update status.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleDelete(u) {
-    const ok = window.confirm(
-      `Delete ${u.name || u.email}? Prefer Suspend if you only want to block access.`
+    const suspend = u.status !== "suspended";
+    const ok = await appConfirm(
+      suspend
+        ? `Suspend ${u.name || u.email}? They're signed out and can't sign in until you reactivate them. Their data stays.`
+        : `Reactivate ${u.name || u.email}? They can sign in again straight away.`,
+      { tone: suspend ? "danger" : undefined, confirmLabel: suspend ? "Suspend" : "Reactivate" },
     );
     if (!ok) return;
-    setBusyId(u.id);
-    setActionError("");
+    setBusy(u.id);
     try {
-      await usersApi.remove(u.id);
-      await logActivity({
-        actorUid: adminUser.uid,
-        actorName: adminProfile?.name || adminUser.email,
-        action: "user.delete",
-        targetUid: u.id,
-        targetName: u.name || u.email,
-      });
+      await usersApi.update(u.id, { status: suspend ? "suspended" : "active" });
+      logActivity({ actorUid: me?.uid, actorName: profile?.name || me?.email, action: suspend ? "user.suspend" : "user.reactivate", targetUid: u.id, targetName: u.name || u.email }).catch(() => {});
+      notify.success(suspend ? "Account suspended" : "Account reactivated");
+      load();
     } catch (err) {
-      setActionError(err.message || "Couldn't delete user.");
+      notify.error(err.message || "Couldn't change their status");
     } finally {
-      setBusyId(null);
+      setBusy(null);
     }
   }
 
-  async function forcePasswordChange(u) {
-    const ok = window.confirm(
-      `Force ${u.name || u.email} to change their password on next login?`
-    );
-    if (!ok) return;
-    setBusyId(u.id);
-    setActionError("");
-    try {
-      await usersApi.update(u.id, { mustChangePassword: true });
-      await logActivity({
-        actorUid: adminUser.uid,
-        actorName: adminProfile?.name || adminUser.email,
-        action: "user.force_password_change",
-        targetUid: u.id,
-        targetName: u.name || u.email,
-      });
-    } catch (err) {
-      setActionError(err.message || "Couldn't set force password change.");
-    } finally {
-      setBusyId(null);
-    }
+  function exportCsv() {
+    const rows = [["Name", "Email", "Academicall ID", "Role", "Institution", "Department", "Level", "Plan", "Status", "Joined", "Last active"]];
+    for (const u of data.users) rows.push([u.name, u.email, u.uniqueId, ROLE_LABELS[u.role] || u.role, u.institution?.displayName || u.institution?.name, u.department, u.level, u.plan, u.status, u.createdAt?.slice(0, 10), u.lastActiveAt?.slice(0, 10)]);
+    const csv = rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `academicall-users-${params.group}-p${params.page}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
-
-  async function handleResetPassword(u) {
-    const ok = window.confirm(
-      `Reset the password for ${u.name || u.email}?\n\nThis issues a brand-new temporary password shown ONCE on screen. Make sure you've verified this person's identity (student ID, phone call, etc.) before handing it to them — this is not a way to recover their old password.`
-    );
-    if (!ok) return;
-    setBusyId(u.id);
-    setActionError("");
-    try {
-      const data = await usersApi.resetPassword(u.id);
-      setResetResult({ email: data.email, tempPassword: data.tempPassword });
-      await logActivity({
-        actorUid: adminUser.uid,
-        actorName: adminProfile?.name || adminUser.email,
-        action: "user.password_reset",
-        targetUid: u.id,
-        targetName: u.name || u.email,
-      });
-    } catch (err) {
-      setActionError(err.message || "Couldn't reset password.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  function openMakeRep(u) {
-    setRepTarget(u);
-    setRepFaculty(u.faculty || "");
-    setRepDepartment(u.courseRepMeta?.department || u.department || "");
-    setRepProgram(u.courseRepMeta?.program || u.program || "");
-    setRepLevel(u.level || u.courseRepMeta?.level || "");
-    setActionError("");
-  }
-
-  async function confirmMakeRep() {
-    if (!repTarget) return;
-    if (!repDepartment.trim()) {
-      setActionError("Select the parent department for this Course Rep program.");
-      return;
-    }
-    if (!repLevel.trim()) {
-      setActionError(
-        "Select the level. Each Course Rep covers one program + one level only."
-      );
-      return;
-    }
-    if (!repProgram.trim()) {
-      setActionError("Select the program this Course Rep represents.");
-      return;
-    }
-    if (!repPrograms.includes(repProgram.trim())) {
-      setActionError("Select a program listed under the chosen department.");
-      return;
-    }
-
-    setBusyId(repTarget.id);
-    setActionError("");
-    try {
-      const department = repDepartment.trim();
-      const level = repLevel.trim();
-      await usersApi.update(repTarget.id, {
-        role: "courseRep",
-        courseRepMeta: {
-          faculty: repFaculty || null,
-          department,
-          program: repProgram,
-          level,
-        },
-        faculty: repFaculty || repTarget.faculty || null,
-        department,
-        program: repProgram,
-        level,
-        assignedBy: adminUser.uid,
-        assignedAt: new Date().toISOString(),
-      });
-      await logActivity({
-        actorUid: adminUser.uid,
-        actorName: adminProfile?.name || adminUser.email,
-        action: "role.change",
-        targetUid: repTarget.id,
-        targetName: repTarget.name || repTarget.email,
-        meta: {
-          from: repTarget.role || "user",
-          to: "courseRep",
-          faculty: repFaculty,
-          department,
-          program: repProgram,
-          level,
-        },
-      });
-      setRepTarget(null);
-      setRepFaculty("");
-      setRepDepartment("");
-      setRepProgram("");
-      setRepLevel("");
-      await retry?.();
-    } catch (err) {
-      setActionError(err.message || "Could not assign Course Rep.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function removeCourseRep(u) {
-    if (!window.confirm(`Remove Course Rep role from ${u.name || u.email}?`)) {
-      return;
-    }
-    setBusyId(u.id);
-    setActionError("");
-    try {
-      await usersApi.update(u.id, {
-        role: "user",
-        courseRepMeta: null,
-        assignedBy: adminUser.uid,
-        assignedAt: new Date().toISOString(),
-      });
-      await logActivity({
-        actorUid: adminUser.uid,
-        actorName: adminProfile?.name || adminUser.email,
-        action: "role.change",
-        targetUid: u.id,
-        targetName: u.name || u.email,
-        meta: { from: u.role || "courseRep", to: "user" },
-      });
-      await retry?.();
-    } catch (err) {
-      setActionError(err.message || "Failed to remove Course Rep.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  if (loading) return <LoadingState message="Loading users…" />;
-  if (error) return <ErrorState message={error} onRetry={retry} />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Users"
-        description="Browse by Students, Course Reps, or Agents. Assign Course Rep by department so they can schedule classes for course mates."
-        actions={
-          <div className="flex w-full max-w-xs items-center gap-2 rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 sm:w-64">
-            <Search size={15} className="shrink-0 text-text-muted" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name, email, ID…"
-              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-            />
-          </div>
-        }
+        description="Everyone on Academicall. Open a person to manage their role, duties, password and sessions."
+        actions={<button type="button" className="acx-btn-ghost" onClick={exportCsv} disabled={!data.users.length}><Download size={14} /> Export this page</button>}
       />
 
-      {/* Category tabs */}
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => setCategory(c.id)}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-              category === c.id
-                ? "bg-accent text-bg-app"
-                : "border border-border-subtle bg-bg-panel text-text-secondary hover:text-text-primary"
-            }`}
-          >
-            {c.label}
-            <span className="ml-2 text-xs opacity-80">
-              ({counts[c.id] ?? 0})
-            </span>
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Groups">
+        {GROUPS.map((g) => (
+          <button key={g.id} type="button" role="tab" aria-selected={params.group === g.id} className={`acx-filter ${params.group === g.id ? "is-on" : ""}`} onClick={() => set({ group: g.id })}>
+            {g.label} <span>{(data.counts?.[g.id] ?? 0).toLocaleString()}</span>
           </button>
         ))}
       </div>
 
-      {/* Faculty / Dept / Program / Level filters */}
-      {category !== "agents" && (
-        <div className="grid grid-cols-1 gap-3 rounded-xl border border-border-subtle bg-bg-panel p-4 sm:grid-cols-4">
-          <div>
-            <label className="mb-1 block text-xs text-text-muted">Faculty</label>
-            <select
-              value={faculty}
-              onChange={(e) => {
-                setFaculty(e.target.value);
-                setDepartment("");
-                setProgram("");
-              }}
-              className={`w-full ${fieldClass}`}
-            >
-              <option value="">All faculties</option>
-              {faculties.map((f) => (
-                <option key={f.name} value={f.name}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-text-muted">
-              Department
-            </label>
-            <select
-              value={department}
-              onChange={(e) => {
-                setDepartment(e.target.value);
-                setProgram("");
-              }}
-              className={`w-full ${fieldClass}`}
-              disabled={!faculty}
-            >
-              <option value="">All departments</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-text-muted">Program</label>
-            <select
-              value={program}
-              onChange={(e) => setProgram(e.target.value)}
-              className={`w-full ${fieldClass}`}
-              disabled={!department}
-            >
-              <option value="">All programs</option>
-              {programs.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-text-muted">Level</label>
-            <select
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className={`w-full ${fieldClass}`}
-            >
-              <option value="">All levels</option>
-              {LEVELS.map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchField value={params.q} onChange={(q) => set({ q })} placeholder="Name, email, ID or matric number" className="w-full sm:w-auto sm:min-w-[17rem] sm:flex-1 lg:max-w-sm" />
+        <div className="w-full sm:w-48"><input className="acx-input" placeholder="Department" value={params.department} onChange={(e) => set({ department: e.target.value })} aria-label="Department" /></div>
+        <select className="acx-select" value={params.level} onChange={(e) => set({ level: e.target.value })} aria-label="Level">
+          <option value="">All levels</option>{["100", "200", "300", "400", "500", "600", "ND", "HND", "NCE"].map((l) => <option key={l} value={l}>{/^\d/.test(l) ? `${l} Level` : l}</option>)}
+        </select>
+        <select className="acx-select" value={params.plan} onChange={(e) => set({ plan: e.target.value })} aria-label="Plan">
+          <option value="">Any plan</option><option value="free">Free</option><option value="pro">Pro</option><option value="annual">Annual</option>
+        </select>
+        <div className="acx-seg">
+          {[["", "Any status"], ["active", "Active"], ["suspended", "Suspended"]].map(([v, l]) => <button key={l} type="button" className={params.status === v ? "is-on" : ""} onClick={() => set({ status: v })}>{l}</button>)}
         </div>
-      )}
+      </div>
 
-      {actionError && (
-        <div className="rounded-lg border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-sm text-status-danger">
-          {actionError}
-        </div>
-      )}
-
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="No users in this view"
-          description="Try another category or clear faculty/department filters."
-        />
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-border-subtle bg-bg-panel">
-          <table className="w-full text-left text-sm">
+      {error ? <ErrorState title="Users didn't load" message={error} onRetry={load} /> : (
+        <div className="acx-table-wrap">
+          <table className="acx-table">
             <thead>
-              <tr className="border-b border-border-subtle text-xs uppercase tracking-wide text-text-muted">
-                <th className="px-4 py-3 font-medium">User</th>
-                <th className="px-4 py-3 font-medium">Role</th>
-                <th className="px-4 py-3 font-medium">Faculty / Dept</th>
-                <th className="px-4 py-3 font-medium">Level</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
+              <tr>
+                <SortTh k="name" sort={sort} onSort={onSort}>Person</SortTh>
+                <th>Role</th>
+                <th className="hidden lg:table-cell">Institution · department</th>
+                <SortTh k="level" sort={sort} onSort={onSort} className="hidden md:table-cell">Level</SortTh>
+                <th>Status</th>
+                <SortTh k="lastActiveAt" sort={sort} onSort={onSort} className="hidden md:table-cell">Last active</SortTh>
+                <SortTh k="createdAt" sort={sort} onSort={onSort} className="hidden xl:table-cell">Joined</SortTh>
+                <th><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((u) => {
-                const busy = busyId === u.id;
+              {loading ? <SkeletonRows cols={8} rows={8} /> : data.users.length === 0 ? (
+                <tr><td colSpan={8}><EmptyState icon={Users} title="Nobody matches" description="Try another group, or clear the search and filters." className="!border-0 !py-12" /></td></tr>
+              ) : data.users.map((u) => {
                 const suspended = u.status === "suspended";
-                const isRep = u.role === "courseRep";
+                const manageable = rank(u.role) < myRank && u.id !== me?.uid;
                 return (
-                  <tr
-                    key={u.id}
-                    ref={(el) => (rowRefs.current[u.id] = el)}
-                    className={`border-b border-border-subtle last:border-0 ${highlightedUserId === u.id ? 'bg-accent-soft' : ''}`}
-                    id={`user-${u.id}`}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-text-primary">
-                        {u.name || "—"}
-                      </div>
-                      <div className="text-xs text-text-muted">
-                        {u.email}
-                        {u.uniqueId ? ` · ${u.uniqueId}` : ""}
-                      </div>
-                      {isRep && u.courseRepMeta?.program && (
-                        <div className="mt-1 text-[11px] text-accent">
-                          Program: {u.courseRepMeta.program}
-                          {u.courseRepMeta.department ? ` · ${u.courseRepMeta.department}` : ""}
+                  <tr key={u.id} className={`cursor-pointer ${suspended ? "is-muted" : ""}`} onClick={() => navigate(`${base}/users/${u.id}`)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && navigate(`${base}/users/${u.id}`)}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <Avatar u={u} />
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold text-text-primary">{u.name || "No name yet"}</div>
+                          <div className="truncate text-xs text-text-muted">{u.email}{u.uniqueId ? ` · ${u.uniqueId}` : ""}</div>
                         </div>
-                      )}
+                      </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full bg-bg-elevated px-2 py-0.5 text-[11px] font-medium text-text-secondary">
-                        {ROLE_LABELS[u.role] || u.role || "Student"}
-                      </span>
+                    <td>
+                      <div className="flex flex-wrap gap-1">
+                        <span className={`acx-chip-sm ${u.role === "admin" ? "is-danger" : u.role === "alphaAgent" || u.role === "agent" ? "is-lemon" : u.role === "courseRep" ? "is-aqua" : ""}`}>{ROLE_LABELS[u.role] || "Student"}</span>
+                        {(u.staffTags || []).includes("news") && <span className="acx-chip-sm" title="News duty"><Newspaper size={10} /> News</span>}
+                        {(u.staffTags || []).includes("secretary") && <span className="acx-chip-sm" title="Secretary duty"><Feather size={10} /> Sec.</span>}
+                        {u.plan && u.plan !== "free" && <span className="acx-chip-sm is-aqua">{u.plan === "annual" ? "Annual" : "Pro"}</span>}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-text-muted">
-                      {[u.faculty, u.department].filter(Boolean).join(" · ") ||
-                        "—"}
+                    <td className="hidden max-w-[18rem] lg:table-cell">
+                      <span className="block truncate text-text-primary">{u.institution?.displayName || u.institution?.abbreviation || u.institution?.name || "—"}</span>
+                      <span className="block truncate text-xs">{u.department || "No department"}</span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-text-muted">
-                      {u.level || "—"}
+                    <td className="hidden whitespace-nowrap md:table-cell">{u.level || "—"}</td>
+                    <td>
+                      <span className={`acx-chip-sm ${suspended ? "is-danger" : "is-aqua"}`}>{suspended ? "Suspended" : u.status === "pending" ? "Pending" : "Active"}</span>
+                      {u.mustChangePassword && <KeyRound size={12} className="ml-1 inline text-text-muted" aria-label="Must change password" />}
                     </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          suspended
-                            ? "bg-status-danger/15 text-status-danger"
-                            : "bg-accent-soft text-accent"
-                        }`}
-                      >
-                        {suspended ? "Suspended" : "Active"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap items-center gap-1">
-                        <Link
-                          to={`${location.pathname.startsWith("/agent") ? "/agent" : "/admin"}/users/${u.id}`}
-                          className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated hover:text-accent"
-                          title="View activity"
-                        >
-                          <Eye size={15} />
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => setViewing(u)}
-                          className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated hover:text-text-primary"
-                          title="View profile"
-                        >
-                          <Eye size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditing(u)}
-                          className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated hover:text-text-primary"
-                          title="Edit"
-                        >
-                          <Pencil size={15} />
-                        </button>
-
-                        {(!u.role || u.role === "user") && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => openMakeRep(u)}
-                            className="rounded-lg p-2 text-accent hover:bg-accent-soft"
-                            title="Make Course Rep"
-                          >
-                            <GraduationCap size={15} />
+                    <td className="hidden whitespace-nowrap md:table-cell">{timeAgo(u.lastActiveAt)}</td>
+                    <td className="hidden whitespace-nowrap xl:table-cell">{u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}</td>
+                    <td className="num" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-end gap-1">
+                        {canSuspend && manageable && (
+                          <button type="button" className={`acx-icon-btn ${suspended ? "is-good" : "is-danger"}`} disabled={busy === u.id} onClick={() => toggleSuspend(u)} aria-label={suspended ? `Reactivate ${u.name || u.email}` : `Suspend ${u.name || u.email}`} title={suspended ? "Reactivate" : "Suspend"}>
+                            {suspended ? <CheckCircle2 size={14} /> : <Ban size={14} />}
                           </button>
                         )}
-                        {isRep && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => removeCourseRep(u)}
-                            className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated"
-                            title="Remove Course Rep"
-                          >
-                            <BadgeCheck size={15} />
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => handleResetPassword(u)}
-                          className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated"
-                          title="Reset password (issues a one-time temp password)"
-                        >
-                          <KeyRound size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => forcePasswordChange(u)}
-                          className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated hover:text-accent"
-                          title="Force password change on next login"
-                        >
-                          <KeyRound size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => toggleSuspend(u)}
-                          className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated"
-                          title={suspended ? "Reactivate" : "Suspend"}
-                        >
-                          {suspended ? (
-                            <CheckCircle2 size={15} />
-                          ) : (
-                            <Ban size={15} />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => handleDelete(u)}
-                          className="rounded-lg p-2 text-text-muted hover:bg-status-danger/10 hover:text-status-danger"
-                          title="Delete"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <Link to={`${base}/users/${u.id}`} className="acx-icon-btn" aria-label={`Open ${u.name || u.email}`} title="Open profile"><ChevronRight size={14} /></Link>
                       </div>
                     </td>
                   </tr>
@@ -652,164 +208,7 @@ export default function AdminUsers() {
           </table>
         </div>
       )}
-
-      {/* Make Course Rep — by department */}
-      {repTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/55 backdrop-blur-[3px] p-4">
-          <div className="w-full max-w-md rounded-2xl border border-border-subtle bg-bg-panel p-5 shadow-xl">
-            <h3 className="text-base font-semibold text-text-primary">
-              Make Course Rep
-            </h3>
-            <p className="mt-1 text-sm text-text-muted">
-              {repTarget.name || repTarget.email} will represent one department + one level and
-              can schedule classes for course mates in that department
-              (notifications + timetable).
-            </p>
-
-            <label className="mt-4 block text-xs font-medium text-text-muted">
-              Faculty
-            </label>
-            <select
-              value={repFaculty}
-              onChange={(e) => {
-                setRepFaculty(e.target.value);
-                setRepDepartment("");
-                setRepProgram("");
-              }}
-              className={`mt-1 w-full ${fieldClass}`}
-            >
-              <option value="">Select faculty</option>
-              {faculties.map((f) => (
-                <option key={f.name} value={f.name}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-
-            <label className="mt-3 block text-xs font-medium text-text-muted">
-              Department they represent *
-            </label>
-            <select
-              value={repDepartment}
-              onChange={(e) => setRepDepartment(e.target.value)}
-              className={`mt-1 w-full ${fieldClass}`}
-              disabled={!repFaculty}
-            >
-              <option value="">Select department</option>
-              {repDepartments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-
-            <label className="mt-3 block text-xs font-medium text-text-muted">
-              Program they represent *
-            </label>
-            <select
-              value={repProgram}
-              onChange={(e) => setRepProgram(e.target.value)}
-              className={`mt-1 w-full ${fieldClass}`}
-              disabled={!repDepartment || repPrograms.length === 0}
-            >
-              <option value="">{repPrograms.length ? "Select program" : "Program not yet listed"}</option>
-              {repPrograms.map((program) => <option key={program} value={program}>{program}</option>)}
-            </select>
-
-            <label className="mt-3 block text-xs font-medium text-text-muted">
-              Level they represent * (one level only)
-            </label>
-            <select
-              value={repLevel}
-              onChange={(e) => setRepLevel(e.target.value)}
-              className={`mt-1 w-full ${fieldClass}`}
-            >
-              <option value="">Select level</option>
-              {LEVELS.map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-[11px] text-text-muted">
-              A Course Rep is assigned to <strong>one department + one level</strong>.
-              100 Level and 200 Level need different Course Reps.
-            </p>
-
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setRepTarget(null);
-                  setRepFaculty("");
-                  setRepDepartment("");
-                  setRepProgram("");
-                  setRepLevel("");
-                }}
-                className="rounded-lg border border-border-subtle px-3 py-2 text-sm text-text-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={busyId === repTarget.id || !repDepartment || !repProgram || !repLevel}
-                onClick={confirmMakeRep}
-                className="rounded-full bg-accent px-3 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"
-              >
-                {busyId === repTarget.id ? "Saving…" : "Confirm Course Rep"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editing && (
-        <EditUserModal
-          user={editing}
-          open={!!editing}
-          busy={busyId === editing.id}
-          onClose={() => setEditing(null)}
-          onSave={handleSaveEdit}
-        />
-      )}
-      {viewing && (
-        <ViewProfileModal
-          user={viewing}
-          open={!!viewing}
-          onClose={() => setViewing(null)}
-        />
-      )}
-      {resetResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/55 backdrop-blur-[3px] p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-xl">
-            <div className="mb-2 flex items-center gap-2 text-status-success">
-              <KeyRound size={18} />
-              <h3 className="text-sm font-semibold text-text-primary">Temporary password issued</h3>
-            </div>
-            <p className="mb-3 text-xs text-text-muted">
-              For <strong>{resetResult.email}</strong>. Shown only this once — copy it now and hand it
-              to the verified user. They'll be required to set a new password on their next login.
-            </p>
-            <div className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-border-subtle bg-bg-elevated px-3 py-2">
-              <code className="text-sm font-mono text-text-primary">{resetResult.tempPassword}</code>
-              <button
-                type="button"
-                className="rounded-md px-2 py-1 text-xs font-medium text-accent-primary hover:bg-accent-primary/10"
-                onClick={() => navigator.clipboard?.writeText(resetResult.tempPassword)}
-              >
-                Copy
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setResetResult(null)}
-              className="w-full rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
+      <Pager page={params.page} pageSize={params.pageSize} total={data.total} onPage={(page) => set({ page })} onPageSize={(pageSize) => set({ pageSize })} />
     </div>
   );
 }

@@ -23,7 +23,8 @@
  *   https://846fcf28d6114e4cd85ef238db9fe993.r2.cloudflarestorage.com
  */
 
-const functions = require("firebase-functions");
+// firebase-functions 6 exports the v2 API at its root; this file is written for v1.
+const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
@@ -485,3 +486,5 @@ exports.onClassDeleted = functions.firestore.document('classEvents/{id}').onDele
   await batch.commit();
   return null;
 });
+/* ───────────────── Link previews ───────────────── */
+exports.ogPage = require("./ogPage").ogPage;

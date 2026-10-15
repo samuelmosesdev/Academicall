@@ -13,11 +13,10 @@ import {
   Clock,
   FileEdit,
   User,
-  Filter,
 } from "lucide-react";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
-import { requestsApi, usersApi } from "../lib/api";
+import { requestsApi } from "../lib/api";
 
 const STATUS_TABS = [
   { id: "pending", label: "Pending" },

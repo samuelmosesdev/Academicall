@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Download, Filter, Shield, Undo2 } from "lucide-react";
 import { usersApi, activityApi } from "../lib/api";
@@ -35,7 +35,7 @@ export default function AdminUserActivity() {
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const [userResponse, activityResponse] = await Promise.all([
@@ -47,9 +47,9 @@ export default function AdminUserActivity() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [userId]);
 
-  useEffect(() => { load().catch(() => setActivities([])); }, [userId]);
+  useEffect(() => { load().catch(() => setActivities([])); }, [load]);
 
   const filtered = useMemo(() => {
     let result = activities;

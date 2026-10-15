@@ -1,4 +1,4 @@
-import { ArrowUpRight, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
 export default function KpiCard({ label, value, trend, highlight = false, icon: Icon }) {
   return (
@@ -11,7 +11,6 @@ export default function KpiCard({ label, value, trend, highlight = false, icon: 
     >
       {/* subtle shine */}
       <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-        <div className="absolute -left-1/2 top-0 h-full w-1/2 rotate-12 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
       </div>
 
       <div className="flex items-start justify-between">

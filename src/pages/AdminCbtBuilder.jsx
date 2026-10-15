@@ -5,7 +5,7 @@ import {
   Search,
   ClipboardList,
   FileSpreadsheet,
-  Sparkles,
+  ListChecks,
 } from "lucide-react";
 import { useCbtData, refreshCbtQuestions } from "../hooks/useCbtData";
 import { useAuth } from "../context/AuthContext";
@@ -13,6 +13,7 @@ import { questionsApi } from "../lib/api";
 import { FACULTIES, departmentsFor } from "../data/facultyData";
 import AiGenerateQuestionsModal from "../components/AiGenerateQuestionsModal";
 import ImportQuestionsModal from "../components/ImportQuestionsModal";
+import { appAlert, appConfirm } from "../lib/dialogs";
 
 const DIFFICULTIES = ["easy", "medium", "hard"];
 
@@ -130,13 +131,13 @@ export default function AdminCbtBuilder() {
   }
 
   async function handleDelete(q) {
-    const ok = window.confirm(`Delete this question from ${q.courseCode}?`);
+    const ok = await appConfirm(`Delete this question from ${q.courseCode}?`);
     if (!ok) return;
     try {
       await questionsApi.remove(q.id);
       await refreshCbtQuestions(authMode);
     } catch (err) {
-      alert(err.message || "Delete failed.");
+      appAlert(err.message || "Delete failed.");
     }
   }
 
@@ -165,7 +166,7 @@ export default function AdminCbtBuilder() {
           onClick={() => setShowAiGenerate(true)}
           className="flex items-center gap-2 rounded-lg border border-accent/40 bg-accent-soft px-4 py-2 text-sm font-medium text-accent hover:bg-accent/15"
 >
-  <Sparkles size={16} />
+  <ListChecks size={16} />
   Generate with AI
 </button>
           <button

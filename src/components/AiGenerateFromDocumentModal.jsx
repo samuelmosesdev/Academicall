@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
   X,
-  Sparkles,
   Loader2,
   Check,
   AlertCircle,
   FileText,
+  ListChecks,
 } from "lucide-react";
 import { generateQuestionsFromDocument } from "../lib/geminiGenerate";
 import { refreshCbtQuestions } from "../hooks/useCbtData";
@@ -105,7 +105,7 @@ export default function AiGenerateFromDocumentModal({
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent">
-              <Sparkles size={16} />
+              <ListChecks size={16} />
             </span>
             <div>
               <h2 className="text-base font-semibold text-text-primary">
@@ -209,7 +209,7 @@ export default function AiGenerateFromDocumentModal({
               </>
             ) : (
               <>
-                <Sparkles size={16} />
+                <ListChecks size={16} />
                 Generate {total} questions
               </>
             )}

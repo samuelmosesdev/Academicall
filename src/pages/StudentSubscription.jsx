@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Check,
   Crown,
-  Sparkles,
   Zap,
   Palette,
   Brain,
@@ -143,7 +142,7 @@ export default function StudentSubscription() {
             </div>
           )}
           <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-accent">
-            <Sparkles size={12} />
+            <Crown size={12} />
             {plans.annual?.name || "Annual"}
           </p>
           <p className="mt-2 text-3xl font-bold text-text-primary">
