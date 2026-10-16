@@ -7,6 +7,7 @@ export const ROLES = {
   COURSE_REP: "courseRep",
   NEWS_AGENT: "newsAgent",
   USER: "user",
+  ASPIRANT: "aspirant",
 };
 
 export const ROLE_LABELS = {
@@ -16,6 +17,7 @@ export const ROLE_LABELS = {
   courseRep: "Course Rep",
   newsAgent: "News Agent",
   user: "Student",
+  aspirant: "Aspirant",
 };
 
 /** Roles an Admin may assign (News and Secretary are duties, not roles) */
@@ -28,7 +30,20 @@ export const ADMIN_ASSIGNABLE = [
 ];
 
 /** Add-on duties any user can hold on top of their role */
-export const DUTY_LABELS = { news: "News Agent", secretary: "Secretary" };
+export const DUTY_LABELS = { news: "News Agent", secretary: "Secretary", newsChief: "Chief News Agent", houseLeader: "House Leader" };
+
+/** Prospective student seeking admission */
+export function isAspirant(profile) {
+  return roleOf(profile) === "aspirant";
+}
+/** Runs one or more Aspirant Houses */
+export function isHouseLeader(profile) {
+  return hasTag(profile, "houseLeader");
+}
+/** Chief News Agent (admins can do everything a chief can) */
+export function isNewsChief(profile) {
+  return roleOf(profile) === "admin" || hasTag(profile, "newsChief");
+}
 
 export function hasTag(profile, tag) {
   return Array.isArray(profile?.staffTags) && profile.staffTags.includes(tag);
@@ -75,7 +90,7 @@ export function isCourseRep(profile) {
 }
 
 export function isNewsAgent(profile) {
-  return hasTag(profile, "news") || roleOf(profile) === ROLES.NEWS_AGENT;
+  return hasTag(profile, "news") || hasTag(profile, "newsChief") || roleOf(profile) === ROLES.NEWS_AGENT;
 }
 
 export function isStaff(profile) {
@@ -118,7 +133,7 @@ export function nextOnboardingPath(profile) {
   if (!profile) return null;
   if (profile.mustChangePassword) return "/change-password";
   const r = roleOf(profile);
-  const isStudentSide = r === ROLES.USER || r === ROLES.COURSE_REP || r === ROLES.NEWS_AGENT;
+  const isStudentSide = r === ROLES.USER || r === ROLES.COURSE_REP || r === ROLES.NEWS_AGENT || r === ROLES.ASPIRANT;
   if (isStudentSide) {
     if (!profile.emailVerified) return "/verify-email";
     if (!profile.profileComplete) return "/complete-profile";
@@ -145,6 +160,8 @@ export function matchesRequiredRole(profile, requiredRole) {
   if (requiredRole === "approver") return canApprove(profile);
   if (requiredRole === "user") return r === "user" || r === "courseRep" || r === "newsAgent";
   if (requiredRole === "newsDesk") return canWriteNews(profile);
+  if (requiredRole === "houseDesk") return isHouseLeader(profile) || canAny(profile, "houses.manage");
+  if (requiredRole === "aspirant") return r === "aspirant";
   if (requiredRole === "agent") return r === "agent" || r === "alphaAgent";
   return r === requiredRole;
 }

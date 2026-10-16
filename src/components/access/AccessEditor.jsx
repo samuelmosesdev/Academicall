@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Newspaper, Feather, ShieldCheck, RotateCcw, Check, Lock } from "lucide-react";
+import { Newspaper, Feather, ShieldCheck, RotateCcw, Check, Lock, Crown, Shield } from "lucide-react";
+import { Link } from "react-router-dom";
 import { accessApi } from "../../lib/staffApi";
 import { can, ROLE_LABELS } from "../../lib/roles";
 import { notify } from "../../lib/dialogs";
@@ -7,6 +8,7 @@ import { notify } from "../../lib/dialogs";
 const RANK = { admin: 4, alphaAgent: 3, agent: 2 };
 const rank = (r) => RANK[r] || 1;
 const STAFF = ["admin", "alphaAgent", "agent"];
+const EMPTY_TAGS = [];
 
 let catalogCache = null;
 export function useAccessCatalog() {
@@ -52,7 +54,7 @@ export function Switch({ on, onChange, disabled, label }) {
  */
 export default function AccessEditor({ person, viewer, onSaved, compact = false }) {
   const catalog = useAccessCatalog();
-  const tags = person.staffTags || [];
+  const tags = person.staffTags || EMPTY_TAGS;
   const isTargetAdmin = person.role === "admin";
   const viewerIsAdmin = viewer?.role === "admin";
   const viewerOutranks = viewerIsAdmin || (viewer?.id !== person.id && rank(viewer?.role) > rank(person.role));
@@ -106,8 +108,10 @@ export default function AccessEditor({ person, viewer, onSaved, compact = false 
 
   const duties = [
     { tag: "news", icon: Newspaper, title: "News Agent", text: "Writes, publishes and moderates Academicall News.", cap: "users.news" },
+    { tag: "newsChief", icon: Crown, title: "Chief News Agent", text: "Oversees every story and News Agent: approve, take down, delete, restrict or suspend.", adminOnly: true },
     { tag: "secretary", icon: Feather, title: "Secretary", text: "Runs the Secretariat: records, minutes and the activity journal.", cap: "users.secretary" },
-  ];
+    { tag: "houseLeader", icon: Shield, title: "House Leader", text: "Runs Aspirant Houses: starts threads, pins, mentions and manages members. Pick the houses in Aspirant Houses.", cap: "users.houseLeader" },
+  ].filter(() => person.role !== "aspirant");
 
   return (
     <div className="space-y-5">
@@ -119,15 +123,17 @@ export default function AccessEditor({ person, viewer, onSaved, compact = false 
           </div>
         </header>
         <div className="divide-y divide-border-subtle">
-          {duties.map(({ tag, icon: Icon, title, text, cap }) => {
+          {duties.length === 0 && <p className="py-3 text-sm text-text-muted">Aspirants can't hold staff duties.</p>}
+          {duties.map(({ tag, icon: Icon, title, text, cap, adminOnly }) => {
             const on = tags.includes(tag);
-            const allowed = viewerOutranks && can(viewer, cap);
+            const allowed = adminOnly ? viewerIsAdmin : viewerOutranks && can(viewer, cap);
             return (
               <div key={tag} className="flex items-center gap-3 py-3">
                 <span className={`acx-duty-icon ${on ? "is-on" : ""}`}><Icon size={17} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-text-primary">{title}</p>
                   <p className="text-xs text-text-muted">{text}</p>
+                  {tag === "houseLeader" && on && can(viewer, "users.houseLeader") && <Link to={viewer?.role === "admin" ? "/admin/houses" : "/agent/houses"} className="mt-0.5 inline-block text-xs font-semibold text-accent">Choose houses →</Link>}
                 </div>
                 {!allowed && <Lock size={14} className="text-text-muted" aria-label="You can't change this" />}
                 <Switch on={on} disabled={!allowed || !!busy} onChange={(v) => duty(tag, v)} label={title} />

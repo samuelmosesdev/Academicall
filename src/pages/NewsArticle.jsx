@@ -8,6 +8,7 @@ import { Byline, Prose, StoryCard } from "../components/news/NewsBits";
 import { REACTIONS, longDate, newsApi, timeAgo } from "../lib/newsApi";
 import { useAuth } from "../context/AuthContext";
 import { appConfirm, notify } from "../lib/dialogs";
+import { FollowButton } from "../components/news/Follow";
 
 export default function NewsArticle() {
   const { slug } = useParams();
@@ -47,7 +48,7 @@ export default function NewsArticle() {
         <Link to="/news" className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"><ArrowLeft size={15} /> All news</Link>
         <div className="mt-6 flex items-center gap-3">
           <span className="news-tag">{post.category}</span>
-          {post.status !== "published" && <span className="rounded-full bg-bg-elevated px-2.5 py-0.5 text-xs text-ink-muted">Draft preview</span>}
+          {post.status !== "published" && <span className="rounded-full bg-bg-elevated px-2.5 py-0.5 text-xs text-ink-muted">{post.status === "review" ? "Waiting for approval" : post.status === "hidden" ? "Taken down" : "Draft preview"}</span>}
           <span className="text-xs text-ink-muted">{longDate(post.publishedAt)}</span>
         </div>
         <h1 className="mt-4 font-display text-[2.1rem] leading-[1.08] tracking-tight text-ink sm:text-[3rem]">{post.title}</h1>
@@ -63,6 +64,13 @@ export default function NewsArticle() {
         {post.coverUrl && <img src={post.coverUrl} alt="" className="mt-7 aspect-[16/9] w-full rounded-[1.5rem] object-cover" />}
 
         <div className="mt-8"><Prose body={post.body} /></div>
+
+        <div className="mt-8 flex flex-wrap items-center gap-2 rounded-2xl bg-card-light px-4 py-3 ring-1 ring-border-light">
+          <p className="mr-auto text-sm text-ink"><b>Get stories like this first.</b> <span className="text-ink-muted">Follow and we'll notify you as they drop.</span></p>
+          <FollowButton kind="category" value={post.category} label={post.category} size="sm" />
+          {post.author?.id && <FollowButton kind="author" value={post.author.id} label={post.author.name} size="sm" />}
+          {(post.tags || []).slice(0, 3).map((t) => <FollowButton key={t} kind="topic" value={t} label={`#${t}`} size="sm" />)}
+        </div>
 
         {post.gated ? <SignInGate /> : (
           <>

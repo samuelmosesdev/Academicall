@@ -6,12 +6,16 @@ import UniqueIdBadge from "../components/UniqueIdBadge";
 import AcademicPicker from "../components/AcademicPicker";
 import { fileToCompressedDataUrl } from "../lib/imageUtils";
 import { pendingGroupInvitePath } from "../lib/groupInvite";
+import AspirantChoicesForm from "../components/house/AspirantChoicesForm";
+import { aspirantApi } from "../lib/aspirantApi";
 
 const LEVELS = ["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "Postgraduate"];
 
 export default function CompleteProfile() {
-  const { profile, completeProfile } = useAuth();
+  const { profile, completeProfile, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  // Aspirant accounts (and new accounts that say "I'm seeking admission") pick institutions of choice instead.
+  const [mode, setMode] = useState(profile?.role === "aspirant" ? "aspirant" : "student");
 
   const [academic, setAcademic] = useState(() => ({
     institution: profile?.institution || null,
@@ -81,6 +85,32 @@ export default function CompleteProfile() {
     }
   }
 
+  if (mode === "aspirant" && !generatedId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-10">
+        <div className="w-full max-w-lg rounded-[1.6rem] border border-border-subtle bg-bg-panel p-6 sm:p-8">
+          <div className="mb-5 flex items-center gap-2">
+            <img src="/brand/mark-full-color.png" alt="" className="h-8 w-8" />
+            <span className="eyebrow text-violet">Aspirant setup</span>
+          </div>
+          {profile?.role !== "aspirant" && <ModeSwitch mode={mode} setMode={setMode} />}
+          <h1 className="font-display text-[1.9rem] leading-tight text-text-primary">Where do you want to <span className="serif-i text-violet">get in?</span></h1>
+          <p className="mb-6 mt-2 text-sm text-text-secondary">Pick one or two institutions. You'll join each one's Aspirant House, where House Leaders post screening dates, cut-off marks and tips.</p>
+          <AspirantChoicesForm
+            profile={profile}
+            submitLabel="Join my Aspirant House"
+            busyLabel="Setting things up…"
+            onSubmit={async (body) => {
+              await aspirantApi.save({ ...body, photoUrl: photoDataUrl || undefined });
+              await refreshProfile();
+              navigate("/dashboard", { replace: true });
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (generatedId) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg-app px-4">
@@ -120,6 +150,7 @@ export default function CompleteProfile() {
           <span className="text-[15px] font-semibold text-text-primary">Academicall</span>
         </div>
 
+        <ModeSwitch mode={mode} setMode={setMode} />
         <h1 className="mb-1 text-xl font-semibold text-text-primary">Complete your profile</h1>
         <p className="mb-6 text-sm text-text-secondary">
           Just a few more details before we generate your Unique ID.
@@ -214,6 +245,20 @@ export default function CompleteProfile() {
           </button>
         </form>
       </div>
+    </div>
+  );
+}
+
+/** New accounts choose: already admitted (student) or still seeking admission (aspirant). */
+function ModeSwitch({ mode, setMode }) {
+  return (
+    <div role="radiogroup" aria-label="I am" className="mb-5 grid grid-cols-2 gap-1 rounded-full bg-bg-panel-alt p-1 text-sm">
+      {[["student", "I'm a student"], ["aspirant", "Seeking admission"]].map(([id, label]) => (
+        <button key={id} type="button" role="radio" aria-checked={mode === id} onClick={() => setMode(id)}
+          className={`rounded-full px-3 py-2 font-medium transition ${mode === id ? "bg-midnight text-white" : "text-text-secondary hover:text-text-primary"}`}>
+          {label}
+        </button>
+      ))}
     </div>
   );
 }

@@ -997,3 +997,50 @@ html.dark .folder-tone-rose { --folder-bg: #ffc6d5; }
 .acx-group-label:first-child { margin-top: 0; }
 .acx-callout { display: flex; align-items: flex-start; gap: 0.75rem; border-radius: 1rem; background: var(--color-lemon-soft, #fcf9c4); padding: 0.85rem 1rem; font-size: 0.84rem; color: #0f0326; }
 .acx-callout.is-info { background: var(--color-violet-soft); color: var(--color-text-primary); }
+
+/* ───────────────────────── Aspirants · Aspirant Houses · Dashboard board · News search ───────────────────────── */
+.asp-choice { border-radius: 1.2rem; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel-alt); padding: 0.9rem; position: relative; }
+.asp-choice-label { font-size: 0.8rem; font-weight: 700; color: var(--color-text-primary); }
+.asp-inst-btn { margin-top: 0.55rem; display: flex; width: 100%; align-items: center; gap: 0.7rem; border-radius: 0.95rem; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); padding: 0.65rem 0.8rem; transition: border-color .15s ease, box-shadow .15s ease; }
+.asp-inst-btn:hover, .asp-inst-btn[aria-expanded="true"] { border-color: #454ade; box-shadow: 0 0 0 3px rgba(69,74,222,.1); }
+.asp-inst-btn.is-set .asp-inst-icon { background: #0f0326; color: #f8f32b; }
+.asp-inst-icon { display: flex; height: 2.1rem; width: 2.1rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 0.7rem; background: var(--color-violet-soft); color: #454ade; }
+.asp-inst-pop { position: absolute; left: 0.6rem; right: 0.6rem; z-index: 40; margin-top: 0.4rem; border-radius: 1.1rem; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); padding: 0.6rem; box-shadow: 0 22px 44px -18px rgba(15,3,38,.35); }
+.asp-add-second { width: 100%; border-radius: 1.2rem; border: 1px dashed var(--color-border-strong); padding: 0.85rem; text-align: left; font-size: 0.86rem; font-weight: 600; color: var(--color-text-primary); transition: border-color .15s ease; }
+.asp-add-second:hover { border-color: #454ade; }
+.asp-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 999px; background: #0f0326; color: #fff; padding: 0.8rem 1.2rem; font-size: 0.92rem; font-weight: 650; transition: background .15s ease; }
+.asp-primary:hover { background: #454ade; }
+.asp-primary:disabled { opacity: .55; }
+
+.house-hero { position: relative; overflow: hidden; border-radius: 1.6rem; padding: 1.75rem; color: #fff; background:
+  radial-gradient(110% 140% at 100% 0%, rgba(69,74,222,0.6) 0%, rgba(69,74,222,0) 58%),
+  radial-gradient(70% 110% at 0% 100%, rgba(68,255,209,0.16) 0%, rgba(68,255,209,0) 60%), #0f0326; }
+@media (min-width: 640px) { .house-hero { padding: 2.4rem; } }
+.house-tab { display: inline-flex; flex-shrink: 0; align-items: center; gap: 0.45rem; border-radius: 999px; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); padding: 0.5rem 0.9rem; font-size: 0.84rem; font-weight: 600; color: var(--color-text-secondary); transition: all .15s ease; }
+.house-tab:hover { border-color: #454ade; color: #454ade; }
+.house-tab.is-on { background: #0f0326; border-color: #0f0326; color: #fff; }
+.house-compose-bar { display: flex; width: 100%; align-items: center; gap: 0.75rem; border-radius: 1.3rem; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); padding: 0.7rem 0.9rem; transition: border-color .15s ease; }
+.house-compose-bar:hover { border-color: #454ade; }
+.house-thread { display: block; border-radius: 1.3rem; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); padding: 1rem 1.1rem; transition: border-color .15s ease, transform .15s ease; }
+.house-thread:hover { border-color: #454ade; transform: translateY(-1px); }
+.house-thread.is-pinned { border-color: #f8f32b; box-shadow: inset 4px 0 0 #f8f32b; background: linear-gradient(90deg, rgba(248,243,43,0.09), transparent 40%), var(--color-bg-panel); }
+.house-thread-open { border-radius: 1.5rem; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); padding: 1.25rem 1.3rem; }
+@media (min-width: 640px) { .house-thread-open { padding: 1.6rem 1.8rem; } }
+.house-reply { display: flex; gap: 0.7rem; border-radius: 1.1rem; background: var(--color-bg-panel); border: 1px solid var(--color-border-subtle); padding: 0.75rem 0.85rem; }
+.house-reply.is-leader { border-color: rgba(68,255,209,.55); background: linear-gradient(90deg, rgba(68,255,209,0.08), transparent 45%), var(--color-bg-panel); }
+.house-reply-box { position: sticky; bottom: 0.75rem; border-radius: 1.3rem; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); padding: 0.75rem; box-shadow: 0 16px 34px -20px rgba(15,3,38,.45); }
+.house-mention { display: inline-flex; align-items: center; border-radius: 0.45rem; background: var(--color-violet-soft); padding: 0 0.3rem; font-weight: 650; color: #2f33b8; }
+.house-mention.is-me { background: #f8f32b; color: #0f0326; }
+.house-mention-pop { position: absolute; left: 0; right: 0; top: calc(100% + 0.35rem); z-index: 50; max-height: 18rem; overflow-y: auto; border-radius: 1rem; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); padding-bottom: 0.35rem; box-shadow: 0 22px 44px -18px rgba(15,3,38,.4); }
+.house-member { border-radius: 1.3rem; border: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); padding: 1rem; }
+.house-member.is-dim { background: var(--color-bg-panel-alt); }
+
+.board-fade { animation: boardFade .55s ease both; }
+@keyframes boardFade { from { opacity: 0; transform: scale(1.01); } to { opacity: 1; transform: none; } }
+.board-mini { position: absolute; left: 0; top: 0; width: 400%; height: 400%; transform: scale(.25); transform-origin: top left; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .board-fade { animation: none; } }
+
+.news-suggest { position: absolute; left: 0; right: 0; top: calc(100% + 0.4rem); z-index: 60; overflow: hidden; border-radius: 1.2rem; border: 1px solid var(--color-border-light); background: var(--color-card-light); padding-bottom: 0.35rem; box-shadow: 0 24px 48px -20px rgba(15,3,38,.35); }
+.news-follow { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; border-radius: 999px; border: 1px solid #454ade; color: #454ade; font-weight: 600; background: transparent; transition: all .15s ease; }
+.news-follow:hover { background: #e9e9fc; }
+.news-follow.is-on { background: #454ade; color: #fff; }

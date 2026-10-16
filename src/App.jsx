@@ -69,6 +69,26 @@ import NewsDesk from "./pages/NewsDesk";
 import AdminStaffAccess from "./pages/AdminStaffAccess";
 import DocumentCenter from "./pages/DocumentCenter";
 import { SecretariatLayout, SecretariatOverview, SecretariatRecords, SecretariatRecord, SecretariatJournal } from "./pages/Secretariat";
+import { useAuth } from "./context/AuthContext";
+import AspirantDashboard from "./pages/AspirantDashboard";
+import AspirantHouse from "./pages/AspirantHouse";
+import AspirantChoices from "./pages/AspirantChoices";
+import { HouseDeskLayout, HouseDeskHome, HouseDeskHouse } from "./pages/HouseDesk";
+import AdminAspirants from "./pages/AdminAspirants";
+import AdminHouses from "./pages/AdminHouses";
+import AdminBoard from "./pages/AdminBoard";
+import NewsFollowing from "./pages/NewsFollowing";
+
+/** Aspirants get their own dashboard; students keep theirs. */
+function DashboardHome() {
+  const { profile } = useAuth();
+  return profile?.role === "aspirant" ? <AspirantDashboard /> : <UserDashboard />;
+}
+/** Student-only pages send aspirants to their Aspirant House instead. */
+function StudentOnly({ children }) {
+  const { profile } = useAuth();
+  return profile?.role === "aspirant" ? <Navigate to="/dashboard/house" replace /> : children;
+}
 
 export default function App() {
   return (
@@ -87,7 +107,21 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/news/following" element={<NewsFollowing />} />
             <Route path="/news/:slug" element={<NewsArticle />} />
+            <Route
+              path="/house-desk"
+              element={
+                <ProtectedRoute requiredRole="houseDesk">
+                  <HouseDeskLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<HouseDeskHome />} />
+              <Route path=":houseId" element={<HouseDeskHouse />} />
+              <Route path=":houseId/members" element={<HouseDeskHouse />} />
+              <Route path=":houseId/t/:threadId" element={<HouseDeskHouse />} />
+            </Route>
             <Route
               path="/secretariat"
               element={
@@ -153,8 +187,8 @@ export default function App() {
               <Route path="notifications" element={<AdminNotifications />} />
               <Route path="agents" element={<AdminAgents />} />
               <Route path="agents/:agentId" element={<AdminAgentActivity />} />
-              <Route path="documents" element={<AdminDocuments />} />
-              <Route path="courses" element={<AdminCourses />} />
+              <Route path="documents" element={<StudentOnly><AdminDocuments /></StudentOnly>} />
+              <Route path="courses" element={<StudentOnly><AdminCourses /></StudentOnly>} />
               <Route path="academics" element={<AdminAcademics />} />
               <Route path="cbt-builder" element={<AdminCbtBuilder />} />
               <Route path="payments" element={<AdminPayments />} />
@@ -165,6 +199,9 @@ export default function App() {
               <Route path="announcements" element={<AdminAnnouncements />} />
               <Route path="feeds" element={<StaffFeedPage />} />
               <Route path="staff-chat" element={<StaffChat />} />
+              <Route path="aspirants" element={<AdminAspirants />} />
+              <Route path="houses" element={<AdminHouses />} />
+              <Route path="board" element={<AdminBoard />} />
             </Route>
 
             <Route
@@ -248,6 +285,30 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="aspirants"
+                element={
+                  <ProtectedRoute requiredRole="cap:aspirants.view|aspirants.manage">
+                    <AdminAspirants />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="houses"
+                element={
+                  <ProtectedRoute requiredRole="cap:houses.manage|users.houseLeader">
+                    <AdminHouses />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="board"
+                element={
+                  <ProtectedRoute requiredRole="cap:board.manage">
+                    <AdminBoard />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="feeds" element={<StaffFeedPage />} />
               <Route path="staff-chat" element={<StaffChat />} />
               <Route path="settings" element={<AgentSettings />} />
@@ -281,30 +342,34 @@ export default function App() {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute requiredRole={["user", "courseRep", "newsAgent"]}>
+                <ProtectedRoute requiredRole={["user", "courseRep", "newsAgent", "aspirant"]}>
                   <UserLayout />
                 </ProtectedRoute>
               }
             >
-              <Route index element={<UserDashboard />} />
+              <Route index element={<DashboardHome />} />
+              <Route path="house" element={<AspirantHouse />} />
+              <Route path="house/:houseId" element={<AspirantHouse />} />
+              <Route path="house/:houseId/t/:threadId" element={<AspirantHouse />} />
+              <Route path="choices" element={<ProtectedRoute requiredRole="aspirant"><AspirantChoices /></ProtectedRoute>} />
               <Route path="profile" element={<StudentProfile />} />
-              <Route path="reading-hub" element={<StudentDocuments />} />
-              <Route path="reading-hub/doc/:docId" element={<DocumentReader />} />
-              <Route path="reading-hub/:courseCode" element={<StudentCourseReading />} />
+              <Route path="reading-hub" element={<StudentOnly><StudentDocuments /></StudentOnly>} />
+              <Route path="reading-hub/doc/:docId" element={<StudentOnly><DocumentReader /></StudentOnly>} />
+              <Route path="reading-hub/:courseCode" element={<StudentOnly><StudentCourseReading /></StudentOnly>} />
               <Route path="practice" element={<StudentPractice />} />
               <Route path="upgrade" element={<StudentUpgrade />} />
-              <Route path="timetable" element={<StudentTimetable />} />
+              <Route path="timetable" element={<StudentOnly><StudentTimetable /></StudentOnly>} />
               <Route path="notifications" element={<StudentNotifications />} />
               <Route path="notifications/archived" element={<ArchivedNotifications />} />
-              <Route path="courses" element={<StudentCourses />} />
-              <Route path="department" element={<StudentDepartment />} />
-              <Route path="materials" element={<StudentMaterials />} />
-              <Route path="materials/folder/:courseCode" element={<StudentMaterialFolder />} />
-              <Route path="materials/library" element={<StudentMaterialsLibrary />} />
-              <Route path="groups" element={<StudentGroups />} />
-              <Route path="groups/join/:code" element={<StudyGroupJoin />} />
-              <Route path="groups/:groupId" element={<StudentGroups />} />
-              <Route path="documents" element={<StudentDocumentsComingSoon />} />
+              <Route path="courses" element={<StudentOnly><StudentCourses /></StudentOnly>} />
+              <Route path="department" element={<StudentOnly><StudentDepartment /></StudentOnly>} />
+              <Route path="materials" element={<StudentOnly><StudentMaterials /></StudentOnly>} />
+              <Route path="materials/folder/:courseCode" element={<StudentOnly><StudentMaterialFolder /></StudentOnly>} />
+              <Route path="materials/library" element={<StudentOnly><StudentMaterialsLibrary /></StudentOnly>} />
+              <Route path="groups" element={<StudentOnly><StudentGroups /></StudentOnly>} />
+              <Route path="groups/join/:code" element={<StudentOnly><StudyGroupJoin /></StudentOnly>} />
+              <Route path="groups/:groupId" element={<StudentOnly><StudentGroups /></StudentOnly>} />
+              <Route path="documents" element={<StudentOnly><StudentDocumentsComingSoon /></StudentOnly>} />
               <Route path="vault" element={<StudentVault />} />
               <Route path="vault/:folderId" element={<StudentVault />} />
               <Route path="settings" element={<StudentSettings />} />
@@ -318,7 +383,7 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="reference" element={<StudentReference />} />
+              <Route path="reference" element={<StudentOnly><StudentReference /></StudentOnly>} />
             </Route>
 
             <Route path="*" element={<Navigate to="/login" replace />} />

@@ -38,7 +38,10 @@ export default function StudentNotifications() {
     } else {
       await markSystemRead(item.id);
     }
-    navigate("/dashboard/department");
+    // House posts, mentions and news carry their own destination.
+    const link = item.data?.link || item.link;
+    if (link && link.startsWith("/")) navigate(link);
+    else navigate(profile?.role === "aspirant" ? "/dashboard/house" : "/dashboard/department");
   }
 
   async function handleArchive(item, toArchive = true) {

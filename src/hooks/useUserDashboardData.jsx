@@ -6,6 +6,7 @@ import {
   notificationsApi,
   STUDENT_NOTIFICATIONS_UPDATED_EVENT,
 } from "../lib/api";
+import { subscribe as subscribeRealtime } from "../lib/realtime";
 
 const EMPTY = {
   profile: null,
@@ -76,9 +77,15 @@ export function UserDashboardDataProvider({ children }) {
     refresh();
     window.addEventListener(STUDENT_NOTIFICATIONS_UPDATED_EVENT, refresh);
     window.addEventListener("focus", refresh);
+    // House posts, mentions and followed news arrive over the live stream.
+    const off = subscribeRealtime("notification", () => {
+      refresh();
+      window.dispatchEvent(new Event(STUDENT_NOTIFICATIONS_UPDATED_EVENT));
+    });
     return () => {
       window.removeEventListener(STUDENT_NOTIFICATIONS_UPDATED_EVENT, refresh);
       window.removeEventListener("focus", refresh);
+      off?.();
     };
   }, [authMode, user, refreshUnreadCount]);
 

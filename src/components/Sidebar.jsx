@@ -19,6 +19,9 @@ import {
   ShieldCheck,
   FolderArchive,
   Feather,
+  Compass,
+  Building2,
+  GalleryHorizontalEnd,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -29,6 +32,9 @@ const NAV_ITEMS = [
   { label: "Work email", icon: Mail, to: "/admin/mail" },
   { label: "Dept Feeds", icon: Megaphone, to: "/admin/feeds" },
   { label: "Users", icon: Users, to: "/admin/users" },
+  { label: "Aspirants", icon: Compass, to: "/admin/aspirants" },
+  { label: "Aspirant Houses", icon: Building2, to: "/admin/houses" },
+  { label: "Dashboard board", icon: GalleryHorizontalEnd, to: "/admin/board" },
   { label: "Staff access", icon: ShieldCheck, to: "/admin/access" },
   { label: "Activity", icon: ScrollText, to: "/admin/activity" },
   { label: "Governance", icon: UserCog, to: "/admin/governance" },

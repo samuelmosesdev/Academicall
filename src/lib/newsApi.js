@@ -17,7 +17,13 @@ const qs = (o) => {
 };
 
 export const newsApi = {
-  list: ({ category, q, before, limit } = {}) => api(`/news${qs({ category, q, before, limit })}`),
+  list: ({ category, q, before, offset, limit } = {}) => api(`/news${qs({ category, q, before, offset, limit })}`),
+  suggest: (q, opts) => api(`/news/suggest${qs({ q })}`, opts),
+  forYou: () => api("/news/for-you"),
+  subscriptions: () => api("/news/subscriptions"),
+  follow: (kind, value, label) => api("/news/subscriptions", { method: "POST", body: { kind, value, label } }),
+  unfollow: (id) => api(`/news/subscriptions/${id}`, { method: "DELETE" }),
+  alerts: (newsAlerts) => api("/news/subscriptions/prefs", { method: "PATCH", body: { newsAlerts } }),
   get: (slug) => api(`/news/${encodeURIComponent(slug)}`),
   comments: (postId) => api(`/news/${postId}/comments`),
   comment: (postId, body) => api(`/news/${postId}/comments`, { method: "POST", body: { body } }),
@@ -27,6 +33,17 @@ export const newsApi = {
   create: (body) => api("/news/desk/posts", { method: "POST", body }),
   update: (id, body) => api(`/news/desk/posts/${id}`, { method: "PATCH", body }),
   remove: (id) => api(`/news/desk/posts/${id}`, { method: "DELETE" }),
+};
+
+/** Chief News Agent tools. */
+export const chiefApi = {
+  overview: () => api("/news/chief/overview"),
+  posts: (params = {}) => api(`/news/chief/posts${qs(params)}`),
+  moderate: (id, action, note) => api(`/news/chief/posts/${id}`, { method: "PATCH", body: { action, note } }),
+  remove: (id, reason) => api(`/news/chief/posts/${id}`, { method: "DELETE", body: { reason } }),
+  agents: () => api("/news/chief/agents"),
+  setAgent: (id, newsStatus, reason) => api(`/news/chief/agents/${id}`, { method: "PATCH", body: { newsStatus, reason } }),
+  removeDuty: (id) => api(`/news/chief/agents/${id}/duty`, { method: "DELETE" }),
 };
 
 export function timeAgo(date) {

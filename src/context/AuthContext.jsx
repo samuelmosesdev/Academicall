@@ -34,8 +34,8 @@ export function AuthProvider({ children }) {
     return applySession(data);
   };
 
-  const registerWithApi = async (email, password, name) => {
-    const data = await authApi.register({ email, password, name });
+  const registerWithApi = async (email, password, name, accountType = "student") => {
+    const data = await authApi.register({ email, password, name, accountType });
     applySession(data);
     try {
       await resendVerificationEmail();

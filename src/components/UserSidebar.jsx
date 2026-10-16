@@ -18,9 +18,12 @@ import {
   ShieldCheck,
   Newspaper,
   PenSquare,
+  Compass,
+  Shield,
+  Target,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { isNewsAgent, isSecretary } from "../lib/roles";
+import { isHouseLeader, isNewsAgent, isSecretary } from "../lib/roles";
 import { useAuth } from "../context/AuthContext";
 import { isPro } from "../lib/subscription";
 import { useUserDashboardData } from "../hooks/useUserDashboardData";
@@ -38,6 +41,7 @@ const NAV_ITEMS = [
   { label: "News", icon: Newspaper, to: "/news" },
   { label: "News desk", icon: PenSquare, to: "/news/desk", newsAgentOnly: true },
   { label: "Secretariat", icon: Feather, to: "/secretariat", secretaryOnly: true },
+  { label: "House desk", icon: Shield, to: "/house-desk", houseLeaderOnly: true },
   { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice" },
   { label: "Reading Hub", icon: Library, to: "/dashboard/reading-hub" },
   { label: "Reference", icon: BookMarked, to: "/dashboard/reference" },
@@ -51,12 +55,29 @@ const NAV_ITEMS = [
   { label: "Settings", icon: Settings, to: "/dashboard/settings" },
 ];
 
+/** Aspirants: no department, courses or materials yet. Their home is the Aspirant House. */
+const ASPIRANT_NAV = [
+  { section: "Admission" },
+  { label: "Dashboard", icon: LayoutDashboard, to: "/dashboard" },
+  { label: "Aspirant House", icon: Compass, to: "/dashboard/house", badgeKey: "house" },
+  { label: "My choices", icon: Target, to: "/dashboard/choices" },
+  { label: "News", icon: Newspaper, to: "/news" },
+  { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice" },
+  { label: "Vault", icon: ShieldCheck, to: "/dashboard/vault" },
+  { section: "Account" },
+  { label: "Notifications", icon: Bell, to: "/dashboard/notifications", badgeKey: "notif" },
+  { label: "Archived", icon: BookOpen, to: "/dashboard/notifications/archived" },
+  { label: "Profile", icon: UserCircle, to: "/dashboard/profile" },
+  { label: "Settings", icon: Settings, to: "/dashboard/settings" },
+];
+
 export default function UserSidebar({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   const pro = isPro(profile);
   const isRep = profile?.role === "courseRep";
+  const aspirant = profile?.role === "aspirant";
   const { totalUnread: groupUnread = 0 } = useGroups(user?.uid);
   const { unreadCount: unread = 0 } = useUserDashboardData();
 
@@ -72,10 +93,11 @@ export default function UserSidebar({ onNavigate }) {
       </button>
 
       <nav className="flex-1">
-        {NAV_ITEMS.filter((item) => {
+        {(aspirant ? ASPIRANT_NAV : NAV_ITEMS).filter((item) => {
           if (item.courseRepOnly) return isRep;
           if (item.newsAgentOnly) return isNewsAgent(profile);
           if (item.secretaryOnly) return isSecretary(profile);
+          if (item.houseLeaderOnly) return isHouseLeader(profile);
           return true;
         }).map((item) => {
           if (item.section) return <p key={item.section} className="nav-section">{item.section}</p>;
@@ -87,7 +109,7 @@ export default function UserSidebar({ onNavigate }) {
                 ? location.pathname === to
                 : location.pathname.startsWith(to);
           const locked = proOnly && !pro;
-          const badgeCount = badgeKey === "groups" ? groupUnread : unread;
+          const badgeCount = badgeKey === "groups" ? groupUnread : badgeKey === "house" ? 0 : unread;
           const showBadge =
             badgeCount > 0 &&
             (badgeKey === "notif" || badgeKey === "groups" || (badgeKey === "dept" && location.pathname !== "/dashboard/department"));
@@ -114,7 +136,7 @@ export default function UserSidebar({ onNavigate }) {
         })}
       </nav>
 
-      {!pro && (
+      {!pro && !aspirant && (
         <button
           type="button"
           onClick={() => go("/dashboard/upgrade")}

@@ -17,6 +17,10 @@ import {
   Newspaper,
   Feather,
   ShieldCheck,
+  Compass,
+  Building2,
+  GalleryHorizontalEnd,
+  Shield,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -29,6 +33,9 @@ const NAV_ITEMS = [
   { label: "Work email", icon: Mail, to: "/agent/mail" },
   { label: "Users", icon: Users, to: "/agent/users", caps: ["users.view"] },
   { label: "Staff access", icon: ShieldCheck, to: "/agent/access", caps: ["users.news", "users.secretary"] },
+  { label: "Aspirants", icon: Compass, to: "/agent/aspirants", caps: ["aspirants.view", "aspirants.manage"] },
+  { label: "Aspirant Houses", icon: Building2, to: "/agent/houses", caps: ["houses.manage", "users.houseLeader"] },
+  { label: "Dashboard board", icon: GalleryHorizontalEnd, to: "/agent/board", caps: ["board.manage"] },
   { label: "Feed & Posts", icon: Megaphone, to: "/agent/announcements", caps: ["announcements.publish"] },
   { label: "Dept Feeds", icon: Megaphone, to: "/agent/feeds" },
   { label: "Documents", icon: FileText, to: "/agent/documents", caps: ["documents.review", "documents.manage"] },
@@ -39,8 +46,9 @@ const NAV_ITEMS = [
   { label: "Requests", icon: ClipboardCheck, to: "/agent/requests", caps: ["requests.review"] },
   { label: "Payments", icon: Wallet, to: "/agent/payments", caps: ["payments.review"] },
   { label: "Activity log", icon: ScrollText, to: "/agent/activity-log", caps: ["activity.view"] },
-  { label: "News desk", icon: Newspaper, to: "/news/desk", duty: "news" },
+  { label: "News desk", icon: Newspaper, to: "/news/desk", duty: ["news", "newsChief"] },
   { label: "Secretariat", icon: Feather, to: "/secretariat", duty: "secretary" },
+  { label: "House desk", icon: Shield, to: "/house-desk", duty: "houseLeader" },
 ];
 
 export default function AgentSidebar({ onNavigate }) {
@@ -79,7 +87,7 @@ export default function AgentSidebar({ onNavigate }) {
       </div>
 
       <nav className="flex-1 space-y-1">
-        {NAV_ITEMS.filter((item) => (!item.caps || canAny(profile, ...item.caps)) && (!item.duty || hasTag(profile, item.duty))).map(({ label, icon: Icon, to }) => {
+        {NAV_ITEMS.filter((item) => (!item.caps || canAny(profile, ...item.caps)) && (!item.duty || [].concat(item.duty).some((d) => hasTag(profile, d)))).map(({ label, icon: Icon, to }) => {
           const isActive =
             to === "/agent"
               ? location.pathname === "/agent"
