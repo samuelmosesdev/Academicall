@@ -1,0 +1,3 @@
+[submodule "Academicall-api"]
+	path = Academicall-api
+	url = https://github.com/samuelmosesdev/Academicall-api.git
