@@ -285,13 +285,13 @@ export default function AdminDocuments() {
               <div className="flex items-center gap-1.5 text-xs font-semibold text-accent">
                 <FileScan size={13} /> AI assist
               </div>
-              <p className="text-[11px] text-text-muted">
+              <p className="text-xs text-text-muted">
                 Title auto-fills from the PDF name. Tags follow the selected course. Edit before upload.
               </p>
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {tags.map((tg) => (
-                    <span key={tg} className="rounded-full bg-bg-elevated px-2 py-0.5 text-[11px] text-text-secondary">
+                    <span key={tg} className="rounded-full bg-bg-elevated px-2 py-0.5 text-xs text-text-secondary">
                       {tg}
                     </span>
                   ))}
@@ -347,7 +347,7 @@ export default function AdminDocuments() {
           {uploading && (
             <div className="h-2 overflow-hidden rounded-full bg-bg-panel-alt">
               <div
-                className="h-full bg-accent transition-all"
+                className="h-full bg-accent transition-colors"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -394,7 +394,7 @@ export default function AdminDocuments() {
           >
             <div className="border-b border-border-subtle bg-bg-panel-alt px-4 py-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-bold text-accent">
+                <span className="rounded bg-accent-soft px-1.5 py-0.5 text-xs font-bold text-accent">
                   {group.courseCode}
                 </span>
                 <span className="text-sm font-medium text-text-primary">

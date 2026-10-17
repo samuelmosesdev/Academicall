@@ -55,7 +55,7 @@ export default function Landing() {
   return (
     <div className="theme-light-only min-h-screen bg-paper text-midnight antialiased">
       {/* ───────── Header ───────── */}
-      <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? "border-b border-midnight/[0.07] bg-paper/90 backdrop-blur-md" : ""}`}>
+      <header className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${scrolled ? "border-b border-midnight/[0.07] bg-paper/90 backdrop-blur-md" : ""}`}>
         <div className="mx-auto grid h-[72px] max-w-[1200px] grid-cols-[1fr_auto_1fr] items-center px-6 sm:px-10">
           <Link to="/" aria-label="Academicall home" className="justify-self-start">
             <img src="/brand/logo-horizontal.png" alt="Academicall" className="h-[26px] w-auto" />
@@ -184,7 +184,7 @@ export default function Landing() {
               ["03", "Agents", "Review reports and recommend new course reps.", "bg-aqua-soft"],
               ["04", "Admins", "Approve, moderate and keep the platform healthy.", "bg-violet-soft"],
             ].map(([n, t, d, bg]) => (
-              <div key={t} className={`${bg} flex min-h-[15rem] flex-col justify-between rounded-[1.4rem] border border-midnight/[0.06] p-7`}>
+              <div key={t} className={`${bg} flex min-h-[15rem] flex-col justify-between rounded-[1.25rem] border border-midnight/[0.06] p-7`}>
                 <span className="eyebrow text-midnight/50">Role {n}</span>
                 <div>
                   <h3 className="font-display text-[1.7rem] font-[420] tracking-[-0.02em]">{t}</h3>
@@ -248,7 +248,7 @@ export default function Landing() {
 
         {/* ───────── App band ───────── */}
         <section id="app" className="scroll-mt-24 px-4 pb-24 sm:px-10">
-          <div className="mx-auto grid max-w-[1200px] overflow-hidden rounded-[2rem] bg-midnight text-white lg:grid-cols-2">
+          <div className="mx-auto grid max-w-[1200px] overflow-hidden rounded-[1.25rem] bg-midnight text-white lg:grid-cols-2">
             <div className="flex flex-col justify-center p-9 sm:p-16">
               <span className="eyebrow text-aqua">Phone access</span>
               <h2 className="mt-5 font-display text-[2.4rem] font-[350] leading-[1.08] tracking-[-0.03em] sm:text-[3.2rem]">

@@ -9,6 +9,7 @@ import { REACTIONS, longDate, newsApi, timeAgo } from "../lib/newsApi";
 import { useAuth } from "../context/AuthContext";
 import { appConfirm, notify } from "../lib/dialogs";
 import { FollowButton } from "../components/news/Follow";
+import { SkeletonCards } from "../components/ui/Skeleton";
 
 export default function NewsArticle() {
   const { slug } = useParams();
@@ -39,7 +40,7 @@ export default function NewsArticle() {
       </NewsShell>
     );
   }
-  if (!data) return <NewsShell><div className="flex items-center gap-2 py-20 text-sm text-ink-muted"><Loader2 size={16} className="animate-spin" /> Loading story…</div></NewsShell>;
+  if (!data) return <NewsShell><SkeletonCards label="Loading story…" /></NewsShell>;
 
   const { post, related } = data;
   return (
@@ -61,7 +62,7 @@ export default function NewsArticle() {
           </div>
         </div>
 
-        {post.coverUrl && <img src={post.coverUrl} alt="" className="mt-7 aspect-[16/9] w-full rounded-[1.5rem] object-cover" />}
+        {post.coverUrl && <img src={post.coverUrl} alt="" className="mt-7 aspect-[16/9] w-full rounded-[1.25rem] object-cover" />}
 
         <div className="mt-8"><Prose body={post.body} /></div>
 
@@ -94,7 +95,7 @@ function SignInGate() {
   const location = useLocation();
   return (
     <div className="news-gate">
-      <div className="relative overflow-hidden rounded-[1.75rem] bg-midnight px-6 py-9 text-center text-white sm:px-10">
+      <div className="relative overflow-hidden rounded-[1.25rem] bg-midnight px-6 py-9 text-center text-white sm:px-10">
         <div className="relative">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-lemon text-midnight"><Lock size={20} /></span>
           <h2 className="mt-4 font-display text-[1.7rem] leading-tight">Sign in to <span className="serif-i text-lemon">keep reading</span></h2>
@@ -124,7 +125,7 @@ function Reactions({ post, onChange }) {
     finally { setBusy(false); }
   }
   return (
-    <div className="mt-10 rounded-[1.5rem] border border-border-light bg-card-light p-5">
+    <div className="mt-10 rounded-[1.25rem] border border-border-light bg-card-light p-5">
       <p className="text-sm font-medium text-ink">How did this story land?</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {REACTIONS.map((r) => (
@@ -177,7 +178,7 @@ function Comments({ post }) {
         <div className="flex-1 rounded-[1.25rem] border border-border-light bg-card-light p-2 focus-within:border-violet">
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} maxLength={1000} placeholder="Add to the conversation…" className="w-full resize-none bg-transparent px-2 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted" />
           <div className="flex items-center justify-between px-2 pb-1">
-            <span className="text-[11px] text-ink-muted">{text.length}/1000</span>
+            <span className="text-xs text-ink-muted">{text.length}/1000</span>
             <button type="submit" disabled={busy || !text.trim()} className="btn-primary inline-flex items-center gap-1.5 px-4 py-2 text-xs disabled:opacity-40">
               {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Post
             </button>
@@ -194,7 +195,7 @@ function Comments({ post }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 text-xs">
                 <span className="font-semibold text-ink">{c.author.name}</span>
-                {(c.author.newsTeam || c.author.role === "newsAgent") && <span className="rounded-full bg-lemon px-1.5 py-0.5 text-[10px] font-semibold text-midnight">News team</span>}
+                {(c.author.newsTeam || c.author.role === "newsAgent") && <span className="rounded-full bg-lemon px-1.5 py-0.5 text-[0.7rem] font-semibold text-midnight">News team</span>}
                 <span className="text-ink-muted">{timeAgo(c.createdAt)}</span>
                 {c.canDelete && <button type="button" onClick={() => remove(c)} className="ml-auto text-ink-muted opacity-0 transition hover:text-status-danger group-hover:opacity-100" aria-label="Delete comment"><Trash2 size={13} /></button>}
               </div>

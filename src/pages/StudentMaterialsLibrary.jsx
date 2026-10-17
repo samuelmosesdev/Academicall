@@ -170,10 +170,10 @@ export default function StudentMaterialsLibrary() {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-ink">{folder.courseCode}</span>
                   {folder.courseTitle && (
-                    <span className="block truncate text-[11px] text-ink-muted">{folder.courseTitle}</span>
+                    <span className="block truncate text-xs text-ink-muted">{folder.courseTitle}</span>
                   )}
                 </span>
-                <span className="text-[11px] text-ink-muted">{folder.items.length}</span>
+                <span className="text-xs text-ink-muted">{folder.items.length}</span>
                 <ChevronDown size={14} className={`text-ink-muted transition ${isOpen ? "" : "-rotate-90"}`} />
               </button>
               {isOpen && (
@@ -226,7 +226,7 @@ export default function StudentMaterialsLibrary() {
           </button>
           <div className="min-w-0">
             <h1 className="truncate text-sm font-semibold text-ink">{current?.title || "Material"}</h1>
-            <p className="truncate text-[11px] text-ink-muted">
+            <p className="truncate text-xs text-ink-muted">
               {currentFolder} · {index + 1} of {ordered.length}
             </p>
           </div>

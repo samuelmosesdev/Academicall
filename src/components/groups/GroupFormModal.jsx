@@ -31,7 +31,7 @@ function Toggle({ checked, onChange, label, hint, icon: Icon }) {
         {hint && <span className="mt-0.5 block text-xs leading-snug text-text-muted">{hint}</span>}
       </span>
       <span className={`relative mt-0.5 h-6 w-10 shrink-0 rounded-full transition ${checked ? "bg-violet" : "bg-border-strong"}`}>
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${checked ? "left-[1.125rem]" : "left-0.5"}`} />
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-colors ${checked ? "left-[1.125rem]" : "left-0.5"}`} />
       </span>
     </button>
   );
@@ -130,7 +130,7 @@ export default function GroupFormModal({ open, onClose, group = null, isCourseRe
         <div>
           <label className="eyebrow mb-1.5 block text-text-muted" htmlFor="group-desc">Description <span className="normal-case tracking-normal">(optional)</span></label>
           <textarea id="group-desc" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} placeholder="What will you study together?" className={`${field} resize-none`} />
-          <p className="mt-1 text-right text-[11px] text-text-muted">{description.length}/500</p>
+          <p className="mt-1 text-right text-xs text-text-muted">{description.length}/500</p>
         </div>
 
         <Toggle
@@ -160,7 +160,7 @@ export default function GroupFormModal({ open, onClose, group = null, isCourseRe
                     className={`rounded-2xl border px-3 py-2.5 text-left transition ${scopeType === s.value ? "border-violet bg-violet-soft" : "border-border-subtle bg-bg-panel hover:border-violet/40"}`}
                   >
                     <span className="block text-sm font-semibold text-text-primary">{s.label}</span>
-                    <span className="block text-[11px] leading-snug text-text-muted">{s.hint}</span>
+                    <span className="block text-xs leading-snug text-text-muted">{s.hint}</span>
                   </button>
                 ))}
                 {scopeType === "course" && (

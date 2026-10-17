@@ -180,7 +180,7 @@ export default function AdminAgentActivity() {
                   <span className="ml-2 font-mono text-accent">Ref: {l.reference}</span>
                 )}
               </p>
-              <p className="text-[11px] text-text-muted">
+              <p className="text-xs text-text-muted">
                 {l.createdAt?.toDate
                   ? l.createdAt.toDate().toLocaleString()
                   : ""}

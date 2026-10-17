@@ -217,17 +217,17 @@ export default function StaffFeed({ compact = false, maxItems = 40 }) {
                       />
                     </p>
                     {post.department && (
-                      <span className="rounded-full bg-bg-panel-alt px-2 py-0.5 text-[10px] font-bold text-text-secondary">
+                      <span className="rounded-full bg-bg-panel-alt px-2 py-0.5 text-[0.7rem] font-bold text-text-secondary">
                         {post.department}
                       </span>
                     )}
                     {post.faculty && (
-                      <span className="text-[10px] text-text-muted">
+                      <span className="text-[0.7rem] text-text-muted">
                         {post.faculty}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-text-muted">
+                  <p className="text-xs text-text-muted">
                     {post.createdAt?.toDate
                       ? post.createdAt.toDate().toLocaleString()
                       : ""}
@@ -290,7 +290,7 @@ export default function StaffFeed({ compact = false, maxItems = 40 }) {
                               subscription={c.authorSubscription}
                             />
                             {anon && (
-                              <span className="ml-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                              <span className="ml-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[0.7rem] font-semibold text-amber-700">
                                 posted as Anonymous
                               </span>
                             )}
@@ -336,7 +336,7 @@ export default function StaffFeed({ compact = false, maxItems = 40 }) {
                         </button>
                       </div>
                     ) : (
-                      <p className="text-[11px] text-text-muted pt-1">
+                      <p className="text-xs text-text-muted pt-1">
                         Viewing only — Alpha Agents and Admins can comment.
                       </p>
                     )}

@@ -102,7 +102,7 @@ export default function NewsHome() {
               <Link key={p.id} to={`/news/${p.slug}`} className="group w-72 shrink-0 snap-start overflow-hidden rounded-3xl border border-border-light bg-card-light transition hover:border-violet">
                 <Cover post={p} className="aspect-[16/9] !rounded-none" />
                 <div className="p-4">
-                  <p className="text-[11px] font-semibold text-violet">{p.reason}</p>
+                  <p className="text-xs font-semibold text-violet">{p.reason}</p>
                   <h3 className="mt-1 line-clamp-2 font-display text-lg leading-snug text-ink group-hover:text-violet">{p.title}</h3>
                   <div className="mt-2"><Engagement post={p} /></div>
                 </div>
@@ -139,8 +139,8 @@ export default function NewsHome() {
 
       {lead && (
         <section className="mt-8 grid gap-8 lg:grid-cols-[1.55fr_1fr]">
-          <Link to={`/news/${lead.slug}`} className="group relative block overflow-hidden rounded-[1.75rem]">
-            <Cover post={lead} eager className="aspect-[4/3] !rounded-[1.75rem] sm:aspect-[16/11]" />
+          <Link to={`/news/${lead.slug}`} className="group relative block overflow-hidden rounded-[1.25rem]">
+            <Cover post={lead} eager className="aspect-[4/3] !rounded-[1.25rem] sm:aspect-[16/11]" />
             <div className="absolute inset-0 bg-gradient-to-t from-midnight via-midnight/45 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
               <span className="news-tag">{lead.category}</span>

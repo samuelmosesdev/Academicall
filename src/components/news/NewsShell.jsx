@@ -25,7 +25,7 @@ export default function NewsShell({ children, title }) {
             <img src="/brand/mark-full-color.png" alt="" className="h-8 w-8" />
             <span className="leading-none">
               <span className="block font-logo text-[1.05rem] font-bold tracking-tight">academicall</span>
-              <span className="eyebrow text-[0.6rem] text-violet">News</span>
+              <span className="eyebrow text-[0.7rem] text-violet">News</span>
             </span>
           </Link>
           <span className="ml-2 hidden h-5 w-px bg-border-light sm:block" />

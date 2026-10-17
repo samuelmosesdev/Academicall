@@ -489,29 +489,29 @@ export default function AdminCbtBuilder() {
           >
             <div className="min-w-0 flex-1">
               <div className="mb-1 flex flex-wrap items-center gap-2">
-                <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-bold text-accent">
+                <span className="rounded bg-accent-soft px-1.5 py-0.5 text-xs font-bold text-accent">
                   {q.courseCode}
                 </span>
                 {q.topic && (
-                  <span className="text-[11px] text-text-muted">{q.topic}</span>
+                  <span className="text-xs text-text-muted">{q.topic}</span>
                 )}
                 {q.difficulty && (
-                  <span className="rounded-full border border-border-subtle px-1.5 py-0.5 text-[10px] capitalize text-text-muted">
+                  <span className="rounded-full border border-border-subtle px-1.5 py-0.5 text-[0.7rem] capitalize text-text-muted">
                     {q.difficulty}
                   </span>
                 )}
                 {q.marks != null && (
-                  <span className="text-[11px] text-text-muted">
+                  <span className="text-xs text-text-muted">
                     {q.marks} mark{q.marks !== 1 ? "s" : ""}
                   </span>
                 )}
                 {q.referenceCode && (
-                  <span className="font-mono text-[10px] text-accent">
+                  <span className="font-mono text-[0.7rem] text-accent">
                     {q.referenceCode}
                   </span>
                 )}
                 {q.level && (
-                  <span className="text-[11px] text-text-muted">{q.level}</span>
+                  <span className="text-xs text-text-muted">{q.level}</span>
                 )}
               </div>
               <p className="line-clamp-2 text-sm text-text-primary">

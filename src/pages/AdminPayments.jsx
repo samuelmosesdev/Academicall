@@ -221,12 +221,12 @@ export default function AdminPayments() {
                   </span>
                 </p>
                 {p.id === "annual" && (
-                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent">LIVE</span>
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[0.7rem] font-bold text-accent">LIVE</span>
                 )}
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-[11px] text-text-muted">Display price</label>
+                  <label className="mb-1 block text-xs text-text-muted">Display price</label>
                   <input
                     value={form.plans[p.id]?.amountLabel || ""}
                     onChange={(e) => setPlanField(p.id, "amountLabel", e.target.value)}
@@ -234,7 +234,7 @@ export default function AdminPayments() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1 flex items-center gap-1 text-[11px] text-text-muted">
+                  <label className="mb-1 flex items-center gap-1 text-xs text-text-muted">
                     <Link2 size={11} /> Paystack URL
                   </label>
                   <input
@@ -302,7 +302,7 @@ export default function AdminPayments() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${pro ? "bg-accent-soft text-accent" : "bg-bg-elevated text-text-muted"}`}>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${pro ? "bg-accent-soft text-accent" : "bg-bg-elevated text-text-muted"}`}>
                     {pro ? "Pro" : "Free"}
                   </span>
                   {pro ? (

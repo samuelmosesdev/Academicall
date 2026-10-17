@@ -14,7 +14,7 @@ export default function LiveIndicator({ className = "" }) {
       role="status"
       aria-live="polite"
       title={status === "live" ? "Updates appear automatically" : status === "connecting" ? "Trying to reconnect. New messages will appear once connected." : "You're offline. We'll catch up when you're back."}
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.bg} ${s.text} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${s.bg} ${s.text} ${className}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
       {s.label}

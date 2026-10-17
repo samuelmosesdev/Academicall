@@ -93,7 +93,7 @@ export default function NewsDesk() {
             <div className="h-14 w-20 shrink-0 overflow-hidden rounded-xl bg-violet-soft">{p.coverUrl && <img src={p.coverUrl} alt="" className="h-full w-full object-cover" />}</div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${STATUS_STYLE[p.status] || STATUS_STYLE.draft}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wider ${STATUS_STYLE[p.status] || STATUS_STYLE.draft}`}>{STATUS_LABEL[p.status] || p.status}</span>
                 <span className="text-xs text-ink-muted">{p.category} · {timeAgo(p.publishedAt || p.updatedAt)}</span>
                 {p.audience && <span className="inline-flex items-center gap-1 text-xs text-violet"><Target size={11} /> {audienceSummary(p.audience)}</span>}
               </div>
@@ -194,7 +194,7 @@ function Editor({ post, onClose, onSaved, restricted }) {
                     }} placeholder={form.tags.length ? "Add another" : "e.g. post-utme, unilag, nelfund (Enter to add)"} className="min-w-[10rem] flex-1 bg-transparent px-2 py-1 text-sm outline-none" />
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-ink-muted">Readers who follow a tag get the story the moment it's published.</p>
+                <p className="mt-1 text-xs text-ink-muted">Readers who follow a tag get the story the moment it's published.</p>
               </div>
               <AudiencePicker value={form.audience} onChange={(audience) => setForm((f) => ({ ...f, audience }))} />
               <p className="text-xs text-ink-muted">Readers who aren't signed in see the first few paragraphs, then a prompt to sign in. Put the hook up top.</p>

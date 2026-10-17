@@ -132,7 +132,7 @@ export default function StudentMaterialFolder() {
             <article key={item.id} className="file-sheet flex min-h-[150px] flex-col justify-between p-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-midnight px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase text-lemon">
+                  <span className="rounded-md bg-midnight px-1.5 py-0.5 font-mono text-[0.7rem] font-semibold uppercase text-lemon">
                     {extension}
                   </span>
                   <span className="eyebrow text-ink-muted">No. {String(index + 1).padStart(2, "0")}</span>
@@ -145,7 +145,7 @@ export default function StudentMaterialFolder() {
                 )}
               </div>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[11px] text-ink-muted">
+                <span className="text-xs text-ink-muted">
                   {savedAt ? `Saved ${savedAt.toLocaleDateString()}` : "Saved"}
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -154,7 +154,7 @@ export default function StudentMaterialFolder() {
                       type="button"
                       onClick={() => onToggleOffline(item)}
                       disabled={offlineBusyId === offlineId}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                      className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
                         offlineIds.has(offlineId)
                           ? "border-teal/40 bg-teal-soft text-teal"
                           : "border-border-light text-ink"
@@ -172,7 +172,7 @@ export default function StudentMaterialFolder() {
                   >
                     {removing === item.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                   </button>
-                  <Link to={readUrl} className="rounded-full bg-teal px-3 py-1 text-[11px] font-semibold text-white">
+                  <Link to={readUrl} className="rounded-full bg-teal px-3 py-1 text-xs font-semibold text-white">
                     Read
                   </Link>
                 </div>

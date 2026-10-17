@@ -282,7 +282,7 @@ export default function AdminRequests() {
         >
           <Users size={16} /> Students
           {studentPending > 0 && (
-            <span className="rounded-full bg-black/20 px-1.5 text-[11px]">
+            <span className="rounded-full bg-black/20 px-1.5 text-xs">
               {studentPending}
             </span>
           )}
@@ -298,7 +298,7 @@ export default function AdminRequests() {
         >
           <GraduationCap size={16} /> Course Reps
           {repPending > 0 && (
-            <span className="rounded-full bg-black/20 px-1.5 text-[11px]">
+            <span className="rounded-full bg-black/20 px-1.5 text-xs">
               {repPending}
             </span>
           )}
@@ -353,11 +353,11 @@ export default function AdminRequests() {
               className="rounded-xl border border-border-subtle bg-bg-panel p-4"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-bold uppercase text-accent">
+                <span className="rounded bg-accent-soft px-1.5 py-0.5 text-xs font-bold uppercase text-accent">
                   {isProfile ? "profile" : r.type || "request"}
                 </span>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                     r.status === "approved"
                       ? "bg-green-500/15 text-green-600"
                       : r.status === "rejected"

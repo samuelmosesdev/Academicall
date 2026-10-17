@@ -8,6 +8,7 @@ import { can, homePathFor } from "../lib/roles";
 import { ErrorState, LoadingState } from "../components/ui";
 import { HouseHeader, ThreadComposer, ThreadList, ThreadView } from "../components/house/HouseView";
 import HouseMembers from "../components/house/HouseMembers";
+import { SkeletonCards } from "../components/ui/Skeleton";
 
 /**
  * House desk — where House Leaders (students or agents the admin picked) run their houses:
@@ -50,7 +51,7 @@ export function HouseDeskHome() {
   const first = profile?.nickname || profile?.name?.split(" ")[0] || "there";
   if (!mine.leading.length) {
     return (
-      <div className="rounded-[1.4rem] border border-dashed border-border-strong bg-bg-panel px-6 py-14 text-center">
+      <div className="rounded-[1.25rem] border border-dashed border-border-strong bg-bg-panel px-6 py-14 text-center">
         <Shield className="mx-auto text-text-muted" />
         <p className="mt-3 font-display text-xl text-text-primary">No houses assigned yet</p>
         <p className="mx-auto mt-2 max-w-sm text-sm text-text-secondary">An admin chooses which Aspirant Houses you lead. They'll appear here as soon as you're added.</p>
@@ -62,7 +63,7 @@ export function HouseDeskHome() {
       <p className="font-display text-[1.6rem] leading-tight text-text-primary">Hi {first}. <span className="text-text-muted">You lead {mine.leading.length === 1 ? "one house" : `${mine.leading.length} houses`}.</span></p>
       <div className="grid gap-4 md:grid-cols-2">
         {mine.leading.map((h) => (
-          <Link key={h.id} to={`/house-desk/${h.id}`} className="group relative overflow-hidden rounded-[1.5rem] bg-midnight p-6 text-white">
+          <Link key={h.id} to={`/house-desk/${h.id}`} className="group relative overflow-hidden rounded-[1.25rem] bg-midnight p-6 text-white">
             {h.coverUrl && <img src={h.coverUrl} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover opacity-25" />}
             <div className="relative">
               <p className="eyebrow text-aqua">{institutionTitle(h.institution)}</p>
@@ -99,7 +100,7 @@ export function HouseDeskHouse() {
   }, [houseId]);
 
   if (err) return <ErrorState title="Couldn't open this house" message={err} />;
-  if (!house) return <div className="flex items-center gap-2 py-10 text-sm text-text-muted"><Loader2 size={16} className="animate-spin" /> Loading house…</div>;
+  if (!house) return <SkeletonCards label="Loading house…" />;
   const base = `/house-desk/${houseId}`;
 
   return (

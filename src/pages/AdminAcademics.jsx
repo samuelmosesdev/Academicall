@@ -62,7 +62,7 @@ function Overview({ onGo }) {
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {tiles.map((t) => (
-          <button key={t.l} type="button" disabled={!t.tab} onClick={() => t.tab && onGo(t.tab)} className={`acx-stat text-left ${t.tone || ""} ${t.tab ? "transition hover:-translate-y-0.5" : "cursor-default"}`}>
+          <button key={t.l} type="button" disabled={!t.tab} onClick={() => t.tab && onGo(t.tab)} className={`acx-stat text-left ${t.tone || ""} ${t.tab ? "transition" : "cursor-default"}`}>
             <div className="acx-stat-n">{s ? fmt(t.n) : "—"}</div>
             <div className="acx-stat-l">{t.l}</div>
             <div className="acx-stat-h">{t.h}</div>

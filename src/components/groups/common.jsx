@@ -56,15 +56,15 @@ export function PersonAvatar({ person, size = 32, className = "" }) {
 
 export function OfficialBadge({ className = "" }) {
   return (
-    <span title="Created by a course representative for this class" className={`inline-flex items-center gap-1 rounded-full bg-lemon-soft px-2 py-0.5 text-[10px] font-semibold text-midnight ${className}`}>
+    <span title="Created by a course representative for this class" className={`inline-flex items-center gap-1 rounded-full bg-lemon-soft px-2 py-0.5 text-[0.7rem] font-semibold text-midnight ${className}`}>
       <BadgeCheck size={11} /> Class group
     </span>
   );
 }
 
 export function RoleBadge({ role }) {
-  if (role === "creator") return <span className="rounded-full bg-midnight px-2 py-0.5 text-[10px] font-semibold text-lemon">Creator</span>;
-  if (role === "moderator") return <span className="rounded-full bg-violet-soft px-2 py-0.5 text-[10px] font-semibold text-violet-deep">Moderator</span>;
+  if (role === "creator") return <span className="rounded-full bg-midnight px-2 py-0.5 text-[0.7rem] font-semibold text-lemon">Creator</span>;
+  if (role === "moderator") return <span className="rounded-full bg-violet-soft px-2 py-0.5 text-[0.7rem] font-semibold text-violet-deep">Moderator</span>;
   return null;
 }
 

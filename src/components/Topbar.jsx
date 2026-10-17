@@ -197,7 +197,7 @@ export default function Topbar({ search, onSearchChange, onMenu }) {
                     {h.type}
                   </span>
                   <span className="text-sm text-text-primary">{h.label}</span>
-                  <span className="text-[11px] text-text-muted">{h.sub}</span>
+                  <span className="text-xs text-text-muted">{h.sub}</span>
                 </button>
               ))}
             </div>
@@ -225,7 +225,7 @@ export default function Topbar({ search, onSearchChange, onMenu }) {
         >
           <MessageSquareMore size={17} />
           {staffUnread > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[10px] font-semibold text-midnight">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[0.7rem] font-semibold text-midnight">
               {staffUnread > 9 ? "9+" : staffUnread}
             </span>
           )}
@@ -241,7 +241,7 @@ export default function Topbar({ search, onSearchChange, onMenu }) {
         >
           <Bell size={17} />
           {unreadCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[10px] font-semibold text-midnight">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[0.7rem] font-semibold text-midnight">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

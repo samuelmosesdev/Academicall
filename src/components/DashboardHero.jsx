@@ -111,7 +111,7 @@ export default function DashboardHero({ profile, firstName }) {
       <div className="flex flex-col rounded-[1.6rem] bg-lemon p-5 text-midnight sm:p-6">
         <div className="flex items-center justify-between gap-2">
           <span className="eyebrow inline-flex items-center gap-1.5 text-midnight/65"><BellRing size={13} /> Lecture update</span>
-          {next && <span className="eyebrow rounded-full bg-midnight px-2.5 py-1 text-[10px] text-lemon">{countdown(next.start, now)}</span>}
+          {next && <span className="eyebrow rounded-full bg-midnight px-2.5 py-1 text-[0.7rem] text-lemon">{countdown(next.start, now)}</span>}
         </div>
         {eventsError ? (
           <div role="alert" className="mt-5">
@@ -125,7 +125,7 @@ export default function DashboardHero({ profile, firstName }) {
           <>
             {next ? (
               <button type="button" onClick={() => navigate("/dashboard/department")} className="group mt-4 w-full rounded-2xl bg-white/55 p-4 text-left transition hover:bg-white/75">
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-midnight/55">Next lecture</p>
+                <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-midnight/55">Next lecture</p>
                 <p className="mt-1 font-display text-[1.55rem] font-[420] leading-none tracking-[-0.02em]">{next.courseCode || "Class"}</p>
                 <p className="mt-1 line-clamp-1 text-[0.9rem] text-midnight/75">{next.title}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8rem] text-midnight/75">
@@ -137,7 +137,7 @@ export default function DashboardHero({ profile, firstName }) {
               <p className="mt-4 font-display text-[1.15rem] font-[380] leading-snug">No lectures scheduled yet. Your Course Rep's updates land here.</p>
             )}
             <div className="mt-4 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-midnight/55">Latest changes</p>
+              <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-midnight/55">Latest changes</p>
               {recentUpdates.length === 0 ? (
                 <p className="mt-1.5 text-[0.82rem] text-midnight/65">Nothing new in the last few days.</p>
               ) : (

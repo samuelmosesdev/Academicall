@@ -8,7 +8,7 @@ export default function EmptyState({
   return (
     <div
       role="status"
-      className={`flex flex-col items-center justify-center gap-3 rounded-[1.4rem] border border-dashed border-border-strong bg-bg-panel px-6 py-16 text-center ${className}`}
+      className={`flex flex-col items-center justify-center gap-3 rounded-[1.25rem] border border-dashed border-border-strong bg-bg-panel px-6 py-16 text-center ${className}`}
     >
       {Icon && (
         <div

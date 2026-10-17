@@ -196,7 +196,7 @@ export default function AdminChangeRequests() {
                     {r.userEmail}
                     {r.uniqueId ? ` · ${r.uniqueId}` : ""}
                   </p>
-                  <p className="mt-1 flex items-center gap-1 text-[11px] text-text-muted">
+                  <p className="mt-1 flex items-center gap-1 text-xs text-text-muted">
                     <Clock size={11} />
                     {formatDate(r.createdAt)}
                   </p>
@@ -212,7 +212,7 @@ export default function AdminChangeRequests() {
             </div>
 
             <div className="mt-3 rounded-lg border border-border-subtle bg-bg-app px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
                 Reason
               </p>
               <p className="mt-0.5 text-sm text-text-primary">{r.reason}</p>
@@ -266,7 +266,7 @@ export default function AdminChangeRequests() {
 function InfoCell({ label, value, accent }) {
   return (
     <div className="rounded-lg border border-border-subtle bg-bg-app px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+      <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
         {label}
       </p>
       <p
@@ -288,7 +288,7 @@ function StatusPill({ status }) {
   };
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
+      className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${
         map[status] || map.pending
       }`}
     >

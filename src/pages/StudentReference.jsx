@@ -143,7 +143,7 @@ export default function StudentReference() {
               className="rounded-2xl border border-border-light bg-card-light p-4"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded bg-teal-soft px-1.5 py-0.5 text-[11px] font-bold text-teal">
+                <span className="rounded bg-teal-soft px-1.5 py-0.5 text-xs font-bold text-teal">
                   {e.courseCode}
                 </span>
                 <span className="flex items-center gap-1 text-xs text-ink-muted">
@@ -160,7 +160,7 @@ export default function StudentReference() {
                   {e.notes}
                 </p>
               )}
-              <p className="mt-2 text-[11px] text-ink-muted">
+              <p className="mt-2 text-xs text-ink-muted">
                 Posted by {e.createdByName || "Course Rep"}
               </p>
             </div>

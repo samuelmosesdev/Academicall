@@ -10,6 +10,7 @@ import { Drawer, PageHeader, Pager, SearchField } from "../components/ui";
 import { Avatar } from "../components/house/Mentions";
 import { InstitutionChoice } from "../components/house/AspirantChoicesForm";
 import { uploadImageToCloudinary } from "../lib/cloudinaryUpload";
+import { SkeletonCards } from "../components/ui/Skeleton";
 
 /** Every Aspirant House: members, activity, leaders. Admins pick House Leaders here. */
 export default function AdminHouses() {
@@ -42,12 +43,12 @@ export default function AdminHouses() {
       />
       <SearchField value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search houses or institutions" className="w-full sm:w-80" />
       {err && <p className="rounded-2xl bg-status-danger/10 px-4 py-3 text-sm text-status-danger">{err}</p>}
-      {!data && !err && <div className="flex items-center gap-2 text-sm text-text-muted"><Loader2 size={15} className="animate-spin" /> Loading houses…</div>}
+      {!data && !err && <SkeletonCards label="Loading houses…" />}
       {data && !data.houses.length && <p className="rounded-2xl border border-dashed border-border-strong px-6 py-12 text-center text-sm text-text-muted">No houses yet. A house opens the first time an aspirant picks an institution, or open one yourself.</p>}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {data?.houses.map((h) => (
           <button key={h.id} type="button" onClick={() => setOpen(h)} className={`acx-card text-left transition hover:border-accent ${h.archived ? "opacity-60" : ""}`}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">{h.institution?.abbreviation || h.institution?.state || "Institution"}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">{h.institution?.abbreviation || h.institution?.state || "Institution"}</p>
             <p className="mt-1 font-display text-[1.2rem] leading-snug text-text-primary">{h.name}</p>
             <div className="mt-3 flex items-center gap-4 text-xs text-text-muted">
               <span className="inline-flex items-center gap-1"><Users size={13} /> {h.memberCount}</span>
@@ -118,9 +119,9 @@ function HouseDrawer({ house, onClose, onChanged, canLead, canManage }) {
       actions={<Link to={`/house-desk/${house.id}`} className="acx-btn-ghost"><ExternalLink size={13} /> Open</Link>}>
       <div className="space-y-5">
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-xl">{house.memberCount}</p><p className="text-[11px] text-text-muted">members</p></div>
-          <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-xl">{house.threadCount}</p><p className="text-[11px] text-text-muted">threads</p></div>
-          <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-[1rem] leading-7">{house.lastThreadAt ? timeAgo(house.lastThreadAt) : "—"}</p><p className="text-[11px] text-text-muted">last post</p></div>
+          <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-xl">{house.memberCount}</p><p className="text-xs text-text-muted">members</p></div>
+          <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-xl">{house.threadCount}</p><p className="text-xs text-text-muted">threads</p></div>
+          <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-[1rem] leading-7">{house.lastThreadAt ? timeAgo(house.lastThreadAt) : "—"}</p><p className="text-xs text-text-muted">last post</p></div>
         </div>
 
         <section className="acx-card">

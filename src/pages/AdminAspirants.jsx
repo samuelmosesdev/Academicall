@@ -170,7 +170,7 @@ function AspirantDrawer({ id, onClose, onChanged, canManage, canDelete }) {
               <div className="space-y-2">
                 {a.choices.map((c) => (
                   <div key={c.rank} className="rounded-xl bg-bg-panel-alt px-3 py-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">{c.rank === 1 ? "First choice" : "Second choice"}</p>
+                    <p className="text-[0.7rem] font-bold uppercase tracking-[0.08em] text-text-muted">{c.rank === 1 ? "First choice" : "Second choice"}</p>
                     <p className="font-medium text-text-primary">{institutionTitle(c.institution)}</p>
                     <p className="text-xs text-text-muted">{c.course || "Course not set"} · {[c.institution.state, c.institution.ownership].filter(Boolean).join(" · ")}</p>
                   </div>
@@ -181,9 +181,9 @@ function AspirantDrawer({ id, onClose, onChanged, canManage, canDelete }) {
           </section>
 
           <section className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-xl">{a.aspirantMeta?.utmeScore ?? "—"}</p><p className="text-[11px] text-text-muted">UTME score</p></div>
-            <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-xl">{a.aspirantMeta?.utmeYear ?? "—"}</p><p className="text-[11px] text-text-muted">UTME year</p></div>
-            <div className="rounded-xl bg-bg-panel-alt p-3"><p className="truncate font-display text-xl">{a.aspirantMeta?.stateOfOrigin ?? "—"}</p><p className="text-[11px] text-text-muted">State</p></div>
+            <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-xl">{a.aspirantMeta?.utmeScore ?? "—"}</p><p className="text-xs text-text-muted">UTME score</p></div>
+            <div className="rounded-xl bg-bg-panel-alt p-3"><p className="font-display text-xl">{a.aspirantMeta?.utmeYear ?? "—"}</p><p className="text-xs text-text-muted">UTME year</p></div>
+            <div className="rounded-xl bg-bg-panel-alt p-3"><p className="truncate font-display text-xl">{a.aspirantMeta?.stateOfOrigin ?? "—"}</p><p className="text-xs text-text-muted">State</p></div>
           </section>
 
           <section className="acx-card">

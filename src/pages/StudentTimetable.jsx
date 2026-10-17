@@ -553,7 +553,7 @@ export default function StudentTimetable() {
                   col.isToday ? "bg-teal-soft/50" : ""
                 }`}
               >
-                <span className="text-[11px] font-medium text-ink-muted">
+                <span className="text-xs font-medium text-ink-muted">
                   {col.label}
                 </span>
                 <span
@@ -582,15 +582,15 @@ export default function StudentTimetable() {
                         className="w-full text-left"
                       >
                         <p
-                          className={`truncate text-[11px] font-bold ${
+                          className={`truncate text-xs font-bold ${
                             isRep ? "text-amber-700" : "text-teal"
                           }`}
                         >
                           {ev.courseCode || "Class"}
                           {isRep ? " · Rep" : ""}
                         </p>
-                        <p className="truncate text-[10px] text-ink">{ev.title}</p>
-                        <p className="mt-0.5 flex items-center gap-0.5 text-[10px] text-ink-muted">
+                        <p className="truncate text-[0.7rem] text-ink">{ev.title}</p>
+                        <p className="mt-0.5 flex items-center gap-0.5 text-[0.7rem] text-ink-muted">
                           <Clock size={10} />
                           {ev.startTime}
                           {ev.endTime ? `–${ev.endTime}` : ""}

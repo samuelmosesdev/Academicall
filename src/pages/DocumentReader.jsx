@@ -281,7 +281,7 @@ export default function DocumentReader() {
             <h1 className="truncate font-display text-sm font-semibold text-ink">
               {record.title || "Document"}
             </h1>
-            <p className="truncate text-[11px] text-ink-muted">
+            <p className="truncate text-xs text-ink-muted">
               {[record.courseCode, record.faculty, record.level]
                 .filter(Boolean)
                 .join(" · ") || "In-app reader"}
@@ -337,7 +337,7 @@ export default function DocumentReader() {
                 {offlineReady ? "Saved offline — tap to remove" : "Make available offline"}
               </button>
               {offlineReady && (
-                <span className="text-[11px] text-ink-muted">
+                <span className="text-xs text-ink-muted">
                   Opens without mobile data in the app
                 </span>
               )}
@@ -367,7 +367,7 @@ export default function DocumentReader() {
                 <p className="font-display text-sm font-semibold text-ink flex items-center gap-1.5">
                   <ListChecks size={15} className="text-teal" /> Practice with AI
                 </p>
-                <p className="text-[11px] text-ink-muted">
+                <p className="text-xs text-ink-muted">
                   Generate a quiz from this material
                 </p>
               </div>
@@ -400,7 +400,7 @@ export default function DocumentReader() {
                 <form onSubmit={startGenerate} className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1 block text-[11px] font-medium text-ink-muted">
+                      <label className="mb-1 block text-xs font-medium text-ink-muted">
                         From page
                       </label>
                       <input
@@ -413,7 +413,7 @@ export default function DocumentReader() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] font-medium text-ink-muted">
+                      <label className="mb-1 block text-xs font-medium text-ink-muted">
                         To page
                       </label>
                       <input
@@ -429,7 +429,7 @@ export default function DocumentReader() {
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-[11px] font-medium text-ink-muted">
+                    <label className="mb-1.5 block text-xs font-medium text-ink-muted">
                       Difficulty
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -451,7 +451,7 @@ export default function DocumentReader() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[11px] font-medium text-ink-muted">
+                    <label className="mb-1 block text-xs font-medium text-ink-muted">
                       Number of questions (max 50)
                     </label>
                     <input
@@ -487,7 +487,7 @@ export default function DocumentReader() {
                       </>
                     )}
                   </button>
-                  <p className="text-[10px] text-ink-muted leading-relaxed">
+                  <p className="text-[0.7rem] text-ink-muted leading-relaxed">
                     Questions are generated from pages {pageFrom || "?"}–{pageTo || "?"}
                     {" · "}
                     {difficulty} · up to {count} Qs. PDF only works best for accurate page focus.
@@ -495,7 +495,7 @@ export default function DocumentReader() {
                 </form>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between text-[11px] text-ink-muted">
+                  <div className="flex items-center justify-between text-xs text-ink-muted">
                     <span>
                       Q{quiz.index + 1} / {quiz.questions.length}
                       {quiz.meta && (
@@ -545,7 +545,7 @@ export default function DocumentReader() {
                                 onClick={() => selectAnswer(quiz.index, oi)}
                                 className={`flex w-full items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-xs transition ${cls}`}
                               >
-                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current text-[10px] font-bold">
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current text-[0.7rem] font-bold">
                                   {String.fromCharCode(65 + oi)}
                                 </span>
                                 <span className="flex-1">{opt}</span>
@@ -558,7 +558,7 @@ export default function DocumentReader() {
                         })}
                       </ul>
                       {quiz.submitted && currentQ.explanation && (
-                        <p className="rounded-xl bg-bg-panel-alt px-3 py-2 text-[11px] text-ink-muted">
+                        <p className="rounded-xl bg-bg-panel-alt px-3 py-2 text-xs text-ink-muted">
                           {currentQ.explanation}
                         </p>
                       )}

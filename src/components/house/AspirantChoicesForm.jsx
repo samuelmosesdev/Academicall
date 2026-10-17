@@ -72,7 +72,7 @@ export function InstitutionChoice({ label, hint, value, onChange, exclude, requi
               >
                 <span className="min-w-0 flex-1">
                   <span className="block text-[0.86rem] font-medium leading-snug text-text-primary">{institutionLabel(r)}</span>
-                  <span className="mt-0.5 flex items-center gap-1 text-[11px] text-text-muted"><MapPin size={11} /> {[r.state, r.type, r.ownership].filter(Boolean).join(" · ")}</span>
+                  <span className="mt-0.5 flex items-center gap-1 text-xs text-text-muted"><MapPin size={11} /> {[r.state, r.type, r.ownership].filter(Boolean).join(" · ")}</span>
                 </span>
                 {inst?.id === r.id && <Check size={15} className="mt-1 text-accent" />}
               </button>

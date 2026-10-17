@@ -19,7 +19,7 @@ export function Byline({ post, light }) {
   return (
     <div className={`flex items-center gap-2 text-xs ${light ? "text-white/70" : "text-ink-muted"}`}>
       {a.photoUrl ? <img src={a.photoUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
-        : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-violet text-[10px] font-semibold text-white">{(a.name || "A").slice(0, 1)}</span>}
+        : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-violet text-[0.7rem] font-semibold text-white">{(a.name || "A").slice(0, 1)}</span>}
       <span className={`font-medium ${light ? "text-white" : "text-ink"}`}>{a.name}</span>
       <span>·</span>
       <span>{timeAgo(post.publishedAt || post.updatedAt)}</span>

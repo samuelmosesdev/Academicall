@@ -204,7 +204,7 @@ export default function AccessEditor({ person, viewer, onSaved, compact = false 
               </div>
             </div>
           )}
-          <p className="mt-3 text-[11px] text-text-muted">Reserved for admins and never grantable: staff management, platform settings, opening a student's vault.</p>
+          <p className="mt-3 text-xs text-text-muted">Reserved for admins and never grantable: staff management, platform settings, opening a student's vault.</p>
         </section>
       )}
     </div>

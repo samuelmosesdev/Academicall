@@ -99,7 +99,7 @@ export default function StudyGroupJoin() {
 
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-md items-center justify-center">
-      <div className="w-full rounded-[1.75rem] border border-border-subtle bg-bg-panel p-7 text-center shadow-[var(--shadow-pop)]">
+      <div className="w-full rounded-[1.25rem] border border-border-subtle bg-bg-panel p-7 text-center shadow-[var(--shadow-pop)]">
         {loading ? (
           <Loader2 size={22} className="mx-auto animate-spin text-violet" />
         ) : error ? (

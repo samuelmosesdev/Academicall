@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { isHouseLeader } from "../lib/roles";
 import { HouseHeader, ThreadList, ThreadView } from "../components/house/HouseView";
 import { EmptyState } from "../components/ui";
+import { SkeletonCards } from "../components/ui/Skeleton";
 
 /**
  * Aspirant House — one per institution of choice. Members read threads and reply;
@@ -60,15 +61,15 @@ export default function AspirantHouse() {
             <button key={h.id} type="button" onClick={() => navigate(`/dashboard/house/${h.id}`)} className={`house-tab ${h.id === houseId ? "is-on" : ""}`}>
               {h.leading ? <Shield size={14} /> : <Building2 size={14} />}
               <span className="max-w-[14rem] truncate">{institutionTitle(h.institution)}</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">{h.leading ? "Leader" : h.choiceRank === 1 ? "1st" : "2nd"}</span>
-              {h.unread > 0 && h.id !== houseId && <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-lemon px-1.5 text-[10px] font-bold text-midnight">{h.unread > 9 ? "9+" : h.unread}</span>}
+              <span className="text-[0.7rem] font-bold uppercase tracking-wider opacity-60">{h.leading ? "Leader" : h.choiceRank === 1 ? "1st" : "2nd"}</span>
+              {h.unread > 0 && h.id !== houseId && <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-lemon px-1.5 text-[0.7rem] font-bold text-midnight">{h.unread > 9 ? "9+" : h.unread}</span>}
             </button>
           ))}
         </div>
       )}
 
       {err && <p className="rounded-2xl bg-status-danger/10 px-4 py-3 text-sm text-status-danger">{err}</p>}
-      {!house && !err && <div className="flex items-center gap-2 py-10 text-sm text-text-muted"><Loader2 size={16} className="animate-spin" /> Loading house…</div>}
+      {!house && !err && <SkeletonCards label="Loading house…" />}
       {house && (
         <>
           {!threadId && (

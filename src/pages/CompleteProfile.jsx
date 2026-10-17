@@ -88,7 +88,7 @@ export default function CompleteProfile() {
   if (mode === "aspirant" && !generatedId) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-10">
-        <div className="w-full max-w-lg rounded-[1.6rem] border border-border-subtle bg-bg-panel p-6 sm:p-8">
+        <div className="w-full max-w-lg rounded-[1.25rem] border border-border-subtle bg-bg-panel p-6 sm:p-8">
           <div className="mb-5 flex items-center gap-2">
             <img src="/brand/mark-full-color.png" alt="" className="h-8 w-8" />
             <span className="eyebrow text-violet">Aspirant setup</span>

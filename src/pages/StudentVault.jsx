@@ -124,7 +124,7 @@ function VaultContents({ limits }) {
               <span>{usage.files} file{usage.files === 1 ? "" : "s"}</span>
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-aqua transition-all" style={{ width: `${Math.max(pct, usage.bytes ? 2 : 0)}%` }} />
+              <div className="h-full rounded-full bg-aqua transition-colors" style={{ width: `${Math.max(pct, usage.bytes ? 2 : 0)}%` }} />
             </div>
           </div>
         )}
@@ -172,7 +172,7 @@ function FoldersHome({ data, onCreate }) {
                   <Lock size={15} className="mb-2 opacity-50" />
                   <p className="font-display text-lg leading-tight sm:text-xl">{f.name}</p>
                 </div>
-                <div className="mt-4 flex items-center justify-between text-[11px]">
+                <div className="mt-4 flex items-center justify-between text-xs">
                   <span className="eyebrow opacity-70">{f.fileCount} file{f.fileCount === 1 ? "" : "s"}</span>
                   <span className="opacity-60">{f.bytes ? formatBytes(f.bytes) : "Empty"}</span>
                 </div>
@@ -329,7 +329,7 @@ function FolderView({ folderId, folders, limits, onChanged }) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-ink">{u.name}</p>
                 {u.error ? <p className="text-xs text-status-danger">{u.error}</p>
-                  : <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-bg-elevated"><div className="h-full bg-violet transition-all" style={{ width: `${Math.round((u.progress || 0) * 100)}%` }} /></div>}
+                  : <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-bg-elevated"><div className="h-full bg-violet transition-colors" style={{ width: `${Math.round((u.progress || 0) * 100)}%` }} /></div>}
               </div>
               {u.error && <button type="button" onClick={() => setUploads((x) => x.filter((y) => y.key !== u.key))} className="text-xs text-ink-muted hover:text-ink">Dismiss</button>}
             </div>

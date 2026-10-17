@@ -85,7 +85,7 @@ export function ChiefNewsroom({ onEdit }) {
           <div key={p.id} className="flex flex-wrap items-center gap-3 border-b border-border-light px-4 py-3.5 last:border-0 sm:px-5">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${STATUS_STYLE[p.status]}`}>{STATUS_LABEL[p.status]}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wider ${STATUS_STYLE[p.status]}`}>{STATUS_LABEL[p.status]}</span>
                 <span className="text-xs text-ink-muted">{p.author?.name} · {p.category} · {timeAgo(p.publishedAt || p.updatedAt)}</span>
               </div>
               <p className="mt-1 truncate font-medium text-ink">{p.title}</p>

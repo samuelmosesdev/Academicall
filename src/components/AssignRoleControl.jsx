@@ -195,13 +195,13 @@ export default function AssignRoleControl({ targetUser }) {
             placeholder="Course codes (optional): CSC101, CSC102"
             className="rounded border border-border-subtle bg-bg-panel px-2 py-1 text-xs"
           />
-          <p className="text-[10px] text-text-muted">
+          <p className="text-[0.7rem] text-text-muted">
             Course Rep covers <strong>one program + one level</strong> within its parent department.
           </p>
         </>
       )}
 
-      {err && <p className="text-[10px] text-status-danger">{err}</p>}
+      {err && <p className="text-[0.7rem] text-status-danger">{err}</p>}
 
       <button
         type="button"

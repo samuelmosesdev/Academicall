@@ -1,21 +1,10 @@
-import Spinner from "./Spinner";
+import { SkeletonPage } from "./Skeleton";
 
-export default function LoadingState({
-  message = "Loading…",
-  className = "",
-  compact = false,
-}) {
+/** Page-level loading: a skeleton the size of the content, so nothing jumps. */
+export default function LoadingState({ message = "Loading…", className = "", compact = false }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      className={`flex flex-col items-center justify-center gap-3 text-text-secondary ${
-        compact ? "py-10" : "min-h-[40vh] py-16"
-      } ${className}`}
-    >
-      <Spinner size={compact ? 22 : 28} label={message} />
-      <p className="text-sm">{message}</p>
+    <div className={`mx-auto w-full max-w-6xl px-4 sm:px-8 ${className}`}>
+      <SkeletonPage label={message} compact={compact} />
     </div>
   );
 }

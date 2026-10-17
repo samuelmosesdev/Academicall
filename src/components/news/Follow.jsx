@@ -67,7 +67,7 @@ export function FollowingCount() {
   if (!f.signedIn) return null;
   return (
     <Link to="/news/following" className="inline-flex items-center gap-1.5 rounded-full border border-border-light bg-card-light px-3.5 py-2 text-sm font-medium text-ink hover:border-violet">
-      <BellRing size={15} className="text-violet" /> Following {f.subscriptions.length ? <span className="rounded-full bg-violet px-1.5 text-[11px] text-white">{f.subscriptions.length}</span> : null}
+      <BellRing size={15} className="text-violet" /> Following {f.subscriptions.length ? <span className="rounded-full bg-violet px-1.5 text-xs text-white">{f.subscriptions.length}</span> : null}
     </Link>
   );
 }

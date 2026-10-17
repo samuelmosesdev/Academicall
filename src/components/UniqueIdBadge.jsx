@@ -19,7 +19,7 @@ export default function UniqueIdBadge({ uniqueId }) {
           />
         ))}
       </div>
-      <span className="font-mono text-[11px] font-medium text-ink-muted">{id}</span>
+      <span className="font-mono text-xs font-medium text-ink-muted">{id}</span>
     </div>
   );
 }

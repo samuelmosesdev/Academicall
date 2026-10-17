@@ -127,7 +127,7 @@ export function SecretariatOverview() {
                 <li key={s.id} className="flex items-center gap-2 text-sm">
                   <span className={`sec-dot ${s.lastActiveAt && Date.now() - new Date(s.lastActiveAt) < 15 * 60000 ? "is-live" : ""}`} />
                   <span className="min-w-0 flex-1 truncate">{s.name || s.email}</span>
-                  <span className="text-[11px] text-text-muted">{[ROLE_LABELS[s.role] && s.role !== "user" ? ROLE_LABELS[s.role] : null, ...(s.staffTags || []).map((t) => DUTY_LABELS[t])].filter(Boolean).join(" · ")}</span>
+                  <span className="text-xs text-text-muted">{[ROLE_LABELS[s.role] && s.role !== "user" ? ROLE_LABELS[s.role] : null, ...(s.staffTags || []).map((t) => DUTY_LABELS[t])].filter(Boolean).join(" · ")}</span>
                 </li>
               ))}
             </ul>

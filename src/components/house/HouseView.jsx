@@ -10,6 +10,7 @@ import { uploadImageToCloudinary } from "../../lib/cloudinaryUpload";
 import { appConfirm, notify } from "../../lib/dialogs";
 import { useAuth } from "../../context/AuthContext";
 import { Avatar, MentionText, MentionTextarea, useMentionField } from "./Mentions";
+import { SkeletonCards } from "../ui/Skeleton";
 
 /** Cover band for a house: institution, motto, members, leaders. */
 export function HouseHeader({ house, leaders = [], viewer, actions }) {
@@ -18,9 +19,9 @@ export function HouseHeader({ house, leaders = [], viewer, actions }) {
       {house.coverUrl && <img src={house.coverUrl} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover opacity-30" />}
       <div className="relative">
         <div className="flex flex-wrap items-center gap-2">
-          {viewer?.choiceRank && <span className="acx-chip is-lemon text-[11px]">{viewer.choiceRank === 1 ? "Your first choice" : "Your second choice"}</span>}
-          {viewer?.isLeader && <span className="acx-chip is-aqua text-[11px]"><Shield size={11} /> You lead this house</span>}
-          {viewer?.memberStatus === "muted" && <span className="acx-chip is-danger text-[11px]"><VolumeX size={11} /> Muted: read only</span>}
+          {viewer?.choiceRank && <span className="acx-chip is-lemon text-xs">{viewer.choiceRank === 1 ? "Your first choice" : "Your second choice"}</span>}
+          {viewer?.isLeader && <span className="acx-chip is-aqua text-xs"><Shield size={11} /> You lead this house</span>}
+          {viewer?.memberStatus === "muted" && <span className="acx-chip is-danger text-xs"><VolumeX size={11} /> Muted: read only</span>}
         </div>
         <p className="eyebrow mt-4 text-aqua">Aspirant House</p>
         <h1 className="mt-1 font-display text-[2rem] font-[380] leading-[1.05] tracking-[-0.03em] sm:text-[2.6rem]">{house.name}</h1>
@@ -86,7 +87,7 @@ export function ThreadComposer({ houseId, thread, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-midnight/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-6" role="dialog" aria-label={isEdit ? "Edit thread" : "New thread"}>
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[1.6rem] bg-bg-panel shadow-2xl sm:rounded-[1.6rem]">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[1.6rem] bg-bg-panel shadow-2xl sm:rounded-[1.25rem]">
         <div className="flex items-center gap-3 border-b border-border-subtle px-5 py-3.5">
           <p className="font-semibold text-text-primary">{isEdit ? "Edit thread" : "Start a thread"}</p>
           <button type="button" onClick={onClose} className="ml-auto rounded-full p-2 text-text-muted hover:bg-bg-hover" aria-label="Close"><X size={18} /></button>
@@ -170,7 +171,7 @@ export function ThreadList({ houseId, basePath, viewer, refreshKey }) {
   }
 
   if (err) return <p className="rounded-2xl bg-status-danger/10 px-4 py-3 text-sm text-status-danger">{err}</p>;
-  if (!data) return <div className="flex items-center gap-2 py-10 text-sm text-text-muted"><Loader2 size={16} className="animate-spin" /> Loading threads…</div>;
+  if (!data) return <SkeletonCards label="Loading threads…" />;
   const empty = !data.pinned.length && !data.threads.length;
 
   return (
@@ -183,7 +184,7 @@ export function ThreadList({ houseId, basePath, viewer, refreshKey }) {
         </button>
       )}
       {empty && (
-        <div className="rounded-[1.4rem] border border-dashed border-border-strong bg-bg-panel px-6 py-14 text-center">
+        <div className="rounded-[1.25rem] border border-dashed border-border-strong bg-bg-panel px-6 py-14 text-center">
           <p className="font-display text-xl text-text-primary">{viewer?.canPost ? "Post the first thread" : "No threads yet"}</p>
           <p className="mx-auto mt-2 max-w-sm text-sm text-text-secondary">{viewer?.canPost ? "Welcome the house, share screening dates, or pin the cut-off marks." : "Your House Leaders will post updates here. You'll get a notification the moment they do."}</p>
         </div>
@@ -311,7 +312,7 @@ export function ThreadView({ houseId, threadId, basePath, viewer }) {
         <div className="house-reply-box">
           <MentionTextarea field={field} rows={2} placeholder={viewer?.canModerate ? "Reply, or type @ to mention a member…" : "Write a reply…"} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(); }} />
           <div className="mt-2 flex items-center justify-between">
-            <span className="text-[11px] text-text-muted">Be kind. House Leaders can remove replies.</span>
+            <span className="text-xs text-text-muted">Be kind. House Leaders can remove replies.</span>
             <button type="button" onClick={send} disabled={busy || !field.value.trim()} className="acx-btn">{busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Reply</button>
           </div>
         </div>

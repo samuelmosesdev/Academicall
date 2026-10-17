@@ -33,7 +33,7 @@ export default function AuthAmbientBackground() {
       {SCENES.map((scene, i) => (
         <div
           key={i}
-          className={`absolute overflow-hidden rounded-[1.75rem] border border-white/10 shadow-[0_25px_80px_rgba(0,0,0,0.5)] ${scene.className}`}
+          className={`absolute overflow-hidden rounded-[1.25rem] border border-white/10 shadow-[0_25px_80px_rgba(0,0,0,0.5)] ${scene.className}`}
         >
           <img
             src={scene.src}

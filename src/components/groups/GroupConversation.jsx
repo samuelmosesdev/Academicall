@@ -80,13 +80,13 @@ function Attachment({ msg, mine, onOpenImage, onOpenPdf, onSave, saved, saving }
       <DocIcon name={a.name} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold" title={a.name}>{a.name || "Document"}</p>
-        <p className="text-[11px] opacity-75">{formatBytes(a.bytes)}</p>
+        <p className="text-xs opacity-75">{formatBytes(a.bytes)}</p>
         {!local && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <button
               type="button"
               onClick={() => (isPdf ? onOpenPdf(a) : downloadFile(a.url, a.name))}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${mine ? "bg-white text-violet-deep" : "bg-violet text-white"}`}
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${mine ? "bg-white text-violet-deep" : "bg-violet text-white"}`}
             >
               {isPdf ? "Read" : "Download"}
             </button>
@@ -94,7 +94,7 @@ function Attachment({ msg, mine, onOpenImage, onOpenPdf, onSave, saved, saving }
               type="button"
               onClick={onSave}
               disabled={saved || saving}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${mine ? "bg-white/20 text-white" : "bg-bg-panel text-text-primary ring-1 ring-border-subtle"} disabled:opacity-70`}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${mine ? "bg-white/20 text-white" : "bg-bg-panel text-text-primary ring-1 ring-border-subtle"} disabled:opacity-70`}
             >
               {saving ? <Loader2 size={11} className="animate-spin" /> : saved ? <BookmarkCheck size={11} /> : <BookmarkPlus size={11} />}
               {saved ? "Saved" : "Save"}
@@ -478,7 +478,7 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
         </button>
         <LiveIndicator className="hidden sm:inline-flex" />
         {isMod && (group?.pendingJoinCount || 0) + (group?.pendingHistoryCount || 0) > 0 && (
-          <button type="button" onClick={onOpenInfo} className="rounded-full bg-lemon px-2.5 py-1 text-[11px] font-semibold text-midnight">
+          <button type="button" onClick={onOpenInfo} className="rounded-full bg-lemon px-2.5 py-1 text-xs font-semibold text-midnight">
             {(group.pendingJoinCount || 0) + (group.pendingHistoryCount || 0)} request{(group.pendingJoinCount || 0) + (group.pendingHistoryCount || 0) === 1 ? "" : "s"}
           </button>
         )}
@@ -530,14 +530,14 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
             const showDay = !prev || !isSameDay(prev.createdAt, m.createdAt);
             const dayRow = showDay ? (
               <li key={`d-${m.id}`} className="flex justify-center py-2">
-                <span className="rounded-full bg-bg-panel/90 px-3 py-1 text-[11px] font-semibold text-text-muted shadow-sm">{dayLabel(m.createdAt)}</span>
+                <span className="rounded-full bg-bg-panel/90 px-3 py-1 text-xs font-semibold text-text-muted shadow-sm">{dayLabel(m.createdAt)}</span>
               </li>
             ) : null;
             if (m.type === "system") {
               return [
                 dayRow,
                 <li key={m.id} className="flex justify-center py-1">
-                  <span className="max-w-[85%] rounded-full bg-lemon-soft/90 px-3 py-1 text-center text-[11px] font-medium text-midnight">{m.text}</span>
+                  <span className="max-w-[85%] rounded-full bg-lemon-soft/90 px-3 py-1 text-center text-xs font-medium text-midnight">{m.text}</span>
                 </li>,
               ];
             }
@@ -578,22 +578,22 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
                   {o?.status === "uploading" && (
                     <div className="mt-2">
                       <div className="h-1.5 overflow-hidden rounded-full bg-white/25">
-                        <div className="h-full rounded-full bg-lemon transition-all" style={{ width: `${o.progress || 0}%` }} />
+                        <div className="h-full rounded-full bg-lemon transition-colors" style={{ width: `${o.progress || 0}%` }} />
                       </div>
-                      <div className="mt-1 flex items-center justify-between text-[11px] opacity-85">
+                      <div className="mt-1 flex items-center justify-between text-xs opacity-85">
                         <span>Uploading {o.progress || 0}%</span>
                         <button type="button" onClick={() => discard(o)} className="font-semibold underline">Cancel</button>
                       </div>
                     </div>
                   )}
                   {o?.status === "failed" && (
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
                       <span className="font-semibold">{o.error || "Not sent"}</span>
                       <button type="button" onClick={() => retry(o)} className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 font-semibold text-violet-deep"><RotateCw size={11} /> Retry</button>
                       <button type="button" onClick={() => discard(o)} className="font-semibold underline">Discard</button>
                     </div>
                   )}
-                  <p className={`mt-0.5 flex items-center justify-end gap-1 text-[10px] ${mine ? "text-white/75" : "text-text-muted"}`}>
+                  <p className={`mt-0.5 flex items-center justify-end gap-1 text-[0.7rem] ${mine ? "text-white/75" : "text-text-muted"}`}>
                     {bubbleTime(m.createdAt)}
                     {mine && (o ? (o.status === "failed" ? <AlertCircle size={11} /> : <Clock size={11} />) : <Check size={11} />)}
                   </p>
@@ -644,7 +644,7 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
                   <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${o.tone}`}><o.icon size={17} /></span>
                   <span>
                     <span className="block text-sm font-semibold text-text-primary">{o.label}</span>
-                    <span className="block text-[11px] text-text-muted">{o.hint}</span>
+                    <span className="block text-xs text-text-muted">{o.hint}</span>
                   </span>
                 </button>
               ))}

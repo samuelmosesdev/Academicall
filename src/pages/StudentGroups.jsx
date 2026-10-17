@@ -52,7 +52,7 @@ function GroupRow({ group, active, onOpen }) {
           <span className="flex items-center gap-2">
             <span className="truncate text-[0.95rem] font-semibold text-text-primary">{group.name}</span>
             {group.official && <OfficialBadge className="hidden shrink-0 xl:inline-flex" />}
-            <span className={`ml-auto shrink-0 text-[11px] ${group.unreadCount ? "font-semibold text-violet" : "text-text-muted"}`}>
+            <span className={`ml-auto shrink-0 text-xs ${group.unreadCount ? "font-semibold text-violet" : "text-text-muted"}`}>
               {pending ? "" : listTime(group.lastMessageAt)}
             </span>
           </span>
@@ -62,7 +62,7 @@ function GroupRow({ group, active, onOpen }) {
               {preview}
             </span>
             {group.unreadCount > 0 && (
-              <span className="flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-lemon px-1.5 text-[10px] font-bold text-midnight">
+              <span className="flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-lemon px-1.5 text-[0.7rem] font-bold text-midnight">
                 {group.unreadCount > 99 ? "99+" : group.unreadCount}
               </span>
             )}
@@ -115,7 +115,7 @@ export default function StudentGroups() {
 
   return (
     <div className="-mx-4 -my-6 h-[calc(100dvh-4.1rem)] sm:-mx-8 sm:-my-8 lg:mx-0 lg:my-0 lg:h-[calc(100dvh-10rem)]">
-      <div className="flex h-full min-h-0 overflow-hidden bg-bg-panel lg:rounded-[1.75rem] lg:border lg:border-border-subtle lg:shadow-[var(--shadow-card,0_1px_2px_rgba(15,3,38,0.04))]">
+      <div className="flex h-full min-h-0 overflow-hidden bg-bg-panel lg:rounded-[1.25rem] lg:border lg:border-border-subtle lg:shadow-[var(--shadow-card,0_1px_2px_rgba(15,3,38,0.04))]">
         {/* Group list */}
         {showList && (
           <section className={`min-h-0 w-full flex-col border-border-subtle lg:w-[22rem] lg:shrink-0 lg:border-r ${infoOpen && showChat ? "hidden 2xl:flex" : "flex"}`}>
@@ -177,7 +177,7 @@ export default function StudentGroups() {
                             <GroupAvatar group={g} size={40} />
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold text-text-primary">{g.name}</p>
-                              <p className="truncate text-[11px] text-text-muted">{g.scopeLabel || "Class group"} · {g.memberCount} members</p>
+                              <p className="truncate text-xs text-text-muted">{g.scopeLabel || "Class group"} · {g.memberCount} members</p>
                             </div>
                             <button type="button" onClick={() => navigate(`/study/${g.code}`)} className="rounded-full bg-lemon px-3 py-1.5 text-xs font-semibold text-midnight hover:brightness-105">
                               View

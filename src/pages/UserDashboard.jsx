@@ -30,6 +30,7 @@ import { useAuth } from "../context/AuthContext";
 import { recordDailyActivity } from "../lib/activity";
 import { feedApi } from "../lib/api";
 import { appAlert } from "../lib/dialogs";
+import { SkeletonCards } from "../components/ui/Skeleton";
 
 
 const REACTIONS = [
@@ -298,9 +299,7 @@ export default function UserDashboard() {
         </div>
 
         {feedLoading && feedTab === "department" && (
-          <p className="flex items-center gap-2 text-sm text-ink-muted px-1">
-            <Loader2 size={14} className="animate-spin" /> Loading feed…
-          </p>
+          <SkeletonCards count={2} label="Loading feed…" />
         )}
 
         {!feedLoading && previewPosts.length === 0 && (
@@ -342,17 +341,17 @@ export default function UserDashboard() {
                         />
                       </p>
                       {post.pinned && (
-                        <span className="rounded-full bg-lemon px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-midnight">
+                        <span className="rounded-full bg-lemon px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wider text-midnight">
                           Pinned
                         </span>
                       )}
                       {feedTab === "general" && (
-                        <span className="rounded-full bg-violet-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet dark:bg-violet/20">
+                        <span className="rounded-full bg-violet-soft px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wider text-violet dark:bg-violet/20">
                           General
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-ink-muted">
+                    <p className="text-xs text-ink-muted">
                       {post.createdAt?.toDate
                         ? post.createdAt.toDate().toLocaleString()
                         : ""}
@@ -385,7 +384,7 @@ export default function UserDashboard() {
                       >
                         <span>{emoji}</span>
                         {(counts[type] || 0) > 0 && (
-                          <span className="text-[11px] tabular-nums">{counts[type]}</span>
+                          <span className="text-xs tabular-nums">{counts[type]}</span>
                         )}
                       </button>
                     );
@@ -425,7 +424,7 @@ export default function UserDashboard() {
                           >
                             {anon ? (
                               <div
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink-muted/15 text-[10px] font-bold text-ink-muted"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink-muted/15 text-[0.7rem] font-bold text-ink-muted"
                                 title="Anonymous"
                               >
                                 ?
@@ -466,7 +465,7 @@ export default function UserDashboard() {
                       })}
                       <div className="space-y-2 pt-1">
                         {(profile?.plan === "annual" || profile?.plan === "paid" || profile?.plan === "pro" || profile?.subscription === "pro") && profile?.allowAnonymousComments && (
-                          <label className="flex items-center gap-2 text-[11px] text-ink-muted">
+                          <label className="flex items-center gap-2 text-xs text-ink-muted">
                             <input
                               type="checkbox"
                               checked={!!anonComment[post.id]}
@@ -559,7 +558,7 @@ export default function UserDashboard() {
               onClick={() => navigate("/dashboard/practice")}
               className="card-stitch flex flex-col rounded-2xl p-4 text-left transition hover:border-teal/40"
             >
-              <span className="inline-block w-fit rounded-md bg-teal-soft px-2 py-0.5 text-[11px] font-bold tracking-wide text-teal">
+              <span className="inline-block w-fit rounded-md bg-teal-soft px-2 py-0.5 text-xs font-bold tracking-wide text-teal">
                 {set.courseCode}
               </span>
               <p className="mt-2 truncate text-sm font-semibold text-ink">

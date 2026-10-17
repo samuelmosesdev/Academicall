@@ -36,7 +36,7 @@ export default function AspirantChoices() {
           }}
         />
       </section>
-      <section className="flex flex-wrap items-center gap-4 rounded-[1.4rem] bg-midnight p-5 text-white">
+      <section className="flex flex-wrap items-center gap-4 rounded-[1.25rem] bg-midnight p-5 text-white">
         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-lemon text-midnight"><GraduationCap size={20} /></span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold">Got admission?</p>

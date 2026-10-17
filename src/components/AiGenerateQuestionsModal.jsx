@@ -419,14 +419,14 @@ export default function AiGenerateQuestionsModal({
                       </button>
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <span className="rounded bg-bg-panel px-1.5 py-0.5 text-[10px] font-bold uppercase text-text-muted">
+                          <span className="rounded bg-bg-panel px-1.5 py-0.5 text-[0.7rem] font-bold uppercase text-text-muted">
                             Q{idx + 1}
                           </span>
-                          <span className="rounded bg-bg-panel px-1.5 py-0.5 text-[10px] text-text-muted">
+                          <span className="rounded bg-bg-panel px-1.5 py-0.5 text-[0.7rem] text-text-muted">
                             {q.difficulty}
                           </span>
                           {q.topic && (
-                            <span className="rounded bg-bg-panel px-1.5 py-0.5 text-[10px] text-text-muted">
+                            <span className="rounded bg-bg-panel px-1.5 py-0.5 text-[0.7rem] text-text-muted">
                               {q.topic}
                             </span>
                           )}

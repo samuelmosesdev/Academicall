@@ -363,12 +363,12 @@ export default function StudentProfile() {
                   />
                 </label>
                 {photoUploading && (
-                  <p className="absolute left-0 top-full mt-1 whitespace-nowrap text-[11px] font-medium text-teal">
+                  <p className="absolute left-0 top-full mt-1 whitespace-nowrap text-xs font-medium text-teal">
                     Saving photo…
                   </p>
                 )}
                 {photoError && (
-                  <p className="absolute left-0 top-full mt-1 max-w-[14rem] text-[11px] text-red-600">
+                  <p className="absolute left-0 top-full mt-1 max-w-[14rem] text-xs text-red-600">
                     {photoError}
                   </p>
                 )}
@@ -415,7 +415,7 @@ export default function StudentProfile() {
           <div className="mb-3 flex items-center gap-3 rounded-xl border border-border-light bg-surface-light px-3.5 py-3">
             <Building2 size={16} className="shrink-0 text-teal" />
             <div className="min-w-0">
-              <p className="text-[11px] font-medium text-ink-muted">Institution</p>
+              <p className="text-xs font-medium text-ink-muted">Institution</p>
               <p className="truncate text-sm font-semibold text-ink">{institutionLabel(profile.institution)}</p>
             </div>
           </div>
@@ -429,7 +429,7 @@ export default function StudentProfile() {
                 className="rounded-xl border border-border-light bg-surface-light/60 px-4 py-3"
               >
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                     <Icon size={12} />
                     {label}
                   </span>
@@ -439,7 +439,7 @@ export default function StudentProfile() {
                   {profile[key] || <span className="text-ink-muted">Not set</span>}
                 </p>
                 {pending ? (
-                  <p className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-amber-600">
+                  <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-amber-600">
                     <Clock size={11} />
                     Pending: → {pending.requestedValue}
                   </p>
@@ -447,7 +447,7 @@ export default function StudentProfile() {
                   <button
                     type="button"
                     onClick={() => openRequestModal(key)}
-                    className="mt-1.5 text-[11px] font-semibold text-teal hover:underline"
+                    className="mt-1.5 text-xs font-semibold text-teal hover:underline"
                   >
                     Request change
                   </button>
@@ -677,7 +677,7 @@ export default function StudentProfile() {
                     <option value="">Select program</option>
                     {requestProgramOptions.map((program) => <option key={program} value={program}>{prettyName(program)}</option>)}
                   </select>
-                  <p className="mt-1 text-[11px] text-ink-muted">Programs shown are for your current department. Change department first if needed.</p>
+                  <p className="mt-1 text-xs text-ink-muted">Programs shown are for your current department. Change department first if needed.</p>
                 </div>
               ) : reqField === "department" ? (
                 <div>
@@ -696,7 +696,7 @@ export default function StudentProfile() {
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1 text-[11px] text-ink-muted">
+                  <p className="mt-1 text-xs text-ink-muted">
                     Based on your current faculty
                     {profile?.faculty ? ` (${profile.faculty})` : ""}. If you also
                     need a faculty change, request that first.
@@ -850,7 +850,7 @@ function StatusBadge({ status }) {
   };
   return (
     <span
-      className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold capitalize ${
+      className={`rounded-full border px-2 py-0.5 text-xs font-semibold capitalize ${
         styles[status] || styles.pending
       }`}
     >

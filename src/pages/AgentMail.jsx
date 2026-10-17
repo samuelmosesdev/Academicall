@@ -83,7 +83,7 @@ export default function AgentMail() {
                 <span className="font-medium text-text-primary">{WEBMAIL_URL}</span> with the
                 mailbox password from Hostinger (not your Academicall app password).
               </p>
-              <p className="mt-2 text-[11px] text-text-muted">
+              <p className="mt-2 text-xs text-text-muted">
                 True “read mail fully inside the app” needs IMAP + a secure backend and each
                 agent’s mailbox password. That can be added later if you want full native inbox.
               </p>

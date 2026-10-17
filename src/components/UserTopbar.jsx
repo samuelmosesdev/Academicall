@@ -88,7 +88,7 @@ export default function UserTopbar({ profile, unreadCount, search, onSearchChang
         <button type="button" onClick={() => navigate("/dashboard/notifications")} className={iconBtn} aria-label="Notifications">
           <Bell size={17} />
           {unreadCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[10px] font-semibold text-midnight">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[0.7rem] font-semibold text-midnight">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

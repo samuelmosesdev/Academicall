@@ -77,7 +77,7 @@ export default function Modal({ title, open, onClose, children, size = "md" }) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`animate-pop relative z-10 w-full ${maxWidth} max-h-[min(92dvh,92vh)] overflow-y-auto rounded-t-[1.75rem] border border-border-subtle bg-bg-panel px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-pop)] outline-none sm:rounded-[1.75rem] sm:p-8`}
+        className={`animate-pop relative z-10 w-full ${maxWidth} max-h-[min(92dvh,92vh)] overflow-y-auto rounded-t-[1.75rem] border border-border-subtle bg-bg-panel px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-pop)] outline-none sm:rounded-[1.25rem] sm:p-8`}
       >
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border-strong sm:hidden" aria-hidden="true" />
         <div className="mb-6 flex items-start justify-between gap-4">

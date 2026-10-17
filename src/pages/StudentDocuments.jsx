@@ -259,7 +259,7 @@ export default function StudentDocuments() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="rounded bg-teal/15 px-1.5 py-0.5 text-[11px] font-bold text-teal">
+                  <span className="rounded bg-teal/15 px-1.5 py-0.5 text-xs font-bold text-teal">
                     {group.courseCode}
                   </span>
                   <span className="text-sm font-semibold text-ink">

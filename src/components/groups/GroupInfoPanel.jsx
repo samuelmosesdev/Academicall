@@ -46,7 +46,7 @@ function MemberMenu({ member, group, meId, onChanged }) {
             {isCreator && member.role === "member" && (
               <button type="button" disabled={(group.moderatorCount || 0) >= (group.maxModerators || 3)} onClick={() => run(() => groupsApi.setRole(group.id, member.userId, "moderator"), `${member.name} is now a moderator`)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-panel-alt disabled:opacity-50">
                 <Shield size={14} /> Make moderator
-                {(group.moderatorCount || 0) >= (group.maxModerators || 3) && <span className="ml-auto text-[10px] text-text-muted">3 max</span>}
+                {(group.moderatorCount || 0) >= (group.maxModerators || 3) && <span className="ml-auto text-[0.7rem] text-text-muted">3 max</span>}
               </button>
             )}
             {isCreator && member.role === "moderator" && (
@@ -268,7 +268,7 @@ export default function GroupInfoPanel({ group, me, onClose, onUpdated }) {
               <Share2 size={13} /> Share
             </button>
           </div>
-          <p className="mt-2 text-[11px] leading-snug text-text-muted">
+          <p className="mt-2 text-xs leading-snug text-text-muted">
             {group.approvalRequired ? "People who open the link ask to join. The link alone doesn't show any messages." : "Anyone signed in with the link joins straight away."}
           </p>
           {group.official && isMod && isRep && (
@@ -284,10 +284,10 @@ export default function GroupInfoPanel({ group, me, onClose, onUpdated }) {
               <Shield size={17} className="text-violet" />
               <span className="flex-1">
                 <span className="block text-sm font-semibold text-text-primary">Approve new members</span>
-                <span className="block text-[11px] text-text-muted">You and moderators review join requests</span>
+                <span className="block text-xs text-text-muted">You and moderators review join requests</span>
               </span>
               <span className={`relative h-6 w-10 rounded-full transition ${group.approvalRequired ? "bg-violet" : "bg-border-strong"}`}>
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${group.approvalRequired ? "left-[1.125rem]" : "left-0.5"}`} />
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-colors ${group.approvalRequired ? "left-[1.125rem]" : "left-0.5"}`} />
               </span>
             </button>
           </section>
@@ -304,7 +304,7 @@ export default function GroupInfoPanel({ group, me, onClose, onUpdated }) {
             >
               {t.label}
               {t.count > 0 && (
-                <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${t.id !== "members" ? "bg-lemon text-midnight" : "bg-bg-panel-alt text-text-muted"}`}>{t.count}</span>
+                <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[0.7rem] ${t.id !== "members" ? "bg-lemon text-midnight" : "bg-bg-panel-alt text-text-muted"}`}>{t.count}</span>
               )}
               {tab === t.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-violet" />}
             </button>
@@ -338,7 +338,7 @@ export default function GroupInfoPanel({ group, me, onClose, onUpdated }) {
                 ))}
               </ul>
               {isCreator && (
-                <p className="mt-2 flex items-center gap-1.5 text-[11px] text-text-muted">
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-text-muted">
                   <Users size={12} /> {group.moderatorCount || 0} of {group.maxModerators || 3} moderators
                 </p>
               )}
@@ -367,7 +367,7 @@ export default function GroupInfoPanel({ group, me, onClose, onUpdated }) {
             )
           ) : history.length ? (
             <>
-              <p className="mt-3 rounded-xl bg-violet-soft px-3 py-2 text-[11px] leading-snug text-violet-deep">
+              <p className="mt-3 rounded-xl bg-violet-soft px-3 py-2 text-xs leading-snug text-violet-deep">
                 <History size={12} className="mr-1 inline" />
                 Approving shows earlier text messages and files up to {group.limits?.historyAttachmentMb || 2} MB. Larger files stay hidden.
               </p>

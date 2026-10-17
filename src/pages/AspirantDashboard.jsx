@@ -31,15 +31,15 @@ export default function AspirantDashboard() {
     <div className="space-y-6">
       <section className="grid gap-4 lg:grid-cols-[1.6fr_0.9fr]">
         <PinnedBoard pinned={data.pinned} first={first} houses={data.houses} />
-        <div className="flex flex-col rounded-[1.6rem] bg-lemon p-6 text-midnight">
+        <div className="flex flex-col rounded-[1.25rem] bg-lemon p-6 text-midnight">
           <div className="flex items-center justify-between">
             <span className="eyebrow text-midnight/60">Your choices</span>
-            <Link to="/dashboard/choices" className="inline-flex items-center gap-1 rounded-full bg-midnight px-2.5 py-1 text-[11px] font-semibold text-lemon"><Settings2 size={11} /> Edit</Link>
+            <Link to="/dashboard/choices" className="inline-flex items-center gap-1 rounded-full bg-midnight px-2.5 py-1 text-xs font-semibold text-lemon"><Settings2 size={11} /> Edit</Link>
           </div>
           <div className="mt-4 space-y-3">
             {choices.map((c) => (
               <div key={c.rank} className="rounded-2xl bg-white/55 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-midnight/55">{c.rank === 1 ? "First choice" : "Second choice"}</p>
+                <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-midnight/55">{c.rank === 1 ? "First choice" : "Second choice"}</p>
                 <p className="mt-0.5 font-display text-[1.15rem] leading-snug">{institutionTitle(c.institution)}</p>
                 {c.course && <p className="text-sm text-midnight/70">{c.course}</p>}
               </div>
@@ -58,7 +58,7 @@ export default function AspirantDashboard() {
         <div className="mb-3 flex items-center gap-3"><p className="eyebrow text-text-muted">Your Aspirant Houses</p><span className="h-px flex-1 bg-border-subtle" /></div>
         <div className="grid gap-3 sm:grid-cols-2">
           {data.houses.map((h) => (
-            <Link key={h.id} to={`/dashboard/house/${h.id}`} className="group flex items-center gap-4 rounded-[1.4rem] border border-border-subtle bg-bg-panel p-4 transition hover:border-accent">
+            <Link key={h.id} to={`/dashboard/house/${h.id}`} className="group flex items-center gap-4 rounded-[1.25rem] border border-border-subtle bg-bg-panel p-4 transition hover:border-accent">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-midnight text-lemon"><Building2 size={20} /></span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold text-text-primary">{h.name}</span>
@@ -68,12 +68,12 @@ export default function AspirantDashboard() {
                   <span>{h.choiceRank === 1 ? "1st choice" : "2nd choice"}</span>
                 </span>
               </span>
-              {h.unread > 0 && <span className="rounded-full bg-lemon px-2 py-0.5 text-[11px] font-bold text-midnight">{h.unread} new</span>}
+              {h.unread > 0 && <span className="rounded-full bg-lemon px-2 py-0.5 text-xs font-bold text-midnight">{h.unread} new</span>}
               <ArrowRight size={16} className="text-text-muted transition group-hover:translate-x-1 group-hover:text-accent" />
             </Link>
           ))}
           {data.houses.length === 0 && (
-            <Link to="/dashboard/choices" className="flex items-center gap-3 rounded-[1.4rem] border border-dashed border-border-strong p-5 text-sm text-text-secondary"><Compass size={18} /> Choose institutions to join their houses</Link>
+            <Link to="/dashboard/choices" className="flex items-center gap-3 rounded-[1.25rem] border border-dashed border-border-strong p-5 text-sm text-text-secondary"><Compass size={18} /> Choose institutions to join their houses</Link>
           )}
         </div>
       </section>
@@ -85,14 +85,14 @@ export default function AspirantDashboard() {
         </div>
         {!news && <p className="text-sm text-text-muted">Loading…</p>}
         {news && news.length === 0 && (
-          <Link to="/news" className="flex items-center gap-3 rounded-[1.4rem] border border-border-subtle bg-bg-panel p-5 text-sm text-text-secondary hover:border-accent"><Newspaper size={18} className="text-accent" /> Follow Admissions and Exams on Academicall News to get stories here first.</Link>
+          <Link to="/news" className="flex items-center gap-3 rounded-[1.25rem] border border-border-subtle bg-bg-panel p-5 text-sm text-text-secondary hover:border-accent"><Newspaper size={18} className="text-accent" /> Follow Admissions and Exams on Academicall News to get stories here first.</Link>
         )}
         <div className="grid gap-3 md:grid-cols-3">
           {(news || []).slice(0, 3).map((p) => (
-            <Link key={p.id} to={`/news/${p.slug}`} className="group overflow-hidden rounded-[1.4rem] border border-border-subtle bg-bg-panel transition hover:border-accent">
+            <Link key={p.id} to={`/news/${p.slug}`} className="group overflow-hidden rounded-[1.25rem] border border-border-subtle bg-bg-panel transition hover:border-accent">
               {p.coverUrl ? <img src={p.coverUrl} alt="" loading="lazy" className="aspect-[16/9] w-full object-cover" /> : <div className="aspect-[16/9] w-full bg-violet-soft" />}
               <div className="p-4">
-                <p className="text-[11px] font-semibold text-accent">{p.reason || p.category}</p>
+                <p className="text-xs font-semibold text-accent">{p.reason || p.category}</p>
                 <p className="mt-1 line-clamp-2 font-display text-[1.05rem] leading-snug text-text-primary">{p.title}</p>
                 <p className="mt-2 text-xs text-text-muted">{timeAgo(p.publishedAt)}</p>
               </div>
@@ -118,7 +118,7 @@ function PinnedBoard({ pinned, first, houses }) {
 
   if (!n) {
     return (
-      <div className="relative overflow-hidden rounded-[1.6rem] bg-midnight p-7 text-white sm:p-10">
+      <div className="relative overflow-hidden rounded-[1.25rem] bg-midnight p-7 text-white sm:p-10">
         <img src="/images/campus/hero-campus.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover opacity-30" />
         <div className="absolute inset-0 bg-gradient-to-r from-midnight via-midnight/85 to-midnight/30" />
         <div className="relative">
@@ -132,11 +132,11 @@ function PinnedBoard({ pinned, first, houses }) {
   }
   const t = pinned[Math.min(i, n - 1)];
   return (
-    <div className="relative overflow-hidden rounded-[1.6rem] bg-midnight text-white" onMouseEnter={() => { hold.current = true; }} onMouseLeave={() => { hold.current = false; }}>
+    <div className="relative overflow-hidden rounded-[1.25rem] bg-midnight text-white" onMouseEnter={() => { hold.current = true; }} onMouseLeave={() => { hold.current = false; }}>
       {t.imageUrl && <img key={t.id} src={t.imageUrl} alt="" aria-hidden className="board-fade absolute inset-0 h-full w-full object-cover opacity-35" />}
       <div className="absolute inset-0 bg-gradient-to-r from-midnight via-midnight/90 to-midnight/40" />
       <Link key={t.id} to={`/dashboard/house/${t.houseId}/t/${t.id}`} className="board-fade relative block p-7 sm:p-9">
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="acx-chip is-lemon"><Pin size={11} /> Pinned</span>
           <span className="text-white/60">{t.house?.name} · {timeAgo(t.pinnedAt || t.createdAt)}</span>
         </div>
@@ -150,7 +150,7 @@ function PinnedBoard({ pinned, first, houses }) {
       {n > 1 && (
         <div className="absolute bottom-4 right-5 flex items-center gap-2">
           <button type="button" onClick={() => setI((x) => (x - 1 + n) % n)} className="rounded-full bg-white/10 p-1.5 hover:bg-white/20" aria-label="Previous"><ChevronLeft size={14} /></button>
-          <span className="flex gap-1.5">{pinned.map((p, k) => <span key={p.id} className={`h-1.5 rounded-full transition-all ${k === i ? "w-5 bg-lemon" : "w-1.5 bg-white/35"}`} />)}</span>
+          <span className="flex gap-1.5">{pinned.map((p, k) => <span key={p.id} className={`h-1.5 rounded-full transition-colors ${k === i ? "w-5 bg-lemon" : "w-1.5 bg-white/35"}`} />)}</span>
           <button type="button" onClick={() => setI((x) => (x + 1) % n)} className="rounded-full bg-white/10 p-1.5 hover:bg-white/20" aria-label="Next"><ChevronRight size={14} /></button>
         </div>
       )}

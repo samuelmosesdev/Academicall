@@ -225,7 +225,7 @@ export default function AdminActivityLog() {
         {filtered.map((l) => (
           <div key={l.id} className="px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded bg-bg-elevated px-1.5 py-0.5 text-[11px] font-mono text-text-secondary">
+              <span className="rounded bg-bg-elevated px-1.5 py-0.5 text-xs font-mono text-text-secondary">
                 {l.action}
               </span>
               <span className="text-xs text-text-muted">

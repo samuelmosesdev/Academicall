@@ -373,7 +373,7 @@ export default function AdminAgents() {
                 Regenerate
               </button>
             </div>
-            <p className="mt-1 text-[11px] text-text-muted">
+            <p className="mt-1 text-xs text-text-muted">
               Agent will be forced to change this password on first login.
             </p>
           </div>
@@ -442,7 +442,7 @@ export default function AdminAgents() {
                   {ROLE_LABELS[a.role] || a.role}
                 </span>
                 {a.mustChangePassword && (
-                  <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                  <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.7rem] font-semibold text-amber-700">
                     Must change password
                   </span>
                 )}
@@ -451,7 +451,7 @@ export default function AdminAgents() {
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <span
-                className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                   a.status === "suspended"
                     ? "bg-status-danger/15 text-status-danger"
                     : "bg-accent-soft text-accent"
@@ -463,7 +463,7 @@ export default function AdminAgents() {
                 <button
                   type="button"
                   onClick={() => setPending({ type: "promote", agent: a })}
-                  className="rounded-lg px-2 py-1 text-[11px] font-medium text-text-muted hover:bg-bg-elevated hover:text-text-primary"
+                  className="rounded-lg px-2 py-1 text-xs font-medium text-text-muted hover:bg-bg-elevated hover:text-text-primary"
                   title="Promote to Alpha"
                 >
                   <Shield size={14} className="inline" /> Alpha+
@@ -473,7 +473,7 @@ export default function AdminAgents() {
                 <button
                   type="button"
                   onClick={() => setPending({ type: "demote", agent: a })}
-                  className="rounded-lg px-2 py-1 text-[11px] font-medium text-text-muted hover:bg-bg-elevated hover:text-text-primary"
+                  className="rounded-lg px-2 py-1 text-xs font-medium text-text-muted hover:bg-bg-elevated hover:text-text-primary"
                   title="Demote to Agent"
                 >
                   Alpha−
@@ -491,7 +491,7 @@ export default function AdminAgents() {
               <button
                 type="button"
                 onClick={() => navigate(`/admin/agents/${a.id}`)}
-                className="rounded-lg px-2 py-1 text-[11px] font-semibold text-accent hover:bg-bg-elevated"
+                className="rounded-lg px-2 py-1 text-xs font-semibold text-accent hover:bg-bg-elevated"
               >
                 Manage & activity
               </button>

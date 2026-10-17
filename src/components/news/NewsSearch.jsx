@@ -73,7 +73,7 @@ export default function NewsSearch({ value, onSearch, className = "" }) {
       </label>
       {open && items.length > 0 && (
         <div className="news-suggest" role="listbox">
-          {!text && <p className="px-4 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">Popular right now</p>}
+          {!text && <p className="px-4 pb-1 pt-3 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-ink-muted">Popular right now</p>}
           {items.map((it, i) => (
             <button
               key={`${it.type}-${it.label}-${i}`}
@@ -87,7 +87,7 @@ export default function NewsSearch({ value, onSearch, className = "" }) {
               {it.type === "story" ? <ArrowUpRight size={15} className="shrink-0 text-violet" /> : it.type === "fix" ? <Sparkle size={15} className="shrink-0 text-violet" /> : <Search size={14} className="shrink-0 text-ink-muted" />}
               <span className="min-w-0 flex-1">
                 {it.type === "fix" ? <span className="text-ink">Did you mean <b>{it.label}</b>?</span>
-                  : it.type === "story" ? <><span className="block truncate font-medium text-ink">{it.label}</span><span className="text-[11px] text-ink-muted">{it.story.category}</span></>
+                  : it.type === "story" ? <><span className="block truncate font-medium text-ink">{it.label}</span><span className="text-xs text-ink-muted">{it.story.category}</span></>
                     : <Highlight text={it.label} q={text} />}
               </span>
               {i === active && <CornerDownLeft size={13} className="shrink-0 text-ink-muted" />}

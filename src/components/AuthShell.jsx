@@ -67,7 +67,7 @@ export default function AuthShell({ scene = "login", title, subtitle, children, 
 
       {/* Photo */}
       <div className="relative hidden p-4 lg:block">
-        <div className="relative h-full overflow-hidden rounded-[2rem]">
+        <div className="relative h-full overflow-hidden rounded-[1.25rem]">
           <img src={s.src} alt="" aria-hidden className={`absolute inset-0 h-full w-full object-cover ${s.pos}`} />
           <div className="absolute inset-0 bg-gradient-to-t from-midnight/85 via-midnight/10 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-10 xl:p-14">

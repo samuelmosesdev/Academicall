@@ -131,13 +131,13 @@ export function MentionTextarea({ field, placeholder, rows = 4, className = "", 
         className={`acx-input resize-y leading-relaxed ${className}`}
       />
       {enabled && (
-        <button type="button" onClick={insertAt} className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-lg bg-bg-panel-alt px-2 py-1 text-[11px] font-semibold text-text-secondary hover:text-accent" title="Mention a member">
+        <button type="button" onClick={insertAt} className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-lg bg-bg-panel-alt px-2 py-1 text-xs font-semibold text-text-secondary hover:text-accent" title="Mention a member">
           <AtSign size={12} /> Mention
         </button>
       )}
       {open && (
         <div className="house-mention-pop" role="listbox" aria-label="Mention a member">
-          <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">Mention a house member</p>
+          <p className="px-3 pb-1 pt-2 text-[0.7rem] font-bold uppercase tracking-[0.08em] text-text-muted">Mention a house member</p>
           {loading && !list.length && <p className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted"><Loader2 size={12} className="animate-spin" /> Looking…</p>}
           {!loading && !list.length && <p className="px-3 py-2 text-xs text-text-muted">No member matches “{query}”.</p>}
           {list.map((p, i) => (
@@ -146,7 +146,7 @@ export function MentionTextarea({ field, placeholder, rows = 4, className = "", 
               <Avatar person={p} size={26} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium text-text-primary">{p.name}</span>
-                <span className="block truncate text-[11px] text-text-muted">{p.choices?.[0]?.course || (p.choiceRank === 1 ? "First choice" : p.choiceRank === 2 ? "Second choice" : "Member")}</span>
+                <span className="block truncate text-xs text-text-muted">{p.choices?.[0]?.course || (p.choiceRank === 1 ? "First choice" : p.choiceRank === 2 ? "Second choice" : "Member")}</span>
               </span>
             </button>
           ))}

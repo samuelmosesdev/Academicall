@@ -89,7 +89,7 @@ function ReactionChip({ reactions, myUid, onToggle }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition ${
+        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition ${
           mine
             ? "border-accent/40 bg-accent-soft text-accent"
             : "border-border-subtle bg-bg-panel-alt text-text-muted hover:border-accent/30"
@@ -118,7 +118,7 @@ function ReactionChip({ reactions, myUid, onToggle }) {
                 onToggle(type);
                 setOpen(false);
               }}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-base transition hover:scale-110 ${
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-base transition ${
                 mine === type ? "bg-accent-soft" : "hover:bg-bg-panel-alt"
               }`}
             >
@@ -515,7 +515,7 @@ export default function StaffChat() {
             <h1 className="truncate text-base font-semibold text-text-primary sm:text-lg">
               Staff HQ
             </h1>
-            <p className="flex items-center gap-1 text-[11px] text-text-muted">
+            <p className="flex items-center gap-1 text-xs text-text-muted">
               <Users size={11} /> Admin · Alpha · Agents · live
             </p>
           </div>
@@ -598,7 +598,7 @@ export default function StaffChat() {
                 }`}
               >
                 <div
-                  className={`inline-flex flex-wrap items-center gap-1.5 text-[11px] text-text-muted ${
+                  className={`inline-flex flex-wrap items-center gap-1.5 text-xs text-text-muted ${
                     mine ? "justify-end" : ""
                   }`}
                 >
@@ -613,7 +613,7 @@ export default function StaffChat() {
                     <span className="italic">(edited)</span>
                   )}
                   {isDeleted && admin && (
-                    <span className="rounded bg-status-danger/15 px-1.5 py-0.5 text-[10px] font-semibold text-status-danger">
+                    <span className="rounded bg-status-danger/15 px-1.5 py-0.5 text-[0.7rem] font-semibold text-status-danger">
                       Deleted
                       {m.deletedByName ? ` · ${m.deletedByName}` : ""}
                     </span>
@@ -622,7 +622,7 @@ export default function StaffChat() {
 
                 {m.replyTo && !isDeleted && (
                   <div
-                    className={`mb-1 rounded-xl border-l-2 border-accent/60 bg-bg-panel-alt/80 px-2.5 py-1.5 text-left text-[11px] ${
+                    className={`mb-1 rounded-xl border-l-2 border-accent/60 bg-bg-panel-alt/80 px-2.5 py-1.5 text-left text-xs ${
                       mine ? "ml-auto" : ""
                     }`}
                   >
@@ -647,7 +647,7 @@ export default function StaffChat() {
                   <>
                     {m.type === "meeting" && m.meeting && (
                       <div className="rounded-2xl border border-accent/30 bg-accent-soft/40 px-4 py-3 text-left">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-accent">
+                        <p className="text-[0.7rem] font-bold uppercase tracking-wide text-accent">
                           Team meeting
                         </p>
                         <p className="mt-1 text-sm font-semibold text-text-primary">
@@ -743,7 +743,7 @@ export default function StaffChat() {
                           className="h-9 w-full max-w-xs"
                         />
                         {m.mediaDuration != null && (
-                          <p className="mt-1 text-[10px] text-text-muted">
+                          <p className="mt-1 text-[0.7rem] text-text-muted">
                             {m.mediaDuration}s voice note
                           </p>
                         )}
@@ -770,7 +770,7 @@ export default function StaffChat() {
                           onClick={() =>
                             setMenuId((id) => (id === m.id ? null : m.id))
                           }
-                          className="rounded px-1.5 text-[11px] text-text-muted hover:text-text-primary"
+                          className="rounded px-1.5 text-xs text-text-muted hover:text-text-primary"
                         >
                           ···
                         </button>
@@ -826,7 +826,7 @@ export default function StaffChat() {
           <div className="mb-2 flex items-start gap-2 rounded-xl border border-accent/25 bg-accent-soft/40 px-3 py-2">
             <Reply size={14} className="mt-0.5 shrink-0 text-accent" />
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold text-accent">
+              <p className="text-xs font-semibold text-accent">
                 Replying to {replyTo.authorName}
               </p>
               <p className="truncate text-xs text-text-muted">{replyTo.text}</p>

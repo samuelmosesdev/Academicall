@@ -137,7 +137,7 @@ export default function StudentSubscription() {
         {/* Annual */}
         <div className="relative flex flex-col overflow-hidden rounded-3xl border-2 border-accent bg-bg-panel p-6 shadow-lg shadow-accent/15">
           {plans.annual?.badge && (
-            <div className="absolute right-4 top-4 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            <div className="absolute right-4 top-4 rounded-full bg-accent px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-white">
               {plans.annual.badge}
             </div>
           )}
@@ -223,7 +223,7 @@ export default function StudentSubscription() {
         )}
       </div>
 
-      <p className="text-center text-[11px] text-text-muted">
+      <p className="text-center text-xs text-text-muted">
         Payment gateway coming soon. For manual upgrade, contact support on WhatsApp.
       </p>
       {plans.whatsappSupport && (

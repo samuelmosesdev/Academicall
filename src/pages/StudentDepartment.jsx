@@ -526,14 +526,14 @@ export default function StudentDepartment() {
                   </span>
                 ))}
               </span>
-              <span className="tabular-nums font-semibold text-[11px]">
+              <span className="tabular-nums font-semibold text-xs">
                 {total}
               </span>
             </>
           ) : (
             <span className="flex items-center gap-1 opacity-70">
               <span>👍</span>
-              <span className="text-[11px] font-medium">React</span>
+              <span className="text-xs font-medium">React</span>
             </span>
           )}
         </button>
@@ -557,7 +557,7 @@ export default function StudentDepartment() {
                   className={`flex h-10 w-10 items-center justify-center rounded-full text-xl transition-transform duration-150 ${
                     active
                       ? "scale-125 bg-teal-soft"
-                      : "scale-100 hover:scale-110 hover:bg-bg-panel-alt"
+                      : "scale-100 hover:bg-bg-panel-alt"
                   }`}
                 >
                   {emoji}
@@ -688,7 +688,7 @@ export default function StudentDepartment() {
       {/* Header — Programme Hub (scoped by program, not broad department) */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+          <p className="mb-1 text-xs font-bold uppercase tracking-wider text-ink-muted">
             Programme Hub
           </p>
           <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink flex items-center gap-2.5">
@@ -718,7 +718,7 @@ export default function StudentDepartment() {
       {/* Course Rep Quick Actions — Bento / glass (Stitch) */}
       {isRepHere && (
         <section>
-          <h3 className="mb-3 px-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+          <h3 className="mb-3 px-1 text-xs font-bold uppercase tracking-wider text-ink-muted">
             Rep Quick Actions
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -730,7 +730,7 @@ export default function StudentDepartment() {
               <span className="flex h-11 w-11 items-center justify-center rounded-full bg-pink-500/10 text-pink-500">
                 <Megaphone size={20} />
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-wide text-ink">
+              <span className="text-xs font-bold uppercase tracking-wide text-ink">
                 Announce
               </span>
             </button>
@@ -742,7 +742,7 @@ export default function StudentDepartment() {
               <span className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
                 <CalendarPlus size={20} />
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-wide text-ink">
+              <span className="text-xs font-bold uppercase tracking-wide text-ink">
                 Schedule
               </span>
             </button>
@@ -754,7 +754,7 @@ export default function StudentDepartment() {
               <span className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-500/10 text-violet-500">
                 <Upload size={20} />
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-wide text-ink">
+              <span className="text-xs font-bold uppercase tracking-wide text-ink">
                 Upload
               </span>
             </button>
@@ -816,7 +816,7 @@ export default function StudentDepartment() {
                   )}
                   {ev.notes && <p className="mt-1 text-ink-muted">{ev.notes}</p>}
                   {ev.createdByName && (
-                    <p className="mt-2 text-[11px] text-ink-muted">
+                    <p className="mt-2 text-xs text-ink-muted">
                       Scheduled by <span className="font-medium text-ink">{ev.createdByName}</span>
                       {ev.createdByEmail && <span className="block">{ev.createdByEmail}</span>}
                     </p>
@@ -866,7 +866,7 @@ export default function StudentDepartment() {
                             {c.text}
                           </p>
                           {c.createdAt && (
-                            <p className="mt-1 text-[10px] text-ink-muted">
+                            <p className="mt-1 text-[0.7rem] text-ink-muted">
                               {new Date(c.createdAt).toLocaleString()}
                             </p>
                           )}
@@ -950,12 +950,12 @@ export default function StudentDepartment() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     {post.pinned && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-pink-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pink-600 border border-pink-500/20">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-pink-500/10 px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-pink-600 border border-pink-500/20">
                         <Pin size={10} /> Pinned
                       </span>
                     )}
                     {post.courseCode && (
-                      <span className="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-600 border border-orange-500/20">
+                      <span className="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-orange-600 border border-orange-500/20">
                         {post.courseCode}
                       </span>
                     )}
@@ -965,11 +965,11 @@ export default function StudentDepartment() {
                 <p className="mt-1.5 text-sm text-ink-muted whitespace-pre-wrap leading-relaxed">
                   {post.body}
                 </p>
-                <p className="mt-2 text-[11px] font-medium text-ink">
+                <p className="mt-2 text-xs font-medium text-ink">
                   {feedAuthorName(post)}
                 </p>
-                {post.authorEmail && <p className="text-[10px] text-ink-muted">{post.authorEmail}</p>}
-                <p className="mt-1 text-[10px] text-ink-muted">
+                {post.authorEmail && <p className="text-[0.7rem] text-ink-muted">{post.authorEmail}</p>}
+                <p className="mt-1 text-[0.7rem] text-ink-muted">
                   {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleString() : ""}
                 </p>
 
@@ -1015,7 +1015,7 @@ export default function StudentDepartment() {
                             {c.text}
                           </p>
                           {c.createdAt && (
-                            <p className="mt-1 text-[10px] text-ink-muted">
+                            <p className="mt-1 text-[0.7rem] text-ink-muted">
                               {new Date(c.createdAt).toLocaleString()}
                             </p>
                           )}

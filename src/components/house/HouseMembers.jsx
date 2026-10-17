@@ -5,6 +5,7 @@ import { timeAgo } from "../../lib/newsApi";
 import { appPrompt, appConfirm, notify } from "../../lib/dialogs";
 import { Pager, SearchField } from "../ui";
 import { Avatar } from "./Mentions";
+import { SkeletonCards } from "../ui/Skeleton";
 
 const TABS = [["", "Members"], ["muted", "Muted"], ["removed", "Removed"]];
 
@@ -41,15 +42,15 @@ export default function HouseMembers({ houseId, onMention }) {
       <div className="flex flex-wrap items-center gap-2">
         {TABS.map(([id, label]) => (
           <button key={id} type="button" onClick={() => { setStatus(id); setPage(1); }} className={`news-cat ${status === id ? "on" : ""}`}>
-            {label} <span className="ml-1 opacity-60">{(id ? counts[id] : (counts.active || 0) + (counts.muted || 0)) || 0}</span>
+            {label} {data && <span className="ml-1 opacity-60">{(id ? counts[id] : (counts.active || 0) + (counts.muted || 0)) || 0}</span>}
           </button>
         ))}
         <SearchField value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search name or email" className="ml-auto w-full sm:w-64" />
       </div>
       {err && <p className="rounded-2xl bg-status-danger/10 px-4 py-3 text-sm text-status-danger">{err}</p>}
-      {!data && !err && <div className="flex items-center gap-2 py-8 text-sm text-text-muted"><Loader2 size={16} className="animate-spin" /> Loading members…</div>}
+      {!data && !err && <SkeletonCards label="Loading members…" />}
       {data && data.members.length === 0 && (
-        <div className="rounded-[1.4rem] border border-dashed border-border-strong bg-bg-panel px-6 py-12 text-center">
+        <div className="rounded-[1.25rem] border border-dashed border-border-strong bg-bg-panel px-6 py-12 text-center">
           <Users className="mx-auto text-text-muted" />
           <p className="mt-2 text-sm text-text-secondary">{q ? `No one matches “${q}”.` : status ? `No ${status} members.` : "No members yet. Aspirants join when they pick this institution."}</p>
         </div>
@@ -75,13 +76,13 @@ export default function HouseMembers({ houseId, onMention }) {
                     <p key={c.rank} className="truncate"><span className="font-semibold text-text-primary">{c.rank === 1 ? "1st" : "2nd"}:</span> {c.course ? `${c.course} · ` : ""}{institutionTitle(c.institution)}</p>
                   ))}
                 </div>
-                <p className="mt-2 flex flex-wrap gap-x-3 text-[11px] text-text-muted">
+                <p className="mt-2 flex flex-wrap gap-x-3 text-xs text-text-muted">
                   {m.meta?.utmeScore != null && <span>UTME {m.meta.utmeScore}{m.meta.utmeYear ? ` (${m.meta.utmeYear})` : ""}</span>}
                   {m.meta?.stateOfOrigin && <span>{m.meta.stateOfOrigin}</span>}
                   <span className="inline-flex items-center gap-1"><MessageCircle size={10} /> {m.replies} replies</span>
                   <span>Joined {timeAgo(m.joinedAt)}</span>
                 </p>
-                {m.reason && m.status !== "active" && <p className="mt-1.5 text-[11px] italic text-text-muted">Reason: {m.reason}</p>}
+                {m.reason && m.status !== "active" && <p className="mt-1.5 text-xs italic text-text-muted">Reason: {m.reason}</p>}
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border-subtle pt-3">

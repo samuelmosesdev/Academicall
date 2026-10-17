@@ -150,7 +150,7 @@ export default function CbtExamWorkspace({
               <div className="flex items-center gap-2 rounded-lg bg-[#E9E9FC] px-3 py-1.5">
                 <Timer size={16} className="text-[#454ADE]" />
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-[#433B5A]">
+                  <div className="text-[0.7rem] uppercase tracking-wider text-[#433B5A]">
                     Remaining
                   </div>
                   <div className="font-mono text-sm font-bold tabular-nums">
@@ -187,7 +187,7 @@ export default function CbtExamWorkspace({
         </div>
         <div className="h-1.5 w-full bg-[#E9E9FC]">
           <div
-            className="h-full rounded-full bg-[#454ADE] transition-all duration-500"
+            className="h-full rounded-full bg-[#454ADE] transition-colors duration-500"
             style={{ width: `${stats.progressPct}%` }}
           />
         </div>
@@ -225,7 +225,7 @@ export default function CbtExamWorkspace({
                   </span>
                 )}
                 {q.difficulty && (
-                  <span className="rounded-full bg-[#E9E9FC] px-2 py-0.5 text-[11px] font-semibold capitalize text-[#454ADE]">
+                  <span className="rounded-full bg-[#E9E9FC] px-2 py-0.5 text-xs font-semibold capitalize text-[#454ADE]">
                     {q.difficulty}
                     {q.marks ? ` · ${q.marks} mark${q.marks > 1 ? "s" : ""}` : ""}
                   </span>
@@ -248,7 +248,7 @@ export default function CbtExamWorkspace({
               )}
             </div>
 
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[#433B5A]">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#433B5A]">
               Problem Statement
             </p>
             <h2 className="mb-4 text-lg font-semibold leading-snug text-[#0F0326] sm:text-xl">
@@ -312,7 +312,7 @@ export default function CbtExamWorkspace({
                       </span>
                       <span className="text-sm font-medium">{opt}</span>
                     </div>
-                    <span className="hidden text-[10px] uppercase text-[#7B7490] sm:inline">
+                    <span className="hidden text-[0.7rem] uppercase text-[#7B7490] sm:inline">
                       Press {letter}
                     </span>
                   </button>
@@ -399,7 +399,7 @@ export default function CbtExamWorkspace({
               <span className="font-semibold text-[#0F0326]">Keyboard:</span>
               <span>[A–D] Select · [N/P] Next/Prev · [F] Flag · [H] Hint</span>
             </div>
-            <span className="rounded bg-aqua-soft px-2 py-0.5 font-mono text-[10px] text-aqua-deep">
+            <span className="rounded bg-aqua-soft px-2 py-0.5 font-mono text-[0.7rem] text-aqua-deep">
               PRACTICE ENGINE
             </span>
           </div>
@@ -438,7 +438,7 @@ export default function CbtExamWorkspace({
                   </div>
                   <div>
                     <div className="text-sm font-medium">{t.title}</div>
-                    <div className="text-[11px] text-[#433B5A]">{t.sub}</div>
+                    <div className="text-xs text-[#433B5A]">{t.sub}</div>
                   </div>
                 </div>
               ))}
@@ -527,7 +527,7 @@ function PalettePanel({
         <span className="font-mono text-xs text-[#433B5A]">{questions.length} TOTAL</span>
       </div>
 
-      <div className="mb-3 grid grid-cols-4 gap-1 rounded-lg bg-[#F4F3FD] p-1 text-[11px] font-medium">
+      <div className="mb-3 grid grid-cols-4 gap-1 rounded-lg bg-[#F4F3FD] p-1 text-xs font-medium">
         {[
           { id: "all", label: "All" },
           { id: "ans", label: "Ans" },
@@ -577,7 +577,7 @@ function PalettePanel({
         })}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-[#433B5A]">
+      <div className="mt-3 flex flex-wrap gap-3 text-[0.7rem] text-[#433B5A]">
         <span className="flex items-center gap-1">
           <span className="h-2.5 w-2.5 rounded bg-aqua-deep" /> Answered
         </span>

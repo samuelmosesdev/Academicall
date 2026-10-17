@@ -856,7 +856,7 @@ export default function CourseRepPanel() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-medium text-ink">{r.title}</span>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  className={`rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${
                     r.status === "approved"
                       ? "bg-teal-soft text-teal"
                       : r.status === "rejected"

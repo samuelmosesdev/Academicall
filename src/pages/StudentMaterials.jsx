@@ -270,7 +270,7 @@ export default function StudentMaterials() {
                 {folder.items.length} file{folder.items.length !== 1 ? "s" : ""}
               </span>
               {folder.lastSaved && (
-                <span className="text-[11px] opacity-60">
+                <span className="text-xs opacity-60">
                   {folder.lastSaved.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                 </span>
               )}

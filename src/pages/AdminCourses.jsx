@@ -256,13 +256,13 @@ function CourseRow({ c, onEdit, onDelete }) {
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-bg-elevated/60">
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <span className="shrink-0 rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-bold text-accent">
+        <span className="shrink-0 rounded bg-accent-soft px-1.5 py-0.5 text-xs font-bold text-accent">
           {c.code}
         </span>
         <p className="truncate text-sm text-text-primary">{c.title}</p>
       </div>
       <div className="flex shrink-0 items-center gap-3">
-        {c.level && <span className="text-[11px] text-text-muted">{c.level}</span>}
+        {c.level && <span className="text-xs text-text-muted">{c.level}</span>}
         <div className="flex gap-1">
           <button type="button" onClick={() => onEdit(c)} className="rounded-lg p-1.5 text-text-muted hover:bg-bg-panel hover:text-text-primary" title="Edit">
             <Pencil size={14} />

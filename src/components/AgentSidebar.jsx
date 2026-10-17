@@ -83,7 +83,7 @@ export default function AgentSidebar({ onNavigate }) {
         <p className="text-sm font-semibold text-text-primary truncate">
           {profile?.nickname || profile?.name || "Staff"}
         </p>
-        <p className="text-[11px] font-medium text-accent mt-0.5">{roleLabel}</p>
+        <p className="text-xs font-medium text-accent mt-0.5">{roleLabel}</p>
       </div>
 
       <nav className="flex-1 space-y-1">

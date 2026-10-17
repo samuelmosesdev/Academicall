@@ -141,13 +141,13 @@ export default function AdminStaffAccess() {
                   <Avatar person={p} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-text-primary">{p.name || p.email}</span>
-                    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px]">
+                    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-xs">
                       <span className="acx-chip-sm">{ROLE_LABELS[p.role] || p.role}</span>
                       {(p.staffTags || []).map((t) => <span key={t} className="acx-chip-sm is-aqua">{DUTY_LABELS[t] || t}</span>)}
                       {p.status === "suspended" && <span className="acx-chip-sm is-danger">suspended</span>}
                     </span>
                   </span>
-                  <span className="text-right text-[11px] leading-tight text-text-muted">
+                  <span className="text-right text-xs leading-tight text-text-muted">
                     {p.role === "admin" ? "Full" : `${p.capabilities.length}`}<br />{p.role === "admin" ? "access" : p.customPermissions ? "custom" : "default"}
                   </span>
                 </button>
@@ -182,7 +182,7 @@ export default function AdminStaffAccess() {
                   <tbody>
                     {staffRows.map((c) => (
                       <tr key={c.key}>
-                        <td><span className="font-medium">{c.label}</span><span className="block text-[11px] text-text-muted">{c.group}</span></td>
+                        <td><span className="font-medium">{c.label}</span><span className="block text-xs text-text-muted">{c.group}</span></td>
                         <td>●</td>
                         <td>{catalog.roleDefaults.alphaAgent?.includes(c.key) ? "●" : "–"}</td>
                         <td>{catalog.roleDefaults.agent?.includes(c.key) ? "●" : "–"}</td>

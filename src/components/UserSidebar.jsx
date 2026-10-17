@@ -126,7 +126,7 @@ export default function UserSidebar({ onNavigate }) {
               <Icon size={17} strokeWidth={1.7} />
               <span className="flex-1 text-left">{label}</span>
               {showBadge && (
-                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-lemon px-1.5 text-[10px] font-semibold text-midnight">
+                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-lemon px-1.5 text-[0.7rem] font-semibold text-midnight">
                   {badgeCount > 9 ? "9+" : badgeCount}
                 </span>
               )}

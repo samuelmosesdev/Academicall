@@ -552,13 +552,13 @@ export default function StudentPractice() {
                 {set.topics.slice(0, 4).map((t) => (
                   <span
                     key={t}
-                    className="rounded-full border border-border-light bg-surface-light px-2 py-0.5 text-[11px] text-ink-muted"
+                    className="rounded-full border border-border-light bg-surface-light px-2 py-0.5 text-xs text-ink-muted"
                   >
                     {t}
                   </span>
                 ))}
                 {set.topics.length > 4 && (
-                  <span className="rounded-full border border-border-light bg-surface-light px-2 py-0.5 text-[11px] text-ink-muted">
+                  <span className="rounded-full border border-border-light bg-surface-light px-2 py-0.5 text-xs text-ink-muted">
                     +{set.topics.length - 4}
                   </span>
                 )}

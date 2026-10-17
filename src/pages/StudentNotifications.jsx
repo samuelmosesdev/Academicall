@@ -4,6 +4,7 @@ import { Bell, Megaphone, CheckCheck } from "lucide-react";
 import { useStudentNotifications } from "../hooks/useStudentNotifications";
 import { useAuth } from "../context/AuthContext";
 import { notificationsApi } from "../lib/api";
+import { SkeletonCards } from "../components/ui/Skeleton";
 
 function timeAgo(ts) {
   if (!ts) return "";
@@ -87,7 +88,7 @@ export default function StudentNotifications() {
 
       {/* Loading */}
       {loading && (
-        <p className="text-sm text-ink-muted">Loading notifications…</p>
+        <SkeletonCards count={4} label="Loading notifications…" />
       )}
 
       {/* Empty state */}
@@ -129,7 +130,7 @@ export default function StudentNotifications() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 {!item._read && (
-                  <span className="rounded bg-teal/15 px-1.5 py-0.5 text-[10px] font-bold text-teal">
+                  <span className="rounded bg-teal/15 px-1.5 py-0.5 text-[0.7rem] font-bold text-teal">
                     NEW
                   </span>
                 )}

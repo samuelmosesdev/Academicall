@@ -183,26 +183,26 @@ export default function UserAvatar({
 
             {designation && (
               <span
-                className={`mt-2 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${badgeClass}`}
+                className={`mt-2 rounded-full border px-2.5 py-0.5 text-[0.7rem] font-bold ${badgeClass}`}
               >
                 {designation === "Pro" ? "✦ Pro" : designation}
               </span>
             )}
 
             {canShowProgram && academicProgram && (
-              <p className="mt-2 text-[11px] font-medium text-ink-muted">
+              <p className="mt-2 text-xs font-medium text-ink-muted">
                 <span className="text-ink-muted/80">Programme · </span>
                 {academicProgram}
               </p>
             )}
             {profile?.faculty && forceShowDetails && (
-              <p className="text-[11px] text-ink-muted">{profile.faculty}</p>
+              <p className="text-xs text-ink-muted">{profile.faculty}</p>
             )}
             {profile?.level && forceShowDetails && (
-              <p className="text-[11px] text-ink-muted">{profile.level}</p>
+              <p className="text-xs text-ink-muted">{profile.level}</p>
             )}
             {canShowPhone && phoneVal && (
-              <p className="mt-1 text-[11px] font-medium text-ink">{phoneVal}</p>
+              <p className="mt-1 text-xs font-medium text-ink">{phoneVal}</p>
             )}
           </div>
         </div>
@@ -238,11 +238,11 @@ export function NameWithBadge({
     <span className={`inline-flex flex-wrap items-center gap-1.5 ${className}`}>
       <span className="font-bold">{label}</span>
       {nickname && name && nickname !== name && (
-        <span className="text-[11px] font-normal text-ink-muted">{name}</span>
+        <span className="text-xs font-normal text-ink-muted">{name}</span>
       )}
       {designation && (
         <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${badgeClass}`}
+          className={`rounded-full px-1.5 py-0.5 text-[0.7rem] font-bold ${badgeClass}`}
         >
           {designation === "Pro" ? "✦ Pro" : designation}
         </span>

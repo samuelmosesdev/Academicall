@@ -44,11 +44,11 @@ export default function AudiencePicker({ value, onChange }) {
       {open && (
         <div className="mt-4 space-y-4">
           <div>
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">Who</p>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Who</p>
             <div className="flex flex-wrap gap-2">{GROUPS.map(([k, l]) => <button key={k} type="button" onClick={() => toggle("groups", k)} className={`news-cat ${(a.groups || []).includes(k) ? "on" : ""}`}>{l}</button>)}</div>
           </div>
           <div>
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">Institutions <span className="normal-case tracking-normal">(students there, and aspirants who chose them)</span></p>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Institutions <span className="normal-case tracking-normal">(students there, and aspirants who chose them)</span></p>
             <div className="flex flex-wrap gap-2">
               {(a.institutionIds || []).map((id) => <span key={id} className="inline-flex items-center gap-1 rounded-full bg-violet-soft px-2.5 py-1 text-xs font-medium text-violet">{names[id] || id}<button type="button" onClick={() => toggle("institutionIds", id)} aria-label="Remove"><X size={11} /></button></span>)}
             </div>
@@ -62,7 +62,7 @@ export default function AudiencePicker({ value, onChange }) {
             )}
           </div>
           <div>
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">Levels</p>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Levels</p>
             <div className="flex flex-wrap gap-2">{LEVELS.map((l) => <button key={l} type="button" onClick={() => toggle("levels", l)} className={`news-cat ${(a.levels || []).includes(l) ? "on" : ""}`}>{l}</button>)}</div>
           </div>
           <p className="rounded-xl bg-paper px-3 py-2 text-xs text-ink-muted">Aimed at: <b className="text-ink">{audienceSummary(value)}</b></p>

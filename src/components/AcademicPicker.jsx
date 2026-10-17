@@ -37,7 +37,7 @@ function InstitutionCombobox({ value, onChange }) {
         <span className={`min-w-0 flex-1 truncate ${value ? "" : "text-text-muted"}`}>
           {value ? institutionLabel(value) : "Search for your university, polytechnic or college"}
         </span>
-        {value?.abbreviation && <span className="shrink-0 rounded bg-bg-panel px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">{value.abbreviation}</span>}
+        {value?.abbreviation && <span className="shrink-0 rounded bg-bg-panel px-1.5 py-0.5 text-[0.7rem] font-semibold text-text-muted">{value.abbreviation}</span>}
         <ChevronDown size={15} className="shrink-0 text-text-muted" />
       </button>
       {open && (
@@ -69,7 +69,7 @@ function InstitutionCombobox({ value, onChange }) {
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm text-text-primary">{institutionLabel(inst)}</span>
-                    <span className="block text-[11px] text-text-muted">
+                    <span className="block text-xs text-text-muted">
                       {[inst.abbreviation, inst.type, inst.ownership, inst.state].filter(Boolean).join(" · ")}
                     </span>
                   </span>
@@ -194,7 +194,7 @@ export default function AcademicPicker({ value, onChange, required = true }) {
               {departments.map((d) => <option key={d.id} value={d.id}>{prettyName(d.name)}</option>)}
             </select>
             {derived && faculty && (
-              <p className="mt-1 flex items-start gap-1 text-[11px] leading-snug text-text-muted">
+              <p className="mt-1 flex items-start gap-1 text-xs leading-snug text-text-muted">
                 <Info size={11} className="mt-0.5 shrink-0" />
                 Your institution's official list doesn't name departments, so each department is listed under its programme.
               </p>
