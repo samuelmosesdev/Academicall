@@ -11,9 +11,11 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
   const [level, setLevel] = useState(user.level || "");
   const [phone, setPhone] = useState(user.phone || "");
 
-  const { faculties, departmentsFor, programsFor } = useAcademicCatalog();
+  const { faculties, departmentsFor, programsFor, loading: catalogLoading, error: catalogError } =
+    useAcademicCatalog(user.institutionId);
+  const levelOptions = user.level && !LEVELS.includes(user.level) ? [...LEVELS, user.level] : LEVELS;
   const departmentOptions = departmentsFor(faculty);
-  const programOptions = programsFor(department);
+  const programOptions = programsFor(department, faculty);
 
   function handleFacultyChange(value) {
     setFaculty(value);
@@ -42,7 +44,7 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-text-secondary">Faculty</label>
-        <select value={faculty} onChange={(e) => handleFacultyChange(e.target.value)} className={fieldClass}>
+        <select value={faculty} onChange={(e) => handleFacultyChange(e.target.value)} className={fieldClass} disabled={catalogLoading || Boolean(catalogError)}>
           <option value="">Select faculty</option>
           {faculties.map((f) => (
             <option key={f.name} value={f.name}>
@@ -55,7 +57,7 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
         <label className="mb-1 block text-xs font-medium text-text-secondary">Department</label>
         <select
           value={department}
-          disabled={!faculty}
+          disabled={!faculty || catalogLoading || Boolean(catalogError)}
           onChange={(e) => handleDepartmentChange(e.target.value)}
           className={`${fieldClass} disabled:opacity-60`}
         >
@@ -71,7 +73,7 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
         <label className="mb-1 block text-xs font-medium text-text-secondary">Program</label>
         <select
           value={program}
-          disabled={!department || programOptions.length === 0}
+          disabled={!department || programOptions.length === 0 || catalogLoading || Boolean(catalogError)}
           onChange={(e) => setProgram(e.target.value)}
           className={`${fieldClass} disabled:opacity-60`}
         >
@@ -87,13 +89,15 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
         <label className="mb-1 block text-xs font-medium text-text-secondary">Level</label>
         <select value={level} onChange={(e) => setLevel(e.target.value)} className={fieldClass}>
           <option value="">Select level</option>
-          {LEVELS.map((lvl) => (
+          {levelOptions.map((lvl) => (
             <option key={lvl} value={lvl}>
               {lvl}
             </option>
           ))}
         </select>
       </div>
+      {catalogLoading && <p className="text-xs text-text-muted">Loading institution choices…</p>}
+      {catalogError && <p className="text-xs text-status-danger">{catalogError}</p>}
       <div>
         <label className="mb-1 block text-xs font-medium text-text-secondary">Phone</label>
         <input value={phone} onChange={(e) => setPhone(e.target.value)} className={fieldClass} />

@@ -10,7 +10,7 @@ import {
 } from "../lib/roles";
 import { logActivity } from "../lib/activityLog";
 import { usersApi } from "../lib/api";
-import { FACULTIES, departmentsFor, LEVELS } from "../data/facultyData";
+import { LEVELS } from "../data/facultyData";
 import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
 
 /**
@@ -18,7 +18,8 @@ import { useAcademicCatalog } from "../hooks/useAcademicCatalog";
  */
 export default function AssignRoleControl({ targetUser }) {
   const { user, profile } = useAuth();
-  const { programsFor } = useAcademicCatalog();
+  const { faculties, departmentsFor, programsFor, loading: catalogLoading, error: catalogError } =
+    useAcademicCatalog(targetUser.institutionId);
   const [role, setRole] = useState(targetUser.role || "user");
   const [codes, setCodes] = useState(
     (targetUser.courseRepMeta?.courseCodes || []).join(", ")
@@ -43,7 +44,8 @@ export default function AssignRoleControl({ targetUser }) {
 
   const options = isAdmin(profile) ? ADMIN_ASSIGNABLE : ALPHA_ASSIGNABLE;
   const depts = departmentsFor(repFaculty);
-  const programs = programsFor(repDepartment);
+  const programs = programsFor(repDepartment, repFaculty);
+  const levels = targetUser.level && !LEVELS.includes(targetUser.level) ? [...LEVELS, targetUser.level] : LEVELS;
 
   async function save() {
     if (!options.includes(role)) return;
@@ -53,7 +55,7 @@ export default function AssignRoleControl({ targetUser }) {
         setErr("Choose a program listed under the required parent department.");
         return;
       }
-      if (!repLevel.trim() || !LEVELS.includes(repLevel)) {
+      if (!repLevel.trim() || !levels.includes(repLevel)) {
         setErr("Level is required. Course Rep is one level per program.");
         return;
       }
@@ -142,7 +144,7 @@ export default function AssignRoleControl({ targetUser }) {
             className="rounded border border-border-subtle bg-bg-panel px-2 py-1 text-xs"
           >
             <option value="">Faculty</option>
-            {FACULTIES.map((f) => (
+            {faculties.map((f) => (
               <option key={f.name} value={f.name}>
                 {f.name}
               </option>
@@ -154,7 +156,7 @@ export default function AssignRoleControl({ targetUser }) {
               setRepDepartment(e.target.value);
               setRepProgram("");
             }}
-            disabled={!repFaculty}
+            disabled={!repFaculty || catalogLoading || Boolean(catalogError)}
             className="rounded border border-border-subtle bg-bg-panel px-2 py-1 text-xs"
           >
             <option value="">Department *</option>
@@ -167,7 +169,7 @@ export default function AssignRoleControl({ targetUser }) {
           <select
             value={repProgram}
             onChange={(e) => setRepProgram(e.target.value)}
-            disabled={!repDepartment || programs.length === 0}
+            disabled={!repDepartment || programs.length === 0 || catalogLoading || Boolean(catalogError)}
             className="rounded border border-border-subtle bg-bg-panel px-2 py-1 text-xs"
           >
             <option value="">{programs.length ? "Program *" : "No programs configured"}</option>
@@ -183,7 +185,7 @@ export default function AssignRoleControl({ targetUser }) {
             className="rounded border border-border-subtle bg-bg-panel px-2 py-1 text-xs"
           >
             <option value="">Level * (one level only)</option>
-            {LEVELS.map((lvl) => (
+            {levels.map((lvl) => (
               <option key={lvl} value={lvl}>
                 {lvl}
               </option>
@@ -198,6 +200,8 @@ export default function AssignRoleControl({ targetUser }) {
           <p className="text-[0.7rem] text-text-muted">
             Course Rep covers <strong>one program + one level</strong> within its parent department.
           </p>
+          {catalogLoading && <p className="text-[0.7rem] text-text-muted">Loading institution choices…</p>}
+          {catalogError && <p className="text-[0.7rem] text-status-danger">{catalogError}</p>}
         </>
       )}
 

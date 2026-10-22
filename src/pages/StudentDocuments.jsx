@@ -19,7 +19,7 @@ export default function StudentDocuments() {
   const { profile } = useAuth();
   const { documents, loading } = useStudentDocuments();
   const { courses } = useCbtData();
-  const { departmentsFor } = useAcademicCatalog();
+  const { departmentsFor } = useAcademicCatalog(profile?.institutionId);
 
   const [search, setSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -29,7 +29,7 @@ export default function StudentDocuments() {
   const [level, setLevel] = useState(profile?.level || "");
   const [quizMaterial, setQuizMaterial] = useState(null);
 
-  const departments = useMemo(() => departmentsFor(faculty), [faculty]);
+  const departments = useMemo(() => departmentsFor(faculty), [faculty, departmentsFor]);
 
   const courseOptions = useMemo(() => {
     let list = courses;

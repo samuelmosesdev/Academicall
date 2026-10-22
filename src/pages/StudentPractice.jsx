@@ -39,7 +39,7 @@ const fieldClass =
 export default function StudentPractice() {
   const { user, profile, authMode, refreshProfile } = useAuth();
   const { practiceSets, questions, loading } = useCbtData({ withQuestions: true });
-  const { programsForFaculty } = useAcademicCatalog();
+  const { programsForFaculty } = useAcademicCatalog(profile?.institutionId);
 
   // Filters
   const [search, setSearch] = useState("");
