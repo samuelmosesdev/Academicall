@@ -1,78 +1,90 @@
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+import { api } from "./api";
+
 const UPLOAD_TIMEOUT_MS = 90_000;
 
-function attachTimeout(xhr, reject) {
-  const t = setTimeout(() => {
-    try { xhr.abort(); } catch { /* ignore */ }
-    reject(new Error("Upload timed out. Check your connection and try again."));
-  }, UPLOAD_TIMEOUT_MS);
-  const clear = () => clearTimeout(t);
-  xhr.addEventListener("loadend", clear);
-  xhr.addEventListener("error", clear);
-  xhr.addEventListener("abort", clear);
-}
-
-export async function uploadDocumentToCloudinary(file, onProgress) {
-  if (!CLOUD_NAME || !UPLOAD_PRESET) {
-    throw new Error("Cloudinary isn't configured yet — check your .env.local.");
+/**
+ * Compatibility helper for existing Cloudinary-named call sites. New files go
+ * through the authenticated API for a short-lived R2 upload URL.
+ */
+export async function uploadFileToR2(file, kind, onProgress, signal) {
+  if (!file) throw new Error("Choose a file to upload.");
+  if (signal?.aborted) {
+    throw Object.assign(new Error("Upload cancelled"), { cancelled: true });
   }
 
+  const upload = await api("/storage/uploads/presign", {
+    method: "POST",
+    body: {
+      name: file.name,
+      contentType: file.type || "",
+      size: file.size,
+      kind,
+    },
+    signal,
+  });
+
   return new Promise((resolve, reject) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", UPLOAD_PRESET);
-
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`);
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    let settled = false;
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abortUpload);
+      callback(value);
     };
+    const abortUpload = () => {
+      xhr.abort();
+      finish(reject, Object.assign(new Error("Upload cancelled"), { cancelled: true }));
+    };
+    const timeout = setTimeout(() => {
+      xhr.abort();
+      finish(reject, new Error("Upload timed out. Check your connection and try again."));
+    }, UPLOAD_TIMEOUT_MS);
 
+    xhr.open("PUT", upload.uploadUrl);
+    xhr.setRequestHeader("Content-Type", upload.headers["Content-Type"]);
+    xhr.setRequestHeader("Content-Disposition", upload.headers["Content-Disposition"]);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
-      else reject(new Error("Upload failed. Please try again."));
+      if (xhr.status >= 200 && xhr.status < 300) {
+        finish(resolve, {
+          secure_url: upload.publicUrl,
+          url: upload.publicUrl,
+          public_id: upload.key,
+          bytes: file.size,
+          format: file.name.split(".").pop()?.toLowerCase() || "",
+          resource_type: kind === "document" ? "raw" : kind,
+        });
+      } else {
+        finish(reject, new Error("Upload failed. Please try again."));
+      }
     };
-    xhr.onerror = () => reject(new Error("Network error during upload."));
-    attachTimeout(xhr, reject);
-    xhr.send(formData);
+    xhr.onerror = () => finish(reject, new Error("Network error during upload."));
+    xhr.onabort = () => finish(reject, Object.assign(new Error("Upload cancelled"), { cancelled: true }));
+    signal?.addEventListener("abort", abortUpload, { once: true });
+    if (signal?.aborted) abortUpload();
+    else xhr.send(file);
   });
 }
 
-// Same as uploadDocumentToCloudinary but for images (question illustrations,
-// diagrams, etc). Uses Cloudinary's image endpoint so it gets thumbnails /
-// transformations if we need them later.
-export async function uploadImageToCloudinary(file, onProgress) {
-  if (!CLOUD_NAME || !UPLOAD_PRESET) {
-    throw new Error("Cloudinary isn't configured yet — check your .env.local.");
-  }
-
-  return new Promise((resolve, reject) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", UPLOAD_PRESET);
-
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
-      else reject(new Error("Image upload failed. Please try again."));
-    };
-    xhr.onerror = () => reject(new Error("Network error during upload."));
-    attachTimeout(xhr, reject);
-    xhr.send(formData);
-  });
+export function uploadDocumentToCloudinary(file, onProgress) {
+  const image = file?.type?.startsWith("image/") || /\.(gif|jpe?g|png|webp)$/i.test(file?.name || "");
+  return uploadFileToR2(file, image ? "image" : "document", onProgress);
 }
 
-// Turns a normal Cloudinary delivery URL into one that forces a browser
-// download (Content-Disposition: attachment) instead of navigating to it.
-// Works for both /raw/upload/ and /image/upload/ style URLs.
+export function uploadImageToCloudinary(file, onProgress) {
+  return uploadFileToR2(file, "image", onProgress);
+}
+
+export function uploadVoiceToCloudinary(file, onProgress) {
+  return uploadFileToR2(file, "audio", onProgress);
+}
+
+// R2 stores downloads with Content-Disposition set at upload time. This helper
+// remains for older Cloudinary URLs already stored by the app.
 export function withDownloadFlag(url, filename) {
   if (!url) return url;
   const marker = "/upload/";
@@ -80,26 +92,4 @@ export function withDownloadFlag(url, filename) {
   if (idx === -1) return url;
   const flag = filename ? `fl_attachment:${encodeURIComponent(filename.replace(/\.[^/.]+$/, ""))}` : "fl_attachment";
   return `${url.slice(0, idx + marker.length)}${flag}/${url.slice(idx + marker.length)}`;
-}
-export async function uploadVoiceToCloudinary(file, onProgress) {
-  if (!CLOUD_NAME || !UPLOAD_PRESET) {
-    throw new Error("Cloudinary isn't configured yet — check your .env.local.");
-  }
-  return new Promise((resolve, reject) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", UPLOAD_PRESET);
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
-      else reject(new Error("Voice note upload failed. Please try again."));
-    };
-    xhr.onerror = () => reject(new Error("Network error during voice upload."));
-    attachTimeout(xhr, reject);
-    xhr.send(formData);
-  });
 }

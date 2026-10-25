@@ -1,9 +1,8 @@
 /**
  * Uploads for study-group messages: client-side checks (mirrored on the server),
- * photo compression, video length check, and Cloudinary upload with progress + cancel.
+ * photo compression, video length check, and R2 upload with progress + cancel.
  */
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+import { uploadFileToR2 } from "./cloudinaryUpload";
 
 export const GROUP_LIMITS = {
   image: 10 * 1024 * 1024,
@@ -113,31 +112,9 @@ export async function prepareFile(file, forcedKind) {
   return { file: prepared, kind, ...meta };
 }
 
-/** Upload to Cloudinary with progress and cancel. Resolves the Cloudinary response. */
+/** Upload to R2 with progress and cancel; the API returns a short-lived PUT URL. */
 export function uploadToCloudinary(file, kind, { onProgress, signal } = {}) {
-  if (!CLOUD_NAME || !UPLOAD_PRESET) return Promise.reject(new Error("File sharing isn't configured yet."));
-  const resource = kind === "image" ? "image" : kind === "video" ? "video" : "raw";
-  return new Promise((resolve, reject) => {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("upload_preset", UPLOAD_PRESET);
-    form.append("folder", "academicall/study-groups");
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resource}/upload`);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
-      else reject(new Error("Upload failed. Tap retry."));
-    };
-    xhr.onerror = () => reject(new Error("Network error during upload. Tap retry."));
-    xhr.onabort = () => reject(Object.assign(new Error("Upload cancelled"), { cancelled: true }));
-    xhr.timeout = 180_000;
-    xhr.ontimeout = () => reject(new Error("Upload timed out. Tap retry."));
-    signal?.addEventListener("abort", () => xhr.abort());
-    xhr.send(form);
-  });
+  return uploadFileToR2(file, kind, onProgress, signal);
 }
 
 /** Cloudinary poster frame for a video URL. */
