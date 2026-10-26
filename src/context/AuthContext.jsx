@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { authApi, usersApi } from "../lib/api";
+import { authApi, twoFactorApi, usersApi } from "../lib/api";
 import { registerFcmToken } from "../lib/fcm";
 import { startRealtime, stopRealtime } from "../lib/realtime";
 import { setGroupsAccount } from "../hooks/useGroups";
@@ -18,6 +18,9 @@ export function AuthProvider({ children }) {
   const fcmRegisteredRef = useRef(false);
 
   const applySession = useCallback((data) => {
+    if (typeof data?.token !== "string" || typeof data.user?.id !== "string") {
+      throw new Error("Sign-in returned an incomplete account session. Please try again.");
+    }
     const nextUser = { ...data.user, uid: data.user.id };
     localStorage.setItem("academicall_token", data.token);
     setUser(nextUser);
@@ -31,8 +34,14 @@ export function AuthProvider({ children }) {
   // ---------- API Auth (email/password) ----------
   const loginWithApi = async (identifier, password) => {
     const data = await authApi.login({ identifier, password });
+    if (data.twoFactorRequired) return data;
     return applySession(data);
   };
+
+  const completeTwoFactor = useCallback(async (challengeId, code) => {
+    const data = await twoFactorApi.verify(challengeId, code);
+    return applySession(data);
+  }, [applySession]);
 
   const registerWithApi = async (email, password, name, accountType = "student") => {
     const data = await authApi.register({ email, password, name, accountType });
@@ -49,6 +58,7 @@ export function AuthProvider({ children }) {
   const signInWithGoogle = useCallback(async (credential) => {
     if (!credential) throw new Error("Google did not return a sign-in credential. Please try again.");
     const data = await authApi.google(credential);
+    if (data.twoFactorRequired) return data;
     return applySession(data);
   }, [applySession]);
 
@@ -187,6 +197,7 @@ export function AuthProvider({ children }) {
     authMode,
     verificationEmailStatus,
     loginWithApi,
+    completeTwoFactor,
     registerWithApi,
     signInWithGoogle,
     completeProfile,

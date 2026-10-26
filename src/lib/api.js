@@ -59,6 +59,7 @@ export async function api(endpoint, options = {}) {
         || `Request failed with status ${res.status}`;
       const error = new Error(message);
       error.status = res.status;
+      error.data = data;
       throw error;
     }
 
@@ -85,6 +86,11 @@ export const authApi = {
   me: () => api("/auth/me"),
   sendVerification: () => api("/auth/verification/send", { method: "POST" }),
   verifyEmail: (code) => api("/auth/verification/verify", { method: "POST", body: { code } }),
+};
+
+export const twoFactorApi = {
+  verify: (challengeId, code) => api("/auth/2fa/verify", { method: "POST", body: { challengeId, code } }),
+  resend: (challengeId) => api("/auth/2fa/resend", { method: "POST", body: { challengeId } }),
 };
 
 // Other resources (ready for later)

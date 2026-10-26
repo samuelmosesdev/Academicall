@@ -5,12 +5,17 @@ import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { friendlyAuthError } from "../lib/authErrors";
 import { renderGoogleSignInButton } from "../lib/googleAuth";
+import { twoFactorApi } from "../lib/api";
 
 export default function Login() {
-  const { loginWithApi, signInWithGoogle } = useAuth();
+  const { loginWithApi, signInWithGoogle, completeTwoFactor } = useAuth();
+  const [challenge, setChallenge] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname;
+  const returnLocation = location.state?.from;
+  const from = returnLocation
+    ? `${returnLocation.pathname || ""}${returnLocation.search || ""}${returnLocation.hash || ""}`
+    : undefined;
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -30,10 +35,11 @@ export default function Login() {
       setError("");
       setBusy(true);
       try {
-        await signInWithGoogle(credential);
+        const r = await signInWithGoogle(credential);
+        if (r?.twoFactorRequired) { setChallenge(r); return; }
         navigate(from && from !== "/login" ? from : "/login-redirect", { replace: true });
       } catch (err) {
-        setError(err.message || friendlyAuthError(err.code) || "Google sign-in failed");
+        setError(err.message || friendlyAuthError(err.code) || "Google sign-in didn't go through.");
       } finally {
         googleBusyRef.current = false;
         if (active) setBusy(false);
@@ -44,7 +50,7 @@ export default function Login() {
         else dispose();
       })
       .catch((err) => {
-        if (active) setError(err.message || "Google sign-in is unavailable. Please try again.");
+        if (active) setError(err?.message || "Google sign-in is unavailable.");
       });
 
     return () => {
@@ -58,13 +64,28 @@ export default function Login() {
     setError("");
     setBusy(true);
     try {
-      await loginWithApi(identifier.trim(), password);
+      const r = await loginWithApi(identifier.trim(), password);
+      if (r?.twoFactorRequired) { setChallenge(r); return; }
       navigate(from && from !== "/login" ? from : "/login-redirect", { replace: true });
     } catch (err) {
-      setError(err.message || friendlyAuthError(err.code) || "Login failed");
+      setError(err.message || friendlyAuthError(err.code) || "Sign-in didn't go through.");
     } finally {
       setBusy(false);
     }
+  }
+
+  if (challenge) {
+    return (
+      <TwoFactorStep
+        challenge={challenge}
+        onBack={() => { setChallenge(null); setPassword(""); }}
+        onRenew={setChallenge}
+        onSubmit={async (code) => {
+          await completeTwoFactor(challenge.challengeId, code);
+          navigate(from && from !== "/login" ? from : "/login-redirect", { replace: true });
+        }}
+      />
+    );
   }
 
   return (
@@ -95,6 +116,83 @@ export default function Login() {
         </Field>
         <PrimaryButton type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</PrimaryButton>
       </form>
+    </AuthShell>
+  );
+}
+
+/** Second step of sign-in: a code from email or an authenticator app (or a backup code). */
+function TwoFactorStep({ challenge, onSubmit, onBack, onRenew }) {
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [useBackup, setUseBackup] = useState(false);
+  const [resent, setResent] = useState(false);
+  const isEmail = challenge.method === "email";
+
+  async function submit(e) {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      await onSubmit(code.trim());
+    } catch (err) {
+      if (err.data?.code === "challenge_expired" || err.data?.code === "challenge_locked") {
+        setError(err.message || "This sign-in code expired. Sign in again.");
+        setTimeout(onBack, 2500);
+      } else setError(err.message || "That code isn't right.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resend() {
+    setError("");
+    try {
+      const r = await twoFactorApi.resend(challenge.challengeId);
+      onRenew(r);
+      setResent(true);
+    } catch (err) {
+      setError(err.message || "Could not send a new code.");
+    }
+  }
+
+  return (
+    <AuthShell
+      scene="login"
+      title={<>One more <span className="serif-i text-violet">step.</span></>}
+      subtitle={useBackup
+        ? "Enter one of the backup codes you saved when you set up two-step sign-in."
+        : isEmail
+          ? `We sent a 6-digit code to ${challenge.emailHint}. It expires in 10 minutes.`
+          : "Open your authenticator app and enter the 6-digit code for Academicall."}
+      footer={<button type="button" onClick={onBack} className="font-medium text-midnight underline decoration-lemon decoration-[3px] underline-offset-4 hover:decoration-violet">Use a different account</button>}
+    >
+      <AuthError>{error}</AuthError>
+      <form onSubmit={submit} className="space-y-5">
+        <Field label={useBackup ? "Backup code" : "Code"}>
+          <input
+            autoFocus
+            inputMode={useBackup ? "text" : "numeric"}
+            autoComplete="one-time-code"
+            value={code}
+            onChange={(e) => setCode(useBackup ? e.target.value.slice(0, 9) : e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder={useBackup ? "abcd-efgh" : "123456"}
+            className="field num tracking-[0.3em]"
+            required
+          />
+        </Field>
+        <PrimaryButton type="submit" disabled={busy || (useBackup ? code.replace(/-/g, "").length < 8 : code.length < 6)}>{busy ? "Checking?" : "Sign in"}</PrimaryButton>
+      </form>
+      <div className="mt-4 flex flex-wrap justify-between gap-2 text-[0.85rem]">
+        {isEmail && !useBackup ? (
+          <button type="button" onClick={resend} className="font-medium text-violet hover:underline">{resent ? "Sent again" : "Send a new code"}</button>
+        ) : <span />}
+        {!isEmail && (
+          <button type="button" onClick={() => { setUseBackup((v) => !v); setCode(""); }} className="font-medium text-violet hover:underline">
+            {useBackup ? "Use the authenticator app" : "Use a backup code"}
+          </button>
+        )}
+      </div>
     </AuthShell>
   );
 }
