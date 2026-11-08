@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
+import { useAuth } from "../context/AuthContext";
 
 /** Human-readable designation from role + plan */
 export function roleBadge(role, plan, subscription) {
@@ -42,6 +44,44 @@ export function isProUser(profile) {
   );
 }
 
+const STAFF_ROLES = ["admin", "alphaAgent", "agent"];
+
+/**
+ * Keep a popover inside the viewport. Prefers below the trigger, flips above
+ * when there isn't room, and clamps left/right with a 16px gutter.
+ */
+function placePopover(trigger, pop) {
+  const gutter = 16;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const r = trigger.getBoundingClientRect();
+  const w = Math.min(pop.offsetWidth || 240, vw - gutter * 2);
+  const h = pop.offsetHeight || 0;
+  let left = r.left + r.width / 2 - w / 2;
+  left = Math.max(gutter, Math.min(left, vw - w - gutter));
+  const below = vh - r.bottom - gutter;
+  const above = r.top - gutter;
+  let top;
+  if (h + 8 <= below || below >= above) top = r.bottom + 8;
+  else top = Math.max(gutter, r.top - 8 - h);
+  const maxHeight = top > r.top ? vh - top - gutter : r.top - 8 - gutter;
+  return { left, top, maxHeight: Math.max(160, maxHeight) };
+}
+
+function useIsNarrow(query = "(max-width: 639px)") {
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query).matches : false
+  );
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const mq = window.matchMedia(query);
+    const on = () => setNarrow(mq.matches);
+    mq.addEventListener?.("change", on);
+    return () => mq.removeEventListener?.("change", on);
+  }, [query]);
+  return narrow;
+}
+
 export default function UserAvatar({
   profile,
   name,
@@ -60,12 +100,27 @@ export default function UserAvatar({
   forceShowDetails = false,
 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
   const ref = useRef(null);
+  const btnRef = useRef(null);
+  const popRef = useRef(null);
+  const narrow = useIsNarrow();
+  const { user: viewer, profile: viewerProfile } = useAuth() || {};
+
+  const viewerId = viewer?.uid || viewer?.id || viewerProfile?.uid || viewerProfile?.id || null;
+  const subjectId = profile?.uid || profile?.id || null;
+  const isSelf = Boolean(
+    profile && ((viewerId && subjectId && viewerId === subjectId) ||
+      (viewerProfile?.email && profile.email && viewerProfile.email === profile.email))
+  );
+  const viewerIsStaff = STAFF_ROLES.includes(viewerProfile?.role || viewer?.role);
+  // E-mail stays private between peers: only you, or staff, see it.
+  const canSeeEmail = isSelf || viewerIsStaff;
 
   const displayNick =
     nickname || profile?.nickname || profile?.nickName || null;
   const displayName =
-    name || profile?.name || profile?.email || "Student";
+    name || profile?.name || (canSeeEmail ? profile?.email : null) || "Student";
   const photo =
     photoURL || profile?.photoUrl || profile?.avatarUrl || profile?.photoURL || null;
   const academicProgram = program ?? profile?.program ?? null;
@@ -98,12 +153,37 @@ export default function UserAvatar({
     .toUpperCase();
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     const close = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current?.contains(e.target) || popRef.current?.contains(e.target)) return;
+      setOpen(false);
     };
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
     document.addEventListener("pointerdown", close);
-    return () => document.removeEventListener("pointerdown", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // Desktop popover: position against the avatar and keep it on screen.
+  useLayoutEffect(() => {
+    if (!open || narrow) return undefined;
+    const update = () => {
+      if (btnRef.current && popRef.current) setPos(placePopover(btnRef.current, popRef.current));
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, narrow]);
+
+  useEffect(() => {
+    if (!open) setPos(null);
   }, [open]);
 
   const px = typeof size === "number" ? `${size}px` : size;
@@ -120,11 +200,106 @@ export default function UserAvatar({
             ? "bg-violet-soft text-violet border-violet/25 dark:bg-violet/20"
             : "bg-teal-soft text-teal border-teal/30";
 
+  const card = (
+    <div className="flex flex-col items-center text-center">
+      <div
+        className="overflow-hidden rounded-full ring-2 ring-teal/30"
+        style={{ width: 72, height: 72 }}
+      >
+        {photo ? (
+          <img src={photo} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center bg-teal-soft text-sm font-bold text-teal">
+            {initials}
+          </span>
+        )}
+      </div>
+
+      {/* Nickname primary (bold); legal name secondary */}
+      <p className="mt-2.5 max-w-full break-words text-base font-bold leading-tight text-ink">
+        {displayNick || displayName}
+      </p>
+      {displayNick && displayName !== displayNick && (
+        <p className="mt-0.5 max-w-full break-words text-[12px] font-normal text-ink-muted">{displayName}</p>
+      )}
+      {canSeeEmail && profile?.email && profile.email !== displayName && (
+        <p className="mt-0.5 max-w-full break-all text-[12px] font-normal text-ink-muted">{profile.email}</p>
+      )}
+
+      {designation && (
+        <span className={`mt-2 rounded-full border px-2.5 py-0.5 text-[0.7rem] font-bold ${badgeClass}`}>
+          {designation === "Pro" ? "✦ Pro" : designation}
+        </span>
+      )}
+
+      {canShowProgram && academicProgram && (
+        <p className="mt-2 max-w-full break-words text-xs font-medium text-ink-muted">
+          <span className="text-ink-muted/80">Programme · </span>
+          {academicProgram}
+        </p>
+      )}
+      {profile?.faculty && forceShowDetails && (
+        <p className="text-xs text-ink-muted">{profile.faculty}</p>
+      )}
+      {profile?.level && forceShowDetails && (
+        <p className="text-xs text-ink-muted">{profile.level}</p>
+      )}
+      {canShowPhone && phoneVal && (
+        <p className="mt-1 text-xs font-medium text-ink">{phoneVal}</p>
+      )}
+    </div>
+  );
+
+  let layer = null;
+  if (open && typeof document !== "undefined") {
+    layer = narrow
+      ? createPortal(
+          <div className="fixed inset-0 z-[90] flex items-end" role="dialog" aria-modal="true" aria-label={displayNick || displayName}>
+            <button
+              type="button"
+              aria-label="Close"
+              className="absolute inset-0 bg-midnight/40"
+              onClick={() => setOpen(false)}
+            />
+            <div
+              ref={popRef}
+              className="animate-stitch-in relative w-full overflow-y-auto overscroll-contain rounded-t-3xl border-t border-border-light bg-card-light px-5 pt-3 shadow-xl"
+              style={{ maxHeight: "85dvh", paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+            >
+              <span className="mx-auto mb-4 block h-1 w-10 rounded-full bg-border-strong/60" aria-hidden="true" />
+              {card}
+            </div>
+          </div>,
+          document.body
+        )
+      : createPortal(
+          <div
+            ref={popRef}
+            role="dialog"
+            aria-label={displayNick || displayName}
+            className="animate-stitch-in fixed z-[90] w-60 overflow-y-auto overscroll-contain rounded-2xl border border-border-light bg-card-light p-3.5 shadow-xl"
+            style={{
+              left: pos?.left ?? -9999,
+              top: pos?.top ?? 0,
+              maxWidth: "calc(100vw - 2rem)",
+              maxHeight: pos?.maxHeight ?? "calc(100dvh - 2rem)",
+              visibility: pos ? "visible" : "hidden",
+            }}
+          >
+            {card}
+          </div>,
+          document.body
+        );
+  }
+
   return (
     <div ref={ref} className={`relative inline-flex ${className}`}>
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
         className="shrink-0 overflow-hidden rounded-full ring-2 ring-border-light focus:outline-none focus:ring-teal/40"
         style={{ width: px, height: px }}
         title={displayNick || displayName}
@@ -141,72 +316,7 @@ export default function UserAvatar({
           </span>
         )}
       </button>
-
-      {open && (
-        <div className="absolute left-1/2 top-full z-[80] mt-2 w-60 -translate-x-1/2 rounded-2xl border border-border-light bg-card-light p-3.5 shadow-xl animate-stitch-in">
-          <div className="flex flex-col items-center text-center">
-            <div
-              className="overflow-hidden rounded-full ring-2 ring-teal/30"
-              style={{ width: 72, height: 72 }}
-            >
-              {photo ? (
-                <img src={photo} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center bg-teal-soft text-sm font-bold text-teal">
-                  {initials}
-                </span>
-              )}
-            </div>
-
-            {/* Nickname primary (bold); legal name secondary */}
-            {displayNick ? (
-              <>
-                <p className="mt-2.5 text-base font-bold leading-tight text-ink">
-                  {displayNick}
-                </p>
-                <p className="mt-0.5 text-[12px] font-normal text-ink-muted">
-                  {displayName}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="mt-2.5 text-base font-bold leading-tight text-ink">
-                  {displayName}
-                </p>
-                {profile?.email && (
-                  <p className="mt-0.5 text-[12px] font-normal text-ink-muted">
-                    {profile.email}
-                  </p>
-                )}
-              </>
-            )}
-
-            {designation && (
-              <span
-                className={`mt-2 rounded-full border px-2.5 py-0.5 text-[0.7rem] font-bold ${badgeClass}`}
-              >
-                {designation === "Pro" ? "✦ Pro" : designation}
-              </span>
-            )}
-
-            {canShowProgram && academicProgram && (
-              <p className="mt-2 text-xs font-medium text-ink-muted">
-                <span className="text-ink-muted/80">Programme · </span>
-                {academicProgram}
-              </p>
-            )}
-            {profile?.faculty && forceShowDetails && (
-              <p className="text-xs text-ink-muted">{profile.faculty}</p>
-            )}
-            {profile?.level && forceShowDetails && (
-              <p className="text-xs text-ink-muted">{profile.level}</p>
-            )}
-            {canShowPhone && phoneVal && (
-              <p className="mt-1 text-xs font-medium text-ink">{phoneVal}</p>
-            )}
-          </div>
-        </div>
-      )}
+      {layer}
     </div>
   );
 }

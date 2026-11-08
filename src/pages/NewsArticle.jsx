@@ -3,6 +3,7 @@ import { usePageMeta } from "../hooks/usePageMeta";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, Eye, Loader2, Lock, MessageCircle, Send, Trash2 } from "lucide-react";
+import { ReportButton, useBlockedIds } from "../components/safety/SafetyActions";
 import NewsShell from "../components/news/NewsShell";
 import { Byline, Prose, StoryCard } from "../components/news/NewsBits";
 import { REACTIONS, longDate, newsApi, timeAgo } from "../lib/newsApi";
@@ -10,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { appConfirm, notify } from "../lib/dialogs";
 import { FollowButton } from "../components/news/Follow";
 import { SkeletonCards } from "../components/ui/Skeleton";
+import LinkifiedText from "../components/LinkifiedText";
 
 export default function NewsArticle() {
   const { slug } = useParams();
@@ -19,7 +21,15 @@ export default function NewsArticle() {
 
   const load = useCallback(async () => {
     setErr("");
-    try { setData(await newsApi.get(slug)); window.scrollTo(0, 0); }
+    try {
+      const first = await newsApi.get(slug, {
+        onUpdate: (fresh) => {
+          if (fresh?.post?.slug === slug) setData(fresh);
+        },
+      });
+      setData(first);
+      window.scrollTo(0, 0);
+    }
     catch (e) { setErr(e.message); }
   }, [slug]);
   useEffect(() => { load(); }, [load, user]);
@@ -43,6 +53,8 @@ export default function NewsArticle() {
   if (!data) return <NewsShell><SkeletonCards label="Loading story…" /></NewsShell>;
 
   const { post, related } = data;
+  const accessMode = data.access?.mode || "preview";
+  const signedIn = !!data.viewer?.signedIn;
   return (
     <NewsShell title={post.title}>
       <article className="mx-auto max-w-3xl">
@@ -73,12 +85,12 @@ export default function NewsArticle() {
           {(post.tags || []).slice(0, 3).map((t) => <FollowButton key={t} kind="topic" value={t} label={`#${t}`} size="sm" />)}
         </div>
 
-        {post.gated ? <SignInGate /> : (
+        {post.gated ? <SignInGate /> : signedIn ? (
           <>
             <Reactions post={post} onChange={(r) => setData((d) => ({ ...d, post: { ...d.post, ...r } }))} />
             <Comments post={post} />
           </>
-        )}
+        ) : accessMode === "soft" ? <SoftInvite /> : null}
       </article>
 
       {related?.length > 0 && (
@@ -88,6 +100,20 @@ export default function NewsArticle() {
         </section>
       )}
     </NewsShell>
+  );
+}
+
+function SoftInvite() {
+  const location = useLocation();
+  return (
+    <div className="mt-8 flex flex-wrap items-center gap-3 rounded-2xl bg-card-light px-5 py-4 ring-1 ring-border-light">
+      <p className="mr-auto text-sm text-ink">
+        <b>Enjoying this?</b>{" "}
+        <span className="text-ink-muted">Sign in to react, join the conversation and follow the stories you care about.</span>
+      </p>
+      <Link to="/login" state={{ from: location }} className="rounded-full bg-midnight px-5 py-2 text-sm font-semibold text-white dark:bg-lemon dark:text-midnight">Sign in</Link>
+      <Link to="/signup" state={{ from: location }} className="rounded-full border border-border-strong px-5 py-2 text-sm font-semibold text-ink">Create an account</Link>
+    </div>
   );
 }
 
@@ -141,6 +167,8 @@ function Reactions({ post, onChange }) {
 
 function Comments({ post }) {
   const { profile } = useAuth();
+  const user = profile;
+  const blockedIds = useBlockedIds();
   const [list, setList] = useState(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -188,7 +216,7 @@ function Comments({ post }) {
       <div className="mt-6 space-y-5">
         {!list && <Loader2 size={16} className="animate-spin text-ink-muted" />}
         {list?.length === 0 && <p className="text-sm text-ink-muted">No comments yet. Start the conversation.</p>}
-        {list?.map((c) => (
+        {list?.filter((c) => c.canDelete || !blockedIds.has(c.author?.id)).map((c) => (
           <div key={c.id} className="group flex gap-3">
             {c.author.photoUrl ? <img src={c.author.photoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
               : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-aqua-soft text-sm font-semibold text-aqua-deep">{(c.author.name || "S").slice(0, 1)}</span>}
@@ -197,9 +225,10 @@ function Comments({ post }) {
                 <span className="font-semibold text-ink">{c.author.name}</span>
                 {(c.author.newsTeam || c.author.role === "newsAgent") && <span className="rounded-full bg-lemon px-1.5 py-0.5 text-[0.7rem] font-semibold text-midnight">News team</span>}
                 <span className="text-ink-muted">{timeAgo(c.createdAt)}</span>
+                {!c.mine && c.author?.id !== profile?.id && user && <ReportButton targetType="news_comment" targetId={c.id} what="this comment" className="ml-auto" />}
                 {c.canDelete && <button type="button" onClick={() => remove(c)} className="ml-auto text-ink-muted opacity-0 transition hover:text-status-danger group-hover:opacity-100" aria-label="Delete comment"><Trash2 size={13} /></button>}
               </div>
-              <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary">{c.body}</p>
+              <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary"><LinkifiedText text={c.body} /></p>
             </div>
           </div>
         ))}

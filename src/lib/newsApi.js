@@ -17,14 +17,22 @@ const qs = (o) => {
 };
 
 export const newsApi = {
-  list: ({ category, q, before, offset, limit } = {}) => api(`/news${qs({ category, q, before, offset, limit })}`),
+  list: ({ category, q, before, offset, limit } = {}, opts) =>
+    api(`/news${qs({ category, q, before, offset, limit })}`, {
+      swr: opts?.fresh ? { ttl: 0, stale: 0 } : { ttl: 30_000, stale: 10 * 60_000, onUpdate: opts?.onUpdate },
+    }),
   suggest: (q, opts) => api(`/news/suggest${qs({ q })}`, opts),
   forYou: () => api("/news/for-you"),
   subscriptions: () => api("/news/subscriptions"),
   follow: (kind, value, label) => api("/news/subscriptions", { method: "POST", body: { kind, value, label } }),
   unfollow: (id) => api(`/news/subscriptions/${id}`, { method: "DELETE" }),
   alerts: (newsAlerts) => api("/news/subscriptions/prefs", { method: "PATCH", body: { newsAlerts } }),
-  get: (slug) => api(`/news/${encodeURIComponent(slug)}`),
+  get: (slug, opts) =>
+    api(`/news/${encodeURIComponent(slug)}`, {
+      swr: opts?.fresh ? { ttl: 0, stale: 0 } : { ttl: 60_000, stale: 10 * 60_000, onUpdate: opts?.onUpdate },
+    }),
+  accessSettings: () => api("/news/admin/access"),
+  saveAccessSettings: (body) => api("/news/admin/access", { method: "PUT", body }),
   comments: (postId) => api(`/news/${postId}/comments`),
   comment: (postId, body) => api(`/news/${postId}/comments`, { method: "POST", body: { body } }),
   deleteComment: (commentId) => api(`/news/comments/${commentId}`, { method: "DELETE" }),

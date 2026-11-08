@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import useMaterialSaves, { fileExtension, materialKey } from "../hooks/useMaterialSaves";
 import { useAuth } from "../context/AuthContext";
+import { myMaterialsApi } from "../lib/myMaterialsApi";
 import { recordDailyActivity, recordMaterialOpen } from "../lib/activity";
 import { isNativeApp } from "../lib/platform";
 import { getOfflineObjectUrl, isOfflineAvailable } from "../lib/offlineMaterials";
@@ -36,17 +37,65 @@ function viewerFor(item, offlineUrl) {
  * Folders on the left, the open material on the right, previous / next across all of them.
  */
 export default function StudentMaterialsLibrary() {
-  const { folders, saves, loading } = useMaterialSaves();
-  const { user, profile } = useAuth();
+  const { folders, loading } = useMaterialSaves();
+  const { user, profile, authMode } = useAuth();
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
   const native = isNativeApp();
+  const [uploads, setUploads] = useState([]);
+  const [uploadsLoading, setUploadsLoading] = useState(authMode === "api");
+  const [uploadsError, setUploadsError] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [openFolders, setOpenFolders] = useState(() => new Set());
   const [offlineUrl, setOfflineUrl] = useState(null);
 
+  const loadUploads = useCallback(() => {
+    if (authMode !== "api") {
+      setUploads([]);
+      setUploadsError("");
+      setUploadsLoading(false);
+      return;
+    }
+
+    let active = true;
+    setUploadsLoading(true);
+    setUploadsError("");
+    myMaterialsApi.overview()
+      .then(({ uploads: ownUploads = [] }) => {
+        if (active) setUploads(ownUploads);
+      })
+      .catch((error) => {
+        if (active) setUploadsError(error.message || "Could not load your uploaded materials.");
+      })
+      .finally(() => {
+        if (active) setUploadsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authMode]);
+
+  useEffect(() => loadUploads(), [loadUploads]);
+
+  const personalItems = useMemo(
+    () => uploads.map((item) => ({
+      ...item,
+      materialId: item.id,
+      courseCode: "MY UPLOADS",
+      courseTitle: "Your uploads",
+      savedAt: item.createdAt,
+    })),
+    [uploads]
+  );
+  const libraryFolders = useMemo(() => {
+    if (!personalItems.length) return folders;
+    return [
+      ...folders,
+      { courseCode: "MY UPLOADS", courseTitle: "Your uploads", items: personalItems, tone: "aqua" },
+    ];
+  }, [folders, personalItems]);
   // Reading order: folder by folder, so "next" walks through every material.
-  const ordered = useMemo(() => folders.flatMap((f) => f.items), [folders]);
+  const ordered = useMemo(() => libraryFolders.flatMap((f) => f.items), [libraryFolders]);
   const currentKey = search.get("m");
   const index = Math.max(0, ordered.findIndex((i) => materialKey(i) === currentKey));
   const current = ordered[index];
@@ -110,7 +159,7 @@ export default function StudentMaterialsLibrary() {
     });
   }
 
-  if (loading) {
+  if (loading || uploadsLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-ink-muted">
         <Loader2 size={16} className="animate-spin" /> Opening the library…
@@ -118,13 +167,19 @@ export default function StudentMaterialsLibrary() {
     );
   }
 
-  if (!saves.length) {
+  if (!ordered.length) {
     return (
       <div className="rounded-3xl border border-dashed border-border-strong bg-card-light px-6 py-16 text-center">
+        {uploadsError && (
+          <p role="alert" className="mb-4 text-sm text-red-600">
+            {uploadsError}{" "}
+            <button type="button" className="font-semibold underline" onClick={loadUploads}>Try again</button>
+          </p>
+        )}
         <p className="font-display text-xl text-ink">Nothing to read yet</p>
-        <p className="mt-2 text-sm text-ink-muted">Save materials from your Department feed and they all appear here.</p>
+        <p className="mt-2 text-sm text-ink-muted">Save materials from your Department feed or upload a file to your library.</p>
         <Link to="/dashboard/materials" className="btn-primary mt-6 inline-flex px-5 py-2.5 text-sm">
-          Back to Materials
+          Open My Library
         </Link>
       </div>
     );
@@ -139,9 +194,9 @@ export default function StudentMaterialsLibrary() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border-light px-4 py-3">
         <div>
-          <p className="eyebrow text-ink-muted">All materials</p>
+          <p className="eyebrow text-ink-muted">All items</p>
           <p className="text-sm font-semibold text-ink">
-            {folders.length} folders · {ordered.length} files
+            {libraryFolders.length} folders · {ordered.length} files
           </p>
         </div>
         <button
@@ -154,7 +209,7 @@ export default function StudentMaterialsLibrary() {
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
-        {folders.map((folder) => {
+        {libraryFolders.map((folder) => {
           const isOpen = openFolders.has(folder.courseCode);
           return (
             <div key={folder.courseCode} className="mb-1">
@@ -212,7 +267,7 @@ export default function StudentMaterialsLibrary() {
             type="button"
             onClick={() => navigate("/dashboard/materials")}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-ink-muted hover:bg-bg-panel-alt hover:text-ink"
-            aria-label="Back to Materials"
+            aria-label="Back to Library"
           >
             <ArrowLeft size={18} />
           </button>
@@ -220,7 +275,7 @@ export default function StudentMaterialsLibrary() {
             type="button"
             onClick={() => setListOpen(true)}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-light text-ink lg:hidden"
-            aria-label="Show all materials"
+            aria-label="Show all items"
           >
             <ListTree size={16} />
           </button>
@@ -282,6 +337,12 @@ export default function StudentMaterialsLibrary() {
         )}
 
         <div className="relative min-w-0 flex-1 bg-[#ece8df] dark:bg-[#0b0220]">
+            {uploadsError && (
+              <p role="alert" className="absolute left-3 right-3 top-3 z-10 rounded-xl bg-card-light px-4 py-3 text-sm text-red-600 shadow">
+                {uploadsError}{" "}
+                <button type="button" className="font-semibold underline" onClick={loadUploads}>Try again</button>
+              </p>
+            )}
           {pdf && src ? (
             <PdfReader key={current?.id} src={src} title={current?.title} />
           ) : src ? (

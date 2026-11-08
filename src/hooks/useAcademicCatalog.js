@@ -52,26 +52,32 @@ export function useAcademicCatalog(institutionId) {
     let alive = true;
     if (instId === UOFA_ID) {
       setState({ catalog: defaultAcademicCatalog(), loading: true, error: "" });
-      settingsApi.get("academicCatalog").then(({ value }) => {
-        if (alive) setState({
-          catalog: value?.faculties?.length ? mergeCatalog(value) : defaultAcademicCatalog(),
-          loading: false,
-          error: "",
+      settingsApi
+        .get("academicCatalog")
+        .then(({ value }) => {
+          if (alive) setState({
+            catalog: value?.faculties?.length ? mergeCatalog(value) : defaultAcademicCatalog(),
+            loading: false,
+            error: "",
+          });
+        })
+        .catch((err) => {
+          if (alive) setState({ catalog: defaultAcademicCatalog(), loading: false, error: err.message || "Couldn't load the academic catalog." });
         });
-      }).catch((err) => {
-        if (alive) setState({ catalog: defaultAcademicCatalog(), loading: false, error: err.message || "Couldn't load the academic catalog." });
-      });
     } else if (treeCatalogCache.has(instId)) {
       setState({ catalog: treeCatalogCache.get(instId), loading: false, error: "" });
     } else {
       setState({ catalog: { faculties: [] }, loading: true, error: "" });
-      institutionsApi.tree(instId).then((tree) => {
-        const catalog = catalogFromTree(tree);
-        treeCatalogCache.set(instId, catalog);
-        if (alive) setState({ catalog, loading: false, error: "" });
-      }).catch((err) => {
-        if (alive) setState({ catalog: { faculties: [] }, loading: false, error: err.message || "Couldn't load this institution's academic catalog." });
-      });
+      institutionsApi
+        .tree(instId)
+        .then((tree) => {
+          const catalog = catalogFromTree(tree);
+          treeCatalogCache.set(instId, catalog);
+          if (alive) setState({ catalog, loading: false, error: "" });
+        })
+        .catch((err) => {
+          if (alive) setState({ catalog: { faculties: [] }, loading: false, error: err.message || "Couldn't load this institution's academic catalog." });
+        });
     }
     return () => { alive = false; };
   }, [instId]);

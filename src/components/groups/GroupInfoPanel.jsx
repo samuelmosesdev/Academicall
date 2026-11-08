@@ -9,6 +9,7 @@ import { appConfirm, notify } from "../../lib/dialogs";
 import { useRealtime } from "../../lib/realtime";
 import { GroupAvatar, OfficialBadge, PersonAvatar, RoleBadge, listTime } from "./common";
 import GroupFormModal from "./GroupFormModal";
+import LinkifiedText from "../LinkifiedText";
 import { dropGroup, refreshGroups } from "../../hooks/useGroups";
 
 function MemberMenu({ member, group, meId, onChanged }) {
@@ -248,7 +249,7 @@ export default function GroupInfoPanel({ group, me, onClose, onUpdated }) {
             {group.official && <OfficialBadge />}
           </div>
           {group.scopeLabel && <p className="mt-1 text-xs text-text-muted">{group.scopeLabel}</p>}
-          {group.description && <p className="mx-auto mt-3 max-w-xs whitespace-pre-line text-sm leading-relaxed text-text-secondary">{group.description}</p>}
+          {group.description && <p className="mx-auto mt-3 max-w-xs whitespace-pre-line text-sm leading-relaxed text-text-secondary"><LinkifiedText text={group.description} /></p>}
           {isCreator && (
             <button type="button" onClick={() => setEditOpen(true)} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-1.5 text-xs font-semibold text-text-primary hover:bg-bg-panel-alt">
               <Pencil size={12} /> Edit name, picture & description

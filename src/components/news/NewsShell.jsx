@@ -18,7 +18,7 @@ export default function NewsShell({ children, title }) {
   }, [title]);
 
   return (
-    <div className="min-h-screen bg-paper text-ink">
+    <div className="news-page min-h-screen bg-paper text-ink">
       <header className="news-masthead">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3.5 sm:px-6">
           <Link to="/news" className="flex items-center gap-2.5" aria-label="Academicall News home">

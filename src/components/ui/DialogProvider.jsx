@@ -145,7 +145,7 @@ export default function DialogProvider({ children }) {
           )}
           {dialog?.kind === "prompt" && (
             <div>
-              {opts.multiline !== false ? (
+              {opts.multiline !== false && !opts.inputType ? (
                 <textarea
                   autoFocus
                   rows={3}
@@ -158,6 +158,7 @@ export default function DialogProvider({ children }) {
               ) : (
                 <input
                   autoFocus
+                  type={opts.inputType || "text"}
                   value={value}
                   maxLength={opts.maxLength || 200}
                   onChange={(e) => { setValue(e.target.value); setError(""); }}

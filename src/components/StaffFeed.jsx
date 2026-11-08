@@ -15,6 +15,7 @@ import {
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import UserAvatar, { displayLabel, NameWithBadge } from "./UserAvatar";
+import LinkifiedText from "./LinkifiedText";
 
 /**
  * Staff-wide department feed viewer.
@@ -241,7 +242,7 @@ export default function StaffFeed({ compact = false, maxItems = 40 }) {
               <p className="mt-1 text-sm text-text-secondary whitespace-pre-wrap">
                 {compact && post.body?.length > 220
                   ? post.body.slice(0, 220) + "…"
-                  : post.body}
+                  : <LinkifiedText text={post.body} />}
               </p>
 
               <div className="mt-3 border-t border-border-subtle pt-2">
@@ -296,7 +297,7 @@ export default function StaffFeed({ compact = false, maxItems = 40 }) {
                             )}
                           </p>
                           <p className="text-xs text-text-secondary whitespace-pre-wrap">
-                            {c.text}
+                            <LinkifiedText text={c.text} />
                           </p>
                         </div>
                       </div>

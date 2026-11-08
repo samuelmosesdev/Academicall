@@ -13,12 +13,12 @@ import { useEffect } from "react";
 import { Bell, CheckCheck, Megaphone, UserPlus } from "lucide-react";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
-import { notificationsApi } from "../lib/api";
-import { useNotifications } from "../hooks/useNotifications";
+import { api, notificationsApi } from "../lib/api";
+import { announceAdminNotificationsChanged } from "../hooks/useNotifications";
 
 export default function AdminNotifications() {
   const { authMode } = useAuth();
-  const { refresh: refreshBadge } = useNotifications();
+  const refreshBadge = announceAdminNotificationsChanged;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unread
@@ -57,9 +57,14 @@ export default function AdminNotifications() {
 
   async function markRead(id) {
     if (authMode === "api") {
-      await notificationsApi.markAdminRead(id);
-      setItems((previous) => previous.map((item) => item.id === id ? { ...item, readByAdmin: true, readAt: new Date().toISOString() } : item));
-      refreshBadge();
+      // Optimistic, then persist. (The old /:id/admin-read route never existed,
+      // so per-item "read" 404'd and the item came back unread on refresh.)
+      setItems((previous) => previous.map((item) => item.id === id ? { ...item, readByAdmin: true, readAt: item.readAt || new Date().toISOString() } : item));
+      try {
+        await api(`/notifications/${id}/read?as=admin`, { method: "PATCH" });
+      } finally {
+        refreshBadge();
+      }
       return;
     }
     await updateDoc(doc(db, "notifications", id), { readByAdmin: true, readAt: serverTimestamp() });
@@ -67,9 +72,12 @@ export default function AdminNotifications() {
 
   async function markAllRead() {
     if (authMode === "api") {
-      await notificationsApi.markAllAdminRead();
-      setItems((previous) => previous.map((item) => ({ ...item, readByAdmin: true, readAt: new Date().toISOString() })));
-      refreshBadge();
+      setItems((previous) => previous.map((item) => ({ ...item, readByAdmin: true, readAt: item.readAt || new Date().toISOString() })));
+      try {
+        await notificationsApi.markAllAdminRead();
+      } finally {
+        refreshBadge();
+      }
       return;
     }
     const batch = writeBatch(db);
@@ -82,8 +90,8 @@ export default function AdminNotifications() {
         });
       });
     await batch.commit();
-      setItems((previous) => previous.map((item) => ({ ...item, readByAdmin: true })));
-      refreshBadge();
+    setItems((previous) => previous.map((item) => ({ ...item, readByAdmin: true })));
+    refreshBadge();
   }
 
   function iconFor(type) {
@@ -167,8 +175,8 @@ export default function AdminNotifications() {
                   <p className="mt-0.5 text-sm text-text-secondary line-clamp-2">{n.body}</p>
                 )}
                 <p className="mt-1 text-xs text-text-muted">
-                  {n.createdAt?.seconds
-                    ? new Date(n.createdAt.seconds * 1000).toLocaleString()
+                  {n.createdAt
+                    ? new Date(n.createdAt.seconds ? n.createdAt.seconds * 1000 : n.createdAt).toLocaleString()
                     : ""}
                 </p>
               </div>

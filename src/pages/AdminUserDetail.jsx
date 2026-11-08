@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import UserSecurityPanel from "../components/access/UserSecurityPanel";
+import UserMaterialsPanel from "../components/materials/UserMaterialsPanel";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Activity, Ban, CheckCircle2, Copy, GraduationCap, KeyRound, LogOut, ShieldAlert, Trash2 } from "lucide-react";
 import { usersApi } from "../lib/api";
@@ -67,7 +69,7 @@ export default function AdminUserDetail() {
       return;
     }
     if (!repPrograms.includes(repProgram.trim())) {
-      setActionError("Select a program listed under the chosen department.");
+      setActionError("Select a program listed under the chosen faculty and department.");
       return;
     }
     setBusy(true);
@@ -79,7 +81,13 @@ export default function AdminUserDetail() {
       const level = repLevel.trim();
       const response = await usersApi.update(userId, {
         role: "courseRep",
-        courseRepMeta: { ...(user.courseRepMeta || {}), faculty, department, program, level },
+        courseRepMeta: {
+          ...(user.courseRepMeta || {}),
+          faculty,
+          department,
+          program,
+          level,
+        },
         faculty,
         department,
         program,
@@ -202,7 +210,6 @@ export default function AdminUserDetail() {
     return <div className="space-y-4 p-6"><Link to={backPath} className="text-sm text-accent"><ArrowLeft className="mr-1 inline" size={16} /> Back</Link><p className="text-sm text-status-danger">{error || "User not found."}</p></div>;
   }
 
-  const meta = user.courseRepMeta || {};
   const viewer = { ...(adminProfile || {}), id: adminProfile?.id || actorId };
   const manage = viewerInfo.canManage;
   const canPassword = manage && can(adminProfile, "users.password");
@@ -212,12 +219,13 @@ export default function AdminUserDetail() {
   const activityPath = location.pathname.startsWith("/agent") ? null : `/admin/users/${userId}/activity`;
   const profileRows = [
     ["Institution", user.institution?.displayName || user.institution?.name],
-    ["Faculty", user.faculty], ["Department", user.department], ["Level", user.level],
+    ["Faculty", user.faculty], ["Department", user.department], ["Programme", user.program], ["Level", user.level],
     ["Matric", user.matricNumber], ["Phone", user.phone], ["Email verified", user.emailVerified ? "Yes" : "No"],
     ["Profile complete", user.profileComplete ? "Yes" : "No"], ["Questions practiced", user.questionsPracticedCount],
     ["Study streak", user.studyStreakDays], ["Last active", user.lastActiveAt ? timeAgo(user.lastActiveAt) : "—"],
     ["Joined", user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"],
   ];
+  const courseRepMeta = user.courseRepMeta || {};
 
   return (
     <div className="space-y-6">
@@ -231,10 +239,10 @@ export default function AdminUserDetail() {
           <div className="min-w-0 flex-1"><h1 className="text-xl font-semibold text-text-primary">{user.name || user.email}</h1><p className="text-sm text-text-muted">{user.email}</p><div className="mt-2 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-accent-soft px-2.5 py-0.5 font-semibold text-accent">{ROLE_LABELS[user.role] || user.role || "Student"}</span>{(user.staffTags || []).map((tag) => <span key={tag} className="rounded-full bg-bg-elevated px-2.5 py-0.5">{DUTY_LABELS[tag] || tag}</span>)}<span className="rounded-full border border-border-subtle px-2.5 py-0.5">{user.status || "active"}</span><span className="rounded-full border border-border-subtle px-2.5 py-0.5">{user.plan || "free"}</span>{user.uniqueId && <span className="font-mono text-text-muted">{user.uniqueId}</span>}</div></div>
         </div>
         <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">{profileRows.map(([label, value]) => <div key={label}><dt className="text-xs text-text-muted">{label}</dt><dd className="font-medium text-text-primary">{value ?? "—"}</dd></div>)}</dl>
-        {user.role === "courseRep" && <div className="mt-4 rounded-lg border border-accent/30 bg-accent-soft/30 p-3 text-sm"><div className="font-semibold text-accent">Course Rep assignment</div><p className="text-text-muted">{[user.institution?.displayName || user.institution?.name, meta.faculty || user.faculty, meta.program || user.program, meta.department || user.department, meta.level || user.level].filter(Boolean).join(" · ") || "No program assignment saved"}</p></div>}
+        {user.role === "courseRep" && <div className="mt-4 rounded-lg border border-accent/30 bg-accent-soft/30 p-3 text-sm"><div className="font-semibold text-accent">Course Rep assignment</div><p className="text-text-muted">{[user.institution?.displayName || user.institution?.name, courseRepMeta.faculty || user.faculty, courseRepMeta.program || user.program, courseRepMeta.department || user.department, courseRepMeta.level || user.level].filter(Boolean).join(" · ") || "No program assignment saved"}</p></div>}
       </div>
       {actionError && <p className="text-sm text-status-danger">{actionError}</p>}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0 [&>*]:overflow-x-auto">
         {canPassword && <section className="rounded-xl border border-border-subtle bg-bg-panel p-5">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold"><KeyRound size={16} /> Sign-in & password</h2>
           <div className="flex flex-wrap gap-2">
@@ -253,18 +261,22 @@ export default function AdminUserDetail() {
               {catalogLoading && <p className="mt-1 text-text-muted">Loading institution choices…</p>}
               {catalogError && <p className="mt-1 text-status-danger">{catalogError}</p>}
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 [&>*]:min-w-0">
               <select value={repFaculty} onChange={(event) => { setRepFaculty(event.target.value); setRepDepartment(""); setRepProgram(""); }} className={fieldClass} disabled={catalogLoading || Boolean(catalogError)}>
-                <option value="">Faculty</option>{faculties.map((faculty) => <option key={faculty.name} value={faculty.name}>{faculty.name}</option>)}
+                <option value="">Faculty</option>
+                {faculties.map((faculty) => <option key={faculty.name} value={faculty.name}>{faculty.name}</option>)}
               </select>
               <select value={repDepartment} onChange={(event) => { setRepDepartment(event.target.value); setRepProgram(""); }} className={fieldClass} disabled={!repFaculty || catalogLoading || Boolean(catalogError)}>
-                <option value="">Department</option>{repDepartments.map((department) => <option key={department} value={department}>{department}</option>)}
+                <option value="">Department</option>
+                {repDepartments.map((department) => <option key={department} value={department}>{department}</option>)}
               </select>
               <select value={repProgram} onChange={(event) => setRepProgram(event.target.value)} className={fieldClass} disabled={!repDepartment || repPrograms.length === 0 || catalogLoading || Boolean(catalogError)}>
-                <option value="">{repPrograms.length ? "Program *" : "No programs configured"}</option>{repPrograms.map((program) => <option key={program} value={program}>{program}</option>)}
+                <option value="">{repPrograms.length ? "Program *" : "No programs configured"}</option>
+                {repPrograms.map((program) => <option key={program} value={program}>{program}</option>)}
               </select>
               <select value={repLevel} onChange={(event) => setRepLevel(event.target.value)} className={fieldClass}>
-                <option value="">Level *</option>{repLevels.map((level) => <option key={level} value={level}>{level}</option>)}
+                <option value="">Level *</option>
+                {repLevels.map((level) => <option key={level} value={level}>{level}</option>)}
               </select>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -277,7 +289,9 @@ export default function AdminUserDetail() {
         </section>}
         {(canSuspend || canDelete) && <section className="rounded-xl border border-border-subtle bg-bg-panel p-5"><h2 className="mb-3 text-sm font-semibold">Account status</h2><div className="flex flex-wrap gap-2">{canSuspend && <button type="button" disabled={busy} onClick={toggleSuspend} className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm">{user.status === "suspended" ? <><CheckCircle2 size={15} /> Reactivate</> : <><Ban size={15} /> Suspend</>}</button>}{canDelete && <button type="button" disabled={busy} onClick={deleteAccount} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600"><Trash2 size={15} /> Delete account</button>}</div></section>}
         <AccessEditor person={user} viewer={viewer} onSaved={(next) => setUser((previous) => ({ ...previous, ...next }))} />
+        <UserSecurityPanel user={user} canPassword={canPassword} isAdminViewer={adminProfile?.role === "admin"} />
       </div>
+      {!["admin", "alphaAgent", "agent"].includes(user.role) && <UserMaterialsPanel userId={userId} />}
     </div>
   );
 }

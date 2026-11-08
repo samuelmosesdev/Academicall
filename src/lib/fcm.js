@@ -1,101 +1,74 @@
-import { getToken, onMessage } from "firebase/messaging";
-import { messaging } from "../firebase/config";
-import { api, notificationsApi, usersApi } from "./api";
+import { deleteToken, getToken, onMessage } from "firebase/messaging";
+import { firebaseConfigured, getMessagingClient } from "../firebase/config";
+import { meApi } from "./gapsApi";
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+const TOKEN_KEY = "ac.web.push.token";
 
-// Keep the same token from being re-registered in a single browser session.
-const writtenTokens = new Set();
-
-async function persistFcmTokenViaApi(uid, token) {
-  const payload = { uid, token, platform: "web" };
-  const candidates = [
-    () => usersApi.updateMe({ fcmToken: token, fcmTokenPlatform: "web" }),
-    () => usersApi.updateMe({ deviceToken: token, devicePlatform: "web" }),
-    () => notificationsApi.registerDeviceToken({ uid, token, platform: "web" }),
-    () => notificationsApi.registerFcmToken({ uid, token, platform: "web" }),
-    () => api("/users/me/device-token", { method: "POST", body: payload }),
-    () => api("/users/me/fcm-token", { method: "POST", body: payload }),
-    () => api("/notifications/device-token", { method: "POST", body: payload }),
-    () => api("/notifications/fcm-token", { method: "POST", body: payload }),
-  ];
-
-  let lastError = null;
-
-  for (const candidate of candidates) {
-    try {
-      const response = await candidate();
-      if (response && response.ok !== false) {
-        return true;
-      }
-    } catch (err) {
-      lastError = err;
-    }
-  }
-
-  console.warn("FCM token API registration failed:", lastError || "unknown error");
-  return false;
+export function browserPushAvailability() {
+  if (
+    typeof window === "undefined" ||
+    !window.isSecureContext ||
+    typeof Notification === "undefined" ||
+    !("serviceWorker" in navigator)
+  ) return "unsupported";
+  if (!firebaseConfigured() || !VAPID_KEY) return "unconfigured";
+  return "available";
 }
 
-/**
- * Ask for permission and save the device token via the app API instead of
- * writing to Firestore directly, which can trigger churn and quota leaks.
- */
-export async function registerFcmToken(uid) {
-  if (!messaging || !uid || !VAPID_KEY) {
-    console.warn("FCM not available");
-    return null;
+export function browserPushRegistered() {
+  return Boolean(localStorage.getItem(TOKEN_KEY));
+}
+
+export async function registerFcmToken(uid, { requestPermission = false } = {}) {
+  if (!uid) throw new Error("Sign in before enabling browser notifications.");
+  const availability = browserPushAvailability();
+  if (availability === "unsupported") throw new Error("This browser cannot receive web notifications.");
+  if (availability === "unconfigured") {
+    throw new Error("Browser notifications are not configured for this deployment. Contact support.");
   }
 
-  try {
-    if (typeof Notification === "undefined") {
-      console.warn("Browser notifications are not supported in this environment.");
-      return null;
-    }
-
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      console.log("Notification permission denied");
-      return null;
-    }
-
-    const registration = await navigator.serviceWorker.register(
-      "/firebase-messaging-sw.js"
+  if (Notification.permission === "default" && requestPermission) {
+    await Notification.requestPermission();
+  }
+  if (Notification.permission !== "granted") {
+    throw new Error(
+      Notification.permission === "denied"
+        ? "Notifications are blocked in this browser. Allow them in the browser's site settings."
+        : "Allow notifications from the button in Settings to continue."
     );
-
-    const token = await getToken(messaging, {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: registration,
-    });
-
-    if (!token) return null;
-
-    const tokenKey = `${uid}:${token}`;
-    if (writtenTokens.has(tokenKey)) {
-      return token;
-    }
-
-    const stored = await persistFcmTokenViaApi(uid, token);
-    if (stored) {
-      writtenTokens.add(tokenKey);
-      console.log("FCM token saved via API");
-    }
-
-    return token;
-  } catch (err) {
-    console.error("FCM registration error:", err);
-    return null;
   }
+
+  const messaging = await getMessagingClient();
+  if (!messaging) throw new Error("Firebase messaging is not supported in this browser.");
+  const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+  const token = await getToken(messaging, {
+    vapidKey: VAPID_KEY,
+    serviceWorkerRegistration: registration,
+  });
+  if (!token) throw new Error("Firebase did not return a browser notification token.");
+
+  const previousToken = localStorage.getItem(TOKEN_KEY);
+  await meApi.registerDevice({ token, platform: "web" });
+  if (previousToken && previousToken !== token) {
+    await meApi.removeDevice(previousToken);
+  }
+  localStorage.setItem(TOKEN_KEY, token);
+  return token;
 }
 
-/**
- * Listen for messages while the app is open (foreground)
- */
-export function listenForForegroundMessages(onReceive) {
-  if (!messaging) return () => {};
+export async function unregisterFcmToken() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  await meApi.removeDevice(token);
+  localStorage.removeItem(TOKEN_KEY);
 
-  return onMessage(messaging, (payload) => {
-    console.log("Foreground message received:", payload);
-    if (onReceive) onReceive(payload);
-  });
+  const messaging = await getMessagingClient();
+  if (messaging) await deleteToken(messaging);
+}
+
+export async function listenForForegroundMessages(onReceive) {
+  const messaging = await getMessagingClient();
+  if (!messaging) return () => {};
+  return onMessage(messaging, onReceive);
 }

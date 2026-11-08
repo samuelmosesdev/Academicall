@@ -42,6 +42,15 @@ export default function ProtectedRoute({ children, requiredRole }) {
     return <Navigate to={homeForRole(role)} replace />;
   }
 
+  // Staff an admin requires to use two-step sign-in set it up before anything else
+  const needsTwoFactor = Boolean(profile?.twoFactorSetupRequired);
+  if (!needsPasswordChange && needsTwoFactor && location.pathname !== "/security-setup") {
+    return <Navigate to="/security-setup" replace />;
+  }
+  if (!needsTwoFactor && location.pathname === "/security-setup") {
+    return <Navigate to={homeForRole(role)} replace />;
+  }
+
   if (needsEmailVerification && location.pathname !== "/verify-email") {
     return <Navigate to="/verify-email" replace />;
   }

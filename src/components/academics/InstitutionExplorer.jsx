@@ -88,7 +88,7 @@ function CurriculumPicker({ open, onClose, onPick }) {
   );
 }
 
-export default function InstitutionExplorer({ institution, isAdmin, onChanged }) {
+export default function InstitutionExplorer({ institution, isAdmin, canManageStructure = isAdmin, onChanged }) {
   const [level, setLevel] = useState({ kind: "faculties" }); // faculties | departments(faculty) | department(faculty, department)
   const [items, setItems] = useState([]);
   const [extra, setExtra] = useState({ programmes: [], courses: [] });
@@ -146,9 +146,9 @@ export default function InstitutionExplorer({ institution, isAdmin, onChanged })
       <>
         <div className="mb-3 flex items-center justify-between">
           <h4 className="text-sm font-semibold text-text-primary">{isFac ? plural(items.length, "faculty").replace("facultys", "faculties") : plural(items.length, "department")}</h4>
-          <button type="button" className="acx-btn !py-1.5 !text-xs" onClick={() => nameForm(isFac ? "Add a faculty" : `Add a department to ${level.faculty.name}`, "", (v) => (isFac ? academicsApi.createFaculty(institution.id, v) : academicsApi.createDepartment(level.faculty.id, v)))}>
+          {canManageStructure && <button type="button" className="acx-btn !py-1.5 !text-xs" onClick={() => nameForm(isFac ? "Add a faculty" : `Add a department to ${level.faculty.name}`, "", (v) => (isFac ? academicsApi.createFaculty(institution.id, v) : academicsApi.createDepartment(level.faculty.id, v)))}>
             <Plus size={13} /> {isFac ? "Faculty" : "Department"}
-          </button>
+          </button>}
         </div>
         {items.length === 0 ? (
           <EmptyState icon={Building2} title={isFac ? "No faculties yet" : "No departments yet"} description="Add the first one to start building this institution's structure." className="!py-8" />
@@ -165,13 +165,13 @@ export default function InstitutionExplorer({ institution, isAdmin, onChanged })
                     {" · "}{plural(it.students || 0, "student")}{!it.active && " · archived"}{it.derived && " · named after its programme"}
                   </span>
                 </span>
-                <RowActions
+                {canManageStructure && <RowActions
                   item={it}
                   canDelete={isAdmin}
                   onRename={() => nameForm(`Rename ${it.name}`, it.name, (v) => (isFac ? academicsApi.updateFaculty(it.id, v) : academicsApi.updateDepartment(it.id, v)))}
                   onToggle={() => toggle(it, isFac ? academicsApi.updateFaculty : academicsApi.updateDepartment)}
                   onDelete={() => confirmDelete(it.name, () => (isFac ? academicsApi.deleteFaculty(it.id) : academicsApi.deleteDepartment(it.id)))}
-                />
+                />}
                 <ChevronRight size={15} className="text-text-muted" />
               </div>
             ))}
@@ -186,7 +186,7 @@ export default function InstitutionExplorer({ institution, isAdmin, onChanged })
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h4 className="text-sm font-semibold text-text-primary">{plural(extra.programmes.length, "programme")}</h4>
-            <button type="button" className="acx-btn !py-1.5 !text-xs" onClick={() => setForm({
+            {canManageStructure && <button type="button" className="acx-btn !py-1.5 !text-xs" onClick={() => setForm({
               title: `Add a programme to ${dep.name}`, submitLabel: "Add", initial: {},
               fields: [
                 { name: "name", label: "Programme name", required: true, minLength: 2, maxLength: 200, wide: true, placeholder: "B.Sc. Computer Science" },
@@ -194,7 +194,7 @@ export default function InstitutionExplorer({ institution, isAdmin, onChanged })
                 { name: "duration", label: "Duration", maxLength: 40, placeholder: "4 years" },
               ],
               submit: async (v) => { await academicsApi.createProgramme(dep.id, v); setForm(null); await load(); },
-            })}><Plus size={13} /> Programme</button>
+            })}><Plus size={13} /> Programme</button>}
           </div>
           {extra.programmes.length === 0 ? <p className="rounded-xl bg-bg-panel-alt px-3 py-4 text-sm text-text-muted">No programmes. Students pick a programme when they set up their profile.</p> : (
             <div className="space-y-2">
@@ -205,7 +205,7 @@ export default function InstitutionExplorer({ institution, isAdmin, onChanged })
                       <p className="text-sm font-semibold text-text-primary">{p.name}</p>
                       <p className="text-xs text-text-muted">{[p.award, p.duration, plural(p.students || 0, "student"), !p.active && "archived"].filter(Boolean).join(" · ")}</p>
                     </div>
-                    <RowActions
+                    {canManageStructure && <RowActions
                       item={p}
                       canDelete={isAdmin}
                       onRename={() => setForm({
@@ -219,18 +219,18 @@ export default function InstitutionExplorer({ institution, isAdmin, onChanged })
                       })}
                       onToggle={() => toggle(p, academicsApi.updateProgramme)}
                       onDelete={() => confirmDelete(p.name, () => academicsApi.deleteProgramme(p.id))}
-                    />
+                    />}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {p.curricula.map((c) => (
                       <span key={c.id} className="acx-chip-sm !gap-1" title={`${c.edition || ""} · matched by ${c.matchedBy}`}>
                         <Layers size={11} /> {c.name}
-                        <button type="button" className="ml-0.5 opacity-60 hover:opacity-100" aria-label={`Unlink ${c.name}`} onClick={async () => {
+                        {canManageStructure && <button type="button" className="ml-0.5 opacity-60 hover:opacity-100" aria-label={`Unlink ${c.name}`} onClick={async () => {
                           if (await appConfirm(`Unlink ${c.name} from ${p.name}? Its courses stop being suggested to these students. Courses already on their lists stay.`, { confirmLabel: "Unlink" })) run(() => academicsApi.unlinkCurriculum(p.id, c.id), "Curriculum unlinked");
-                        }}><Unlink size={10} /></button>
+                        }}><Unlink size={10} /></button>}
                       </span>
                     ))}
-                    <button type="button" className="acx-filter !py-0.5 !text-[0.7rem]" onClick={() => setPicker({ programme: p })}><Link2 size={11} /> Link curriculum</button>
+                        {canManageStructure && <button type="button" className="acx-filter !py-0.5 !text-[0.7rem]" onClick={() => setPicker({ programme: p })}><Link2 size={11} /> Link curriculum</button>}
                   </div>
                 </div>
               ))}

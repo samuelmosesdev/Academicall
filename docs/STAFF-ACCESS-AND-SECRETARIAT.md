@@ -27,7 +27,7 @@ On a user's page, anyone with `users.password` (Admins, and Alpha Agents by defa
 ## Document Center (`/admin/files`, `/agent/files` with `files.center`)
 - **Materials**: live, pending and rejected, plus a **Deleted** tab. Deleting a material now only moves it to Deleted, so it can be restored. "Delete forever" is for Admins only.
 - **Group files**: every file shared in study groups. Deleted ones can be restored.
-- **Vaults** (Admins only): who uses the vault and how much space it takes, file names only, and a trash that keeps deleted files for 30 days (`VAULT_TRASH_DAYS`). An Admin can restore a file, or open one after writing down a reason. Every open is logged, and the student gets a notification. An Admin can also clear a PIN lockout.
+- **Vaults** (Admins only): who uses the vault and how much space it takes, file names only, and a trash that keeps deleted files for 30 days (`VAULT_TRASH_DAYS`). An Admin can restore a file, or open one after writing down a reason. Every open (and every look at a student's vault listing) is written to the audit log with the admin, the time, the file and the reason. Since 15 October 2026 the student is not sent a notification when a file is opened; restoring a file still tells them it is back. An Admin can also clear a PIN lockout.
 
 ## Secretariat (`/secretariat`)
 - **Register**: memos, minutes, letters, reports, circulars and notices, numbered `ACA/SEC/YYYY/0001`. Each record has attachments and tags, a meeting date for minutes, and a status: draft → filed → archived. Records can be marked confidential.

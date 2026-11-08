@@ -14,10 +14,15 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
+const isConfigured = Boolean(
+  firebaseConfig.apiKey &&
+  firebaseConfig.projectId &&
+  firebaseConfig.messagingSenderId &&
+  firebaseConfig.appId
+);
 
 export let app = null;
-export let messaging = null;
+let messagingPromise;
 
 // Legacy stubs: a handful of unreachable fallback code paths (dead code from
 // the pre-migration Firestore version, gated behind `authMode !== "api"`,
@@ -30,14 +35,19 @@ export const db = null;
 if (isConfigured) {
   try {
     app = initializeApp(firebaseConfig);
-    isSupported().then((supported) => {
-      if (supported) {
-        messaging = getMessaging(app);
-      }
-    });
   } catch (err) {
     console.warn("[firebase] init skipped:", err?.message || err);
   }
 } else {
-  console.info("[firebase] not configured — push notifications disabled. This is expected; auth and data use the API.");
+  console.info("[firebase] not configured — push notifications disabled; auth and data use the API.");
+}
+
+export const firebaseConfigured = () => Boolean(app);
+
+export function getMessagingClient() {
+  if (!app) return Promise.resolve(null);
+  if (!messagingPromise) {
+    messagingPromise = isSupported().then((supported) => (supported ? getMessaging(app) : null));
+  }
+  return messagingPromise;
 }

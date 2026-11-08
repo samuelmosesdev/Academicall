@@ -7,6 +7,7 @@ import { notify } from "../lib/dialogs";
 import { useRealtime } from "../lib/realtime";
 import { PENDING_INVITE_KEY } from "../lib/groupInvite";
 import { GroupAvatar } from "../components/groups/common";
+import LinkifiedText from "../components/LinkifiedText";
 import { refreshGroups, upsertGroup } from "../hooks/useGroups";
 
 export { PENDING_INVITE_KEY } from "../lib/groupInvite";
@@ -119,7 +120,7 @@ export default function StudyGroupJoin() {
               {group.official && <><span>·</span><BadgeCheck size={13} className="text-midnight" /> Class group</>}
             </p>
             {group.scopeLabel && <p className="mt-1 text-xs text-text-muted">{group.scopeLabel}</p>}
-            {group.description && <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-text-secondary">{group.description}</p>}
+            {group.description && <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-text-secondary"><LinkifiedText text={group.description} /></p>}
             <p className="mt-3 text-xs text-text-muted">Created by {group.createdByName}</p>
 
             <div className="mt-6 space-y-2 rounded-2xl bg-bg-panel-alt p-3 text-left text-xs text-text-secondary">

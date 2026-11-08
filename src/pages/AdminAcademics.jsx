@@ -4,7 +4,7 @@ import {
   Archive, ArchiveRestore, BookOpen, Building2, FileSpreadsheet, GraduationCap, Layers, Library, Pencil, Plus, School, Trash2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { roleOf } from "../lib/roles";
+import { can, roleOf } from "../lib/roles";
 import { academicsApi } from "../lib/api";
 import { appConfirm, notify } from "../lib/dialogs";
 import { PageHeader, ErrorState, EmptyState, SearchField, SortTh, Pager, Drawer, SkeletonRows } from "../components/ui";
@@ -82,7 +82,7 @@ function Overview({ onGo }) {
 }
 
 // ─── Institutions ────────────────────────────────────────────────────────────
-function Institutions({ isAdmin }) {
+function Institutions({ isAdmin, canManageStructure }) {
   const t = useTable(async (p) => {
     const r = await academicsApi.institutions(p);
     return { rows: r.institutions, total: r.total };
@@ -119,7 +119,7 @@ function Institutions({ isAdmin }) {
         <div className="acx-seg">
           {[["active", "Active"], ["archived", "Archived"], ["", "All"]].map(([v, l]) => <button key={l} type="button" className={(t.params.status || "") === v ? "is-on" : ""} onClick={() => t.set({ status: v })}>{l}</button>)}
         </div>
-        <button type="button" className="acx-btn ml-auto" onClick={() => setForm({ mode: "create" })}><Plus size={14} /> Institution</button>
+        {canManageStructure && <button type="button" className="acx-btn ml-auto" onClick={() => setForm({ mode: "create" })}><Plus size={14} /> Institution</button>}
       </div>
 
       {t.error ? <ErrorState message={t.error} onRetry={t.reload} /> : (
@@ -163,8 +163,8 @@ function Institutions({ isAdmin }) {
         title={open?.displayName || open?.name}
         actions={open && (
           <>
-            <button type="button" className="acx-icon-btn" onClick={() => setForm({ mode: "edit", inst: open })} aria-label="Edit details" title="Edit details"><Pencil size={14} /></button>
-            <button type="button" className="acx-icon-btn" onClick={() => archive(open)} aria-label={open.active ? "Archive" : "Restore"} title={open.active ? "Archive" : "Restore"}>{open.active ? <Archive size={14} /> : <ArchiveRestore size={14} />}</button>
+            {canManageStructure && <button type="button" className="acx-icon-btn" onClick={() => setForm({ mode: "edit", inst: open })} aria-label="Edit details" title="Edit details"><Pencil size={14} /></button>}
+            {canManageStructure && <button type="button" className="acx-icon-btn" onClick={() => archive(open)} aria-label={open.active ? "Archive" : "Restore"} title={open.active ? "Archive" : "Restore"}>{open.active ? <Archive size={14} /> : <ArchiveRestore size={14} />}</button>}
             {isAdmin && <button type="button" className="acx-icon-btn is-danger" onClick={() => remove(open)} aria-label="Delete" title="Delete permanently"><Trash2 size={14} /></button>}
           </>
         )}
@@ -177,7 +177,7 @@ function Institutions({ isAdmin }) {
               ))}
             </dl>
             <p className="text-xs text-text-muted">{[open.name, open.ownership, open.category, open.source === "admin" ? "added by staff" : open.source === "ibass" ? "from JAMB IBASS" : open.source].filter(Boolean).join(" · ")}</p>
-            <InstitutionExplorer key={open.id} institution={open} isAdmin={isAdmin} onChanged={() => refreshOpen(open.id)} />
+            <InstitutionExplorer key={open.id} institution={open} isAdmin={isAdmin} canManageStructure={canManageStructure} onChanged={() => refreshOpen(open.id)} />
           </div>
         )}
       </Drawer>
@@ -464,7 +464,11 @@ export default function AdminAcademics() {
   const location = useLocation();
   const base = location.pathname.startsWith("/agent") ? "/agent" : "/admin";
   const [params, setParams] = useSearchParams();
-  const tab = TABS.some((x) => x.id === params.get("tab")) ? params.get("tab") : "overview";
+  const canManageStructure = can(profile, "academics.manage");
+  const canManageCourses = can(profile, "courses.manage");
+  const visibleTabs = canManageStructure ? TABS : TABS.filter((item) => ["institutions", "courses"].includes(item.id));
+  const requestedTab = params.get("tab");
+  const tab = visibleTabs.some((x) => x.id === requestedTab) ? requestedTab : canManageStructure ? "overview" : "institutions";
   const go = (id) => setParams(id === "overview" ? {} : { tab: id }, { replace: true });
   const isAdmin = roleOf(profile) === "admin";
 
@@ -472,19 +476,21 @@ export default function AdminAcademics() {
     <div className="space-y-5">
       <PageHeader
         title="Academics"
-        description="Institutions, faculties, departments, programmes and the course catalogue that powers students' course suggestions."
-        actions={<Link to={`${base}/governance/academic-catalog`} className="acx-btn-ghost"><GraduationCap size={14} /> UniAbuja sign-up list</Link>}
+        description={canManageStructure
+          ? "Institutions, faculties, departments, programmes and the course catalogue that powers students' course suggestions."
+          : "Browse institutions and add or assign courses to their departments."}
+        actions={isAdmin && <Link to={`${base}/governance/academic-catalog`} className="acx-btn-ghost"><GraduationCap size={14} /> UniAbuja sign-up list</Link>}
       />
       <div className="acx-tabs" role="tablist">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {visibleTabs.map(({ id, label, icon: Icon }) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "is-on" : ""} onClick={() => go(id)}><Icon size={15} /> {label}</button>
         ))}
       </div>
       {tab === "overview" && <Overview onGo={go} />}
-      {tab === "institutions" && <Institutions isAdmin={isAdmin} />}
+      {tab === "institutions" && <Institutions isAdmin={isAdmin} canManageStructure={canManageStructure} />}
       {tab === "courses" && <Courses isAdmin={isAdmin} base={base} />}
       {tab === "curricula" && <Curricula />}
-      <p className="flex items-center gap-1.5 text-xs text-text-muted"><Building2 size={12} /> Changes are saved immediately and logged in the audit trail.</p>
+      {canManageCourses && <p className="flex items-center gap-1.5 text-xs text-text-muted"><Building2 size={12} /> Course changes are saved immediately and logged in the audit trail.</p>}
     </div>
   );
 }

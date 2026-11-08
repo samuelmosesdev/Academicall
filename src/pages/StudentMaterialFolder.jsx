@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, BookOpenText, ChevronRight, Loader2, Trash2 } from "lucide-react";
 import useMaterialSaves, { fileExtension, materialKey, toDate } from "../hooks/useMaterialSaves";
 import { isNativeApp } from "../lib/platform";
+import { notify } from "../lib/dialogs";
 import { listOfflineMaterials, removeMaterialOffline, saveMaterialOffline } from "../lib/offlineMaterials";
 
 export default function StudentMaterialFolder() {
@@ -34,6 +35,26 @@ export default function StudentMaterialFolder() {
       setRemoving(null);
     }
   }
+
+  const [folderBusy, setFolderBusy] = useState(null); // [done, total]
+  async function downloadFolder() {
+    const todo = (folder?.items || []).filter((it) => it.fileUrl && !offlineIds.has(it.materialId || it.id));
+    if (!todo.length) return;
+    setFolderBusy([0, todo.length]);
+    let failed = 0;
+    for (let i = 0; i < todo.length; i++) {
+      const it = todo[i];
+      const id = it.materialId || it.id;
+      try {
+        await saveMaterialOffline({ id, title: it.title, fileUrl: it.fileUrl, courseCode: it.courseCode, fileName: it.fileName || it.title });
+        setOfflineIds((cur) => new Set(cur).add(id));
+      } catch { failed++; }
+      setFolderBusy([i + 1, todo.length]);
+    }
+    setFolderBusy(null);
+    if (failed) notify.error(`${failed} file${failed === 1 ? "" : "s"} couldn't download. Try again on a stronger connection.`);
+  }
+  const allOffline = (folder?.items || []).every((it) => !it.fileUrl || offlineIds.has(it.materialId || it.id));
 
   async function onToggleOffline(item) {
     const id = item.materialId || item.id;
@@ -71,7 +92,7 @@ export default function StudentMaterialFolder() {
     <div className="space-y-6">
       <nav className="flex items-center gap-1.5 text-sm text-ink-muted">
         <Link to="/dashboard/materials" className="inline-flex items-center gap-1 hover:text-ink">
-          <ArrowLeft size={15} /> Materials
+          <ArrowLeft size={15} /> Library
         </Link>
         <ChevronRight size={14} />
         <span className="font-medium text-ink">{courseCode}</span>
@@ -98,6 +119,16 @@ export default function StudentMaterialFolder() {
           >
             <BookOpenText size={16} /> Read this folder
           </Link>
+        )}
+        {native && folder?.items.length > 0 && (
+          <button
+            type="button"
+            onClick={downloadFolder}
+            disabled={!!folderBusy || allOffline}
+            className="inline-flex items-center gap-2 rounded-full border border-midnight/30 px-5 py-2.5 text-sm font-semibold text-midnight disabled:opacity-60"
+          >
+            {folderBusy ? `Downloading ${folderBusy[0]}/${folderBusy[1]}…` : allOffline ? "Saved offline" : "Download folder"}
+          </button>
         )}
       </header>
 

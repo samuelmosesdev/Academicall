@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Building2, ChevronLeft, ChevronRight, Compass, Loader2, MessageCircle, Newspaper, Pin, Settings2, Users } from "lucide-react";
+import { ArrowRight, Building2, ChevronLeft, ChevronRight, Compass, Loader2, MessageCircle, Newspaper, Pin, Settings2, Users, Timer, Calculator } from "lucide-react";
 import { aspirantApi, institutionTitle, plainText } from "../lib/aspirantApi";
 import { newsApi, timeAgo } from "../lib/newsApi";
 import { useRealtime } from "../lib/realtime";
@@ -77,6 +77,15 @@ export default function AspirantDashboard() {
           )}
         </div>
       </section>
+
+      <Link to="/dashboard/utme" className="group flex flex-wrap items-center gap-4 rounded-[6px] bg-midnight p-5 text-white sm:p-6">
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-[1.35rem] leading-tight">UTME CBT practice</span>
+          <span className="mt-1 block text-sm text-white/70">36,000+ past questions from 1978 to 2026, by topic or by year, with the JAMB timer and calculator.</span>
+          <span className="mt-2 flex flex-wrap gap-3 text-xs text-white/60"><span className="inline-flex items-center gap-1"><Timer size={12} /> Timed or practice</span><span className="inline-flex items-center gap-1"><Calculator size={12} /> On-screen calculator</span></span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-[4px] bg-lemon px-4 py-2 text-sm font-semibold text-midnight">Start practising <ArrowRight size={15} /></span>
+      </Link>
 
       <section>
         <div className="mb-3 flex items-center gap-3">

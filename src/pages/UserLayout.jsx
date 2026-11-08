@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import UserSidebar from "../components/UserSidebar";
 import UserTopbar from "../components/UserTopbar";
+import { SiteBanner } from "../lib/features";
 import {
   UserDashboardDataProvider,
   useUserDashboardData,
@@ -21,7 +22,6 @@ export default function UserLayout() {
 
 function UserLayoutShell() {
   const { profile, unreadCount } = useUserDashboardData();
-  const [search, setSearch] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
@@ -46,12 +46,11 @@ function UserLayoutShell() {
         <UserTopbar
           profile={profile}
           unreadCount={unreadCount}
-          search={search}
-          onSearchChange={setSearch}
           onMenu={() => setMobileNavOpen(true)}
         />
 
         {/* More breathing room on mobile */}
+        <SiteBanner />
         <main className="animate-stitch-in mx-auto w-full max-w-[1320px] flex-1 px-4 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
           <Outlet />
         </main>

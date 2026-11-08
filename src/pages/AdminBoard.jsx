@@ -6,8 +6,9 @@ import { appConfirm, notify } from "../lib/dialogs";
 import { PageHeader } from "../components/ui";
 import { Switch } from "../components/access/AccessEditor";
 import { Slide } from "../components/board/DashboardBoard";
+import { plainText } from "../components/board/boldText";
 
-const EMPTY = { kind: "message", title: "", body: "", imageUrl: "", ctaLabel: "", ctaUrl: "", theme: "midnight", audience: "students", active: true, startsAt: "", endsAt: "" };
+const EMPTY = { kind: "message", title: "", body: "", imageUrl: "", ctaLabel: "", ctaUrl: "", theme: "midnight", titleBold: false, audience: "students", active: true, startsAt: "", endsAt: "" };
 const THEMES = [["midnight", "#0f0326"], ["violet", "#454ade"], ["lemon", "#f8f32b"], ["aqua", "#44ffd1"]];
 const AUDIENCE = { students: "Students", aspirants: "Aspirants", all: "Everyone" };
 const toLocal = (d) => (d ? new Date(new Date(d).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "");
@@ -92,10 +93,11 @@ export default function AdminBoard() {
                 <span className="acx-chip-sm">{s.kind === "image" ? <><ImageIcon size={10} /> Design</> : <><Type size={10} /> Message</>}</span>
                 <span className="acx-chip-sm is-lemon">{AUDIENCE[s.audience]}</span>
                 {!s.active && <span className="acx-chip-sm">hidden</span>}
+                {s.kind !== "image" && s.titleBold && <span className="acx-chip-sm">bold headline</span>}
                 {s.endsAt && <span className="acx-chip-sm">until {new Date(s.endsAt).toLocaleDateString()}</span>}
               </div>
-              <p className="mt-1 truncate font-semibold text-text-primary">{s.title || (s.kind === "image" ? "Image slide" : "Untitled")}</p>
-              <p className="truncate text-xs text-text-muted">{s.body || s.ctaUrl || ""}{s.createdByName ? ` · by ${s.createdByName}` : ""}</p>
+              <p className="mt-1 truncate font-semibold text-text-primary">{plainText(s.title) || (s.kind === "image" ? "Image slide" : "Untitled")}</p>
+              <p className="truncate text-xs text-text-muted">{plainText(s.body) || s.ctaUrl || ""}{s.createdByName ? ` · by ${s.createdByName}` : ""}</p>
             </div>
             <div className="flex items-center gap-1.5">
               <button type="button" className="acx-icon-btn" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up"><ArrowUp size={14} /></button>
@@ -139,7 +141,7 @@ function SlideEditor({ slide, background, onClose, onSaved }) {
     setBusy(true);
     const body = {
       kind: f.kind, title: f.title || null, body: f.kind === "image" ? null : f.body || null, imageUrl: f.imageUrl || null,
-      ctaLabel: f.kind === "image" ? null : f.ctaLabel || null, ctaUrl: f.ctaUrl || null, theme: f.theme, audience: f.audience, active: f.active,
+      ctaLabel: f.kind === "image" ? null : f.ctaLabel || null, ctaUrl: f.ctaUrl || null, theme: f.theme, titleBold: f.kind === "message" && !!f.titleBold, audience: f.audience, active: f.active,
       startsAt: f.startsAt ? new Date(f.startsAt).toISOString() : null, endsAt: f.endsAt ? new Date(f.endsAt).toISOString() : null,
     };
     try { if (slide.id) await boardApi.update(slide.id, body); else await boardApi.create(body); notify.success("Slide saved"); onSaved(); }
@@ -165,7 +167,14 @@ function SlideEditor({ slide, background, onClose, onSaved }) {
             {f.kind === "message" && (
               <>
                 <input className="acx-input" value={f.title} onChange={set("title")} maxLength={120} placeholder="Headline, e.g. Exams start 3 November" />
-                <textarea className="acx-input" rows={3} value={f.body} onChange={set("body")} maxLength={400} placeholder="A line or two of detail (optional)" />
+                <div className="flex items-center gap-3 rounded-xl border border-border-subtle px-3 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-text-primary">Bold headline</p>
+                    <p className="text-xs text-text-muted">Sets the whole headline in bold. To bold only a few words, wrap them in **double asterisks**.</p>
+                  </div>
+                  <Switch on={!!f.titleBold} onChange={(v) => setF((x) => ({ ...x, titleBold: v }))} label="Bold headline" />
+                </div>
+                <textarea className="acx-input" rows={3} value={f.body} onChange={set("body")} maxLength={400} placeholder="A line or two of detail (optional). **Asterisks** make words bold." />
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-text-secondary">Colour</span>
                   {THEMES.map(([k, c]) => <button key={k} type="button" onClick={() => setF((x) => ({ ...x, theme: k }))} className={`h-7 w-7 rounded-full ring-offset-2 ${f.theme === k ? "ring-2 ring-accent" : ""}`} style={{ background: c }} aria-label={k} />)}
@@ -192,8 +201,8 @@ function SlideEditor({ slide, background, onClose, onSaved }) {
           </div>
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">Preview</p>
-            <div className="relative min-h-[17rem] overflow-hidden rounded-[1.4rem] bg-midnight">
-              {f.kind === "image" && !f.imageUrl ? <p className="absolute inset-0 flex items-center justify-center text-sm text-white/60">Upload a design to preview</p> : <Slide slide={f} background={background} />}
+            <div className="relative h-[19rem] overflow-hidden rounded-[1.4rem] bg-midnight">
+              {f.kind === "image" && !f.imageUrl ? <p className="absolute inset-0 flex items-center justify-center text-sm text-white/60">Upload a design to preview</p> : <Slide slide={f} background={background} compact />}
             </div>
           </div>
         </div>

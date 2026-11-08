@@ -5,6 +5,7 @@ import { ChiefReview, ChiefNewsroom, ChiefTeam } from "../components/news/ChiefD
 import AudiencePicker, { audienceSummary } from "../components/news/AudiencePicker";
 import NewsShell from "../components/news/NewsShell";
 import { Prose } from "../components/news/NewsBits";
+import StoryEditor from "../components/news/editor/StoryEditor";
 import { NEWS_CATEGORIES, newsApi, timeAgo } from "../lib/newsApi";
 import { uploadImageToCloudinary } from "../lib/cloudinaryUpload";
 import { appConfirm, notify } from "../lib/dialogs";
@@ -183,7 +184,7 @@ function Editor({ post, onClose, onSaved, restricted }) {
               </div>
               <textarea value={form.title} onChange={set("title")} rows={2} maxLength={140} placeholder="Headline" className="w-full resize-none bg-transparent font-display text-[2.2rem] leading-tight text-ink outline-none placeholder:text-ink-muted/50" />
               <textarea value={form.excerpt} onChange={set("excerpt")} rows={2} maxLength={240} placeholder="Standfirst: one or two sentences that sum up the story (optional)" className="w-full resize-none bg-transparent text-lg text-text-secondary outline-none placeholder:text-ink-muted/60" />
-              <textarea value={form.body} onChange={set("body")} rows={16} placeholder={"Write the story…\n\nLeave a blank line between paragraphs.\n## Starts a subheading\n> Starts a pull quote\n**bold** for emphasis"} className="w-full resize-y rounded-2xl border border-border-light bg-card-light p-4 text-[1.02rem] leading-relaxed text-ink outline-none focus:border-violet" />
+              <StoryEditor value={form.body} onChange={(body) => setForm((f) => ({ ...f, body }))} />
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Topic tags</p>
                 <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border-light bg-card-light p-2">

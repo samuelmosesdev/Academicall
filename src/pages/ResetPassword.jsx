@@ -2,6 +2,7 @@ import { useState } from "react";
 import AuthShell, { Field, AuthError, AuthNote, PrimaryButton } from "../components/AuthShell";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { authApi } from "../lib/api";
+import { describeAuthError } from "../lib/authErrors";
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
@@ -16,15 +17,15 @@ export default function ResetPassword() {
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
-    if (!token) return setError("This reset link is missing its token.");
-    if (password.length < 8) return setError("Password must be at least 8 characters.");
-    if (password !== confirm) return setError("Passwords do not match.");
+    if (!token) return setError(describeAuthError("This reset link is missing its token."));
+    if (password.length < 8) return setError(describeAuthError("Password must be at least 8 characters."));
+    if (password !== confirm) return setError(describeAuthError("Passwords do not match."));
     setBusy(true);
     try {
       await authApi.confirmPasswordReset({ token, password });
       setDone(true);
     } catch (err) {
-      setError(err.message || "Could not reset password.");
+      setError(describeAuthError(err, { fallback: "We couldn't update your password." }));
     } finally {
       setBusy(false);
     }
@@ -37,7 +38,7 @@ export default function ResetPassword() {
       subtitle="Use at least 8 characters."
       footer={<Link to="/login" className="font-medium text-midnight underline decoration-lemon decoration-[3px] underline-offset-4 hover:decoration-violet">Back to sign in</Link>}
     >
-      <AuthError>{error}</AuthError>
+      <AuthError error={error} onDismiss={() => setError("")} />
       {done ? (
         <div className="space-y-5">
           <AuthNote>Your password has been updated.</AuthNote>

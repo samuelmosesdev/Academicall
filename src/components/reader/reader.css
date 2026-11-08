@@ -1,0 +1,141 @@
+/* Reader surface — kept outside Tailwind so the page filters and text-layer tweaks stay in one place. */
+
+.reader {
+  --reader-desk: #e6e1d6;
+  --reader-bar: #fbf9f4;
+  --reader-bar-ink: #0f0326;
+  --reader-bar-muted: #645d79;
+  --reader-bar-line: #d8d0c0;
+  --reader-bar-hover: #efeae0;
+  --reader-chip: #efeae0;
+  --reader-page-filter: none;
+  --reader-thumb-active: #454ade;
+  background: var(--reader-desk);
+  color: var(--reader-bar-ink);
+}
+
+.reader[data-theme="sepia"] {
+  --reader-desk: #e4d9c1;
+  --reader-bar: #f4ecd9;
+  --reader-bar-ink: #3b2f1e;
+  --reader-bar-muted: #7a6a52;
+  --reader-bar-line: #d6c7a6;
+  --reader-bar-hover: #eadfc6;
+  --reader-chip: #eadfc6;
+  --reader-page-filter: sepia(0.32) saturate(1.15) brightness(0.97);
+  --reader-thumb-active: #8a5a1c;
+}
+
+.reader[data-theme="dark"] {
+  --reader-desk: #0c0a10;
+  --reader-bar: #16131c;
+  --reader-bar-ink: #ece9f3;
+  --reader-bar-muted: #9a93ab;
+  --reader-bar-line: #2a2533;
+  --reader-bar-hover: #221e2a;
+  --reader-chip: #221e2a;
+  --reader-page-filter: invert(0.9) hue-rotate(180deg) contrast(0.92);
+  --reader-thumb-active: #f8f32b;
+}
+
+.reader-bar {
+  background: var(--reader-bar);
+  border-color: var(--reader-bar-line);
+  color: var(--reader-bar-ink);
+}
+
+.reader-muted { color: var(--reader-bar-muted); }
+.reader-line { background: var(--reader-bar-line); }
+.reader-chip { background: var(--reader-chip); }
+
+.reader-btn {
+  color: var(--reader-bar-ink);
+}
+.reader-btn:hover:not(:disabled) { background: var(--reader-bar-hover); }
+.reader-btn[data-active="true"] {
+  background: var(--reader-bar-ink);
+  color: var(--reader-bar);
+}
+
+.reader-scroll {
+  /* We handle two-finger pinch ourselves; single-finger panning stays native. */
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.reader-page canvas,
+.reader-page .reader-ph,
+.reader-thumb canvas,
+.reader-image {
+  filter: var(--reader-page-filter);
+}
+
+.reader-page .reader-ph {
+  background: #fff;
+}
+
+.reader-page .react-pdf__Page,
+.reader-page .react-pdf__Page__canvas {
+  display: block;
+}
+
+/* Desktop: pages sit on the desk with a quiet edge. Phones: edge to edge, no chrome. */
+@media (min-width: 640px) {
+  .reader-page {
+    box-shadow: 0 1px 2px rgba(15, 3, 38, 0.08), 0 8px 24px -16px rgba(15, 3, 38, 0.35);
+  }
+  .reader[data-theme="dark"] .reader-page {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+}
+
+.reader-page .textLayer mark {
+  background: rgba(248, 243, 43, 0.6);
+  color: transparent;
+  border-radius: 2px;
+  padding: 0;
+}
+.reader[data-theme="dark"] .reader-page .textLayer mark {
+  /* The canvas is inverted, the text layer isn't — use a tone that reads on dark. */
+  background: rgba(248, 243, 43, 0.35);
+}
+
+.reader-protected .reader-page .textLayer {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.reader-thumb {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 120ms ease;
+}
+.reader-thumb[data-active="true"] {
+  outline-color: var(--reader-thumb-active);
+}
+
+.reader-pill {
+  background: rgba(15, 3, 38, 0.78);
+  color: #fff;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.reader-sheet {
+  background: var(--reader-bar);
+  color: var(--reader-bar-ink);
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.reader-seg {
+  background: var(--reader-chip);
+}
+.reader-seg > button[data-active="true"] {
+  background: var(--reader-bar);
+  box-shadow: 0 1px 2px rgba(15, 3, 38, 0.12);
+}
+
+.reader-top-safe {
+  padding-top: env(safe-area-inset-top);
+}

@@ -1,15 +1,7 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AtSign, Loader2 } from "lucide-react";
 import { housesApi, mentionToken, MENTION_RX } from "../../lib/aspirantApi";
-
-const URL_RX = /(https?:\/\/[^\s<]+[^\s<.,:;"')\]])/g;
-
-function linkify(text, keyBase) {
-  const parts = text.split(URL_RX);
-  return parts.map((p, i) =>
-    i % 2 === 1 ? <a key={`${keyBase}-${i}`} href={p} target="_blank" rel="noreferrer" className="font-medium text-accent underline underline-offset-2">{p.replace(/^https?:\/\//, "")}</a> : <Fragment key={`${keyBase}-${i}`}>{p}</Fragment>,
-  );
-}
+import { linkifyText } from "../../lib/linkifyText";
 
 /** Renders a post body: paragraphs, links and @mention chips. */
 export function MentionText({ text = "", meId, className = "" }) {
@@ -22,11 +14,11 @@ export function MentionText({ text = "", meId, className = "" }) {
         const rx = new RegExp(MENTION_RX.source, "gi");
         let m;
         while ((m = rx.exec(block))) {
-          if (m.index > last) out.push(...linkify(block.slice(last, m.index), `${b}-t${last}`));
+          if (m.index > last) out.push(...linkifyText(block.slice(last, m.index), `${b}-t${last}`));
           out.push(<span key={`${b}-m${m.index}`} className={`house-mention ${m[2] === meId ? "is-me" : ""}`}>@{m[1]}</span>);
           last = m.index + m[0].length;
         }
-        if (last < block.length) out.push(...linkify(block.slice(last), `${b}-t${last}`));
+        if (last < block.length) out.push(...linkifyText(block.slice(last), `${b}-t${last}`));
         return <p key={b} className="whitespace-pre-line">{out}</p>;
       })}
     </div>

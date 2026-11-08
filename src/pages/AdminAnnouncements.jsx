@@ -11,6 +11,7 @@ import {
 import { Plus, Trash2, Pin, MessageCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { announcementsApi, feedApi } from "../lib/api";
+import LinkifiedText from "../components/LinkifiedText";
 
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
@@ -263,7 +264,7 @@ export default function AdminAnnouncements() {
                       {item.pinned && <Pin size={12} className="inline text-accent mr-1" />}
                       {item.title}
                     </p>
-                    <p className="mt-1 text-sm text-text-secondary whitespace-pre-wrap">{item.body}</p>
+                    <p className="mt-1 text-sm text-text-secondary whitespace-pre-wrap"><LinkifiedText text={item.body} /></p>
                     <p className="mt-2 text-xs text-text-muted">{item.createdByName} · {item.audience} · {item.published ? "Published" : "Draft"}</p>
                   </div>
                   <button type="button" onClick={() => handleDelete(item.id)} className="text-status-danger p-1">
@@ -316,7 +317,7 @@ export default function AdminAnnouncements() {
                         {item.pinned && <Pin size={12} className="inline text-accent mr-1" />}
                         {item.title}
                       </p>
-                      <p className="mt-1 text-sm text-text-secondary whitespace-pre-wrap">{item.body}</p>
+                      <p className="mt-1 text-sm text-text-secondary whitespace-pre-wrap"><LinkifiedText text={item.body} /></p>
                       <p className="mt-2 text-xs text-text-muted">{item.authorName || item.createdByName}</p>
                     </div>
                     <div className="flex gap-1">
@@ -342,7 +343,7 @@ export default function AdminAnnouncements() {
                       {comments.map((c) => (
                         <div key={c.id} className="rounded-lg bg-bg-panel-alt px-3 py-2">
                           <p className="text-xs font-semibold text-text-primary">{c.authorName || "Student"}</p>
-                          <p className="text-xs text-text-secondary">{c.text}</p>
+                          <p className="text-xs text-text-secondary"><LinkifiedText text={c.text} /></p>
                         </div>
                       ))}
                     </div>

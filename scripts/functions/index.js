@@ -272,11 +272,11 @@ exports.verifyPaystackReference = functions.https.onRequest(async (req, res) => 
 function getR2Config() {
   const c = functions.config().r2 || {};
   return {
-    accountId: c.account_id || process.env.R2_ACCOUNT_ID || "846fcf28d6114e4cd85ef238db9fe993",
-    accessKeyId: c.access_key_id || process.env.R2_ACCESS_KEY_ID || "4045a13ef7df59874a79568e1b38c683",
-    secretAccessKey: c.secret_access_key || process.env.R2_SECRET_ACCESS_KEY || "da82304bdb72007c490e502dd9f3a57a2e8d1b7085406291e2ce30b494ea7944",
+    accountId: c.account_id || process.env.R2_ACCOUNT_ID || "",
+    accessKeyId: c.access_key_id || process.env.R2_ACCESS_KEY_ID || "",
+    secretAccessKey: c.secret_access_key || process.env.R2_SECRET_ACCESS_KEY || "",
     bucket: c.bucket || process.env.R2_BUCKET || "",
-    publicBaseUrl: (c.public_base_url || process.env.R2_PUBLIC_BASE_URL || "https://846fcf28d6114e4cd85ef238db9fe993.r2.cloudflarestorage.com").replace(/\/$/, ""),
+    publicBaseUrl: (c.public_base_url || process.env.R2_PUBLIC_BASE_URL || "").replace(/\/$/, ""),
   };
 }
 
@@ -330,10 +330,10 @@ exports.getR2UploadUrl = functions.https.onCall(async (data, context) => {
   }
 
   const cfg = getR2Config();
-  if (!cfg.bucket || !cfg.publicBaseUrl) {
+  if (!cfg.accountId || !cfg.accessKeyId || !cfg.secretAccessKey || !cfg.bucket || !cfg.publicBaseUrl) {
     throw new functions.https.HttpsError(
       "failed-precondition",
-      "R2 bucket or public_base_url not configured."
+      "R2 account, credentials, bucket, and public_base_url must be configured."
     );
   }
 

@@ -1,83 +1,166 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Landing from "./pages/Landing";
-import Privacy from "./pages/Privacy";
+const Privacy = lazy(() => import("./pages/Privacy"));
 import Login from "./pages/Login";
-import LoginRedirect from "./pages/LoginRedirect";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import ForceChangePassword from "./pages/ForceChangePassword";
-import Signup from "./pages/Signup";
-import VerifyEmail from "./pages/VerifyEmail";
-import CompleteProfile from "./pages/CompleteProfile";
-import AdminLayout from "./pages/AdminLayout";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminUsers from "./pages/AdminUsers";
-import AdminUserDetail from "./pages/AdminUserDetail";
-import AdminDocuments from "./pages/AdminDocuments";
-import AdminCbtBuilder from "./pages/AdminCbtBuilder";
-import AdminCourses from "./pages/AdminCourses";
-import AdminAgents from "./pages/AdminAgents";
-import AdminAgentActivity from "./pages/AdminAgentActivity";
-import AdminPayments from "./pages/AdminPayments";
-import AdminSettings from "./pages/AdminSettings";
-import AdminAnnouncements from "./pages/AdminAnnouncements";
-import StaffFeedPage from "./pages/StaffFeedPage";
-import StaffChat from "./pages/StaffChat";
-import StaffProfile from "./pages/StaffProfile";
-import AdminRequests from "./pages/AdminRequests";
-import AdminActivityLog from "./pages/AdminActivityLog";
-import AdminUserActivity from "./pages/AdminUserActivity";
-import AdminActivity from "./pages/AdminActivity";
-import AdminGovernance from "./pages/AdminGovernance";
-import AdminAcademics from "./pages/AdminAcademics";
-import AdminAcademicCatalog from "./pages/AdminAcademicCatalog";
-import AdminAuditLog from "./pages/AdminAuditLog";
-import AdminNotifications from "./pages/AdminNotifications";
-import AgentLayout from "./pages/AgentLayout";
-import AgentDashboard from "./pages/AgentDashboard";
-import AgentSettings from "./pages/AgentSettings";
-import StudentSettings from "./pages/StudentSettings";
-import UserLayout from "./pages/UserLayout";
-import UserDashboard from "./pages/UserDashboard";
-import StudentProfile from "./pages/StudentProfile";
-import StudentDocuments from "./pages/StudentDocuments";
-import StudentCourseReading from "./pages/StudentCourseReading";
-import DocumentReader from "./pages/DocumentReader";
-import StudentPractice from "./pages/StudentPractice";
-import StudentUpgrade from "./pages/StudentUpgrade";
-import StudentTimetable from "./pages/StudentTimetable";
-import StudentNotifications from "./pages/StudentNotifications";
-import ArchivedNotifications from "./pages/ArchivedNotifications";
-import StudentCourses from "./pages/StudentCourses";
+const LoginRedirect = lazy(() => import("./pages/LoginRedirect"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const ForceChangePassword = lazy(() => import("./pages/ForceChangePassword"));
+const Signup = lazy(() => import("./pages/Signup"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const CompleteProfile = lazy(() => import("./pages/CompleteProfile"));
+const AdminLayout = lazy(() => import("./pages/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const AdminUserDetail = lazy(() => import("./pages/AdminUserDetail"));
+const AdminDocuments = lazy(() => import("./pages/AdminDocuments"));
+const AdminCbtBuilder = lazy(() => import("./pages/AdminCbtBuilder"));
+const AdminCourses = lazy(() => import("./pages/AdminCourses"));
+const AdminAgents = lazy(() => import("./pages/AdminAgents"));
+const AdminAgentActivity = lazy(() => import("./pages/AdminAgentActivity"));
+const AdminPayments = lazy(() => import("./pages/AdminPayments"));
+const AdminBilling = lazy(() => import("./pages/AdminBilling"));
+import { PremiumGate } from "./lib/billing";
+const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+const AdminAnnouncements = lazy(() => import("./pages/AdminAnnouncements"));
+const StaffFeedPage = lazy(() => import("./pages/StaffFeedPage"));
+const StaffChat = lazy(() => import("./pages/StaffChat"));
+const AgentMail = lazy(() => import("./pages/AgentMail"));
+const AdminOrganization = lazy(() => import("./pages/AdminOrganization"));
+const AdminTasks = lazy(() => import("./pages/AdminTasks"));
+const StaffMyWork = lazy(() => import("./pages/StaffMyWork"));
+const StaffMyTeam = lazy(() => import("./pages/StaffMyTeam"));
+const StaffProfile = lazy(() => import("./pages/StaffProfile"));
+const AdminRequests = lazy(() => import("./pages/AdminRequests"));
+const AdminActivityLog = lazy(() => import("./pages/AdminActivityLog"));
+const AdminUserActivity = lazy(() => import("./pages/AdminUserActivity"));
+const AdminActivity = lazy(() => import("./pages/AdminActivity"));
+const AdminGovernance = lazy(() => import("./pages/AdminGovernance"));
+const AdminAcademics = lazy(() => import("./pages/AdminAcademics"));
+const AdminAcademicCatalog = lazy(() => import("./pages/AdminAcademicCatalog"));
+const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
+const AdminNotifications = lazy(() => import("./pages/AdminNotifications"));
+const AgentLayout = lazy(() => import("./pages/AgentLayout"));
+const AgentDashboard = lazy(() => import("./pages/AgentDashboard"));
+const AgentSettings = lazy(() => import("./pages/AgentSettings"));
+const StudentSettings = lazy(() => import("./pages/StudentSettings"));
+const UserLayout = lazy(() => import("./pages/UserLayout"));
+const UserDashboard = lazy(() => import("./pages/UserDashboard"));
+const StudentProfile = lazy(() => import("./pages/StudentProfile"));
+const StudentDocuments = lazy(() => import("./pages/StudentDocuments"));
+const StudentCourseReading = lazy(() => import("./pages/StudentCourseReading"));
+const DocumentReader = lazy(() => import("./pages/DocumentReader"));
+const StudentPractice = lazy(() => import("./pages/StudentPractice"));
+const UtmeCbt = lazy(() => import("./pages/UtmeCbt"));
+const UtmeExam = lazy(() => import("./pages/UtmeExam"));
+const StudentUpgrade = lazy(() => import("./pages/StudentUpgrade"));
+const StudentTimetable = lazy(() => import("./pages/StudentTimetable"));
+const StudentNotifications = lazy(() => import("./pages/StudentNotifications"));
+const ArchivedNotifications = lazy(() => import("./pages/ArchivedNotifications"));
+const StudentCourses = lazy(() => import("./pages/StudentCourses"));
 const CourseRepPanel = lazy(() => import("./pages/CourseRepPanel"));
-import StudentReference from "./pages/StudentReference";
-import StudentDepartment from "./pages/StudentDepartment";
-import StudentMaterials from "./pages/StudentMaterials";
-import StudentMaterialFolder from "./pages/StudentMaterialFolder";
-import StudentMaterialsLibrary from "./pages/StudentMaterialsLibrary";
-import StudentGroups from "./pages/StudentGroups";
+const StudentReference = lazy(() => import("./pages/StudentReference"));
+const StudentDepartment = lazy(() => import("./pages/StudentDepartment"));
+const StudentMaterials = lazy(() => import("./pages/StudentMaterials"));
+const StudentMaterialFolder = lazy(() => import("./pages/StudentMaterialFolder"));
+const StudentMaterialsLibrary = lazy(() => import("./pages/StudentMaterialsLibrary"));
+const StudentGroups = lazy(() => import("./pages/StudentGroups"));
 import StudyGroupJoin, { StudyInviteRedirect } from "./pages/StudyGroupJoin";
-import StudentDocumentsComingSoon from "./pages/StudentDocumentsComingSoon";
-import StudentVault from "./pages/StudentVault";
-import NewsHome from "./pages/NewsHome";
-import NewsArticle from "./pages/NewsArticle";
-import NewsDesk from "./pages/NewsDesk";
-import AdminStaffAccess from "./pages/AdminStaffAccess";
-import DocumentCenter from "./pages/DocumentCenter";
+const StudentDocumentsComingSoon = lazy(() => import("./pages/StudentDocumentsComingSoon"));
+const StudentVault = lazy(() => import("./pages/StudentVault"));
+const NewsHome = lazy(() => import("./pages/NewsHome"));
+const NewsArticle = lazy(() => import("./pages/NewsArticle"));
+const NewsDesk = lazy(() => import("./pages/NewsDesk"));
+const AdminStaffAccess = lazy(() => import("./pages/AdminStaffAccess"));
+const DocumentCenter = lazy(() => import("./pages/DocumentCenter"));
 import { SecretariatLayout, SecretariatOverview, SecretariatRecords, SecretariatRecord, SecretariatJournal } from "./pages/Secretariat";
 import { useAuth } from "./context/AuthContext";
-import AspirantDashboard from "./pages/AspirantDashboard";
-import AspirantHouse from "./pages/AspirantHouse";
-import AspirantChoices from "./pages/AspirantChoices";
+import { FeaturesProvider, FeatureRedirect, MaintenanceScreen } from "./lib/features";
+import { SafetyHost } from "./components/safety/SafetyActions";
+
+const PREFETCH = {
+  guest: [() => import("./pages/NewsHome"), () => import("./pages/NewsArticle"), () => import("./pages/Signup")],
+  student: [
+    () => import("./pages/StudentCourses"),
+    () => import("./pages/NewsHome"),
+    () => import("./pages/StudentMaterials"),
+    () => import("./pages/StudentNotifications"),
+  ],
+  staff: [
+    () => import("./pages/AdminDocuments"),
+    () => import("./pages/StaffMyWork"),
+    () => import("./pages/AdminOrganization"),
+    () => import("./pages/AdminTasks"),
+  ],
+};
+
+function RoutePrefetcher() {
+  const { profile, loading } = useAuth();
+  const role = profile?.role;
+  const group = !role
+    ? "guest"
+    : ["admin", "agent", "alphaAgent", "staff", "supervisor"].includes(role)
+      ? "staff"
+      : "student";
+
+  useEffect(() => {
+    if (loading) return undefined;
+    const connection = navigator.connection;
+    if (connection?.saveData || /(^|-)slow-2g$|(^|-)2g$|(^|-)3g$/.test(connection?.effectiveType || "")) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let timer;
+    const queue = [...PREFETCH[group]];
+    const idle = (callback) => {
+      if (window.requestIdleCallback) window.requestIdleCallback(callback, { timeout: 2000 });
+      else setTimeout(callback, 400);
+    };
+    const next = () => {
+      if (cancelled || !queue.length) return;
+      idle(() => {
+        if (cancelled) return;
+        Promise.resolve(queue.shift()())
+          .catch((error) => console.debug("Route prefetch failed", error))
+          .finally(() => {
+            timer = setTimeout(next, 700);
+          });
+      });
+    };
+    timer = setTimeout(next, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [group, loading]);
+
+  return null;
+}
+const SecuritySetup = lazy(() => import("./pages/SecuritySetup"));
+const AdminModeration = lazy(() => import("./pages/AdminModeration"));
+const AdminTests = lazy(() => import("./pages/AdminTests"));
+const AdminSecurity = lazy(() => import("./pages/AdminSecurity"));
+const AdminData = lazy(() => import("./pages/AdminData"));
+const StudentResults = lazy(() => import("./pages/StudentResults"));
+const StudentDownloads = lazy(() => import("./pages/StudentDownloads"));
+const StudentTests = lazy(() => import("./pages/StudentTests"));
+const TestExam = lazy(() => import("./pages/TestExam"));
+const SearchPage = lazy(() => import("./pages/SearchPage"));
+const AdminFeatures = lazy(() => import("./pages/AdminFeatures"));
+const AdminUtmeBank = lazy(() => import("./pages/AdminUtmeBank"));
+const AspirantDashboard = lazy(() => import("./pages/AspirantDashboard"));
+const AspirantHouse = lazy(() => import("./pages/AspirantHouse"));
+const AspirantChoices = lazy(() => import("./pages/AspirantChoices"));
 import { HouseDeskLayout, HouseDeskHome, HouseDeskHouse } from "./pages/HouseDesk";
-import AdminAspirants from "./pages/AdminAspirants";
-import AdminHouses from "./pages/AdminHouses";
-import AdminBoard from "./pages/AdminBoard";
-import NewsFollowing from "./pages/NewsFollowing";
+const AdminAspirants = lazy(() => import("./pages/AdminAspirants"));
+const AdminHouses = lazy(() => import("./pages/AdminHouses"));
+const AdminBoard = lazy(() => import("./pages/AdminBoard"));
+const NewsFollowing = lazy(() => import("./pages/NewsFollowing"));
 
 /** Aspirants get their own dashboard; students keep theirs. */
 function DashboardHome() {
@@ -94,7 +177,14 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <FeaturesProvider>
         <BrowserRouter>
+          <RoutePrefetcher />
+          <FeatureRedirect />
+          <PremiumGate />
+          <MaintenanceScreen />
+          <SafetyHost />
+          <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-text-muted" role="status">Loading…</div>}>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/privacy" element={<Privacy />} />
@@ -147,6 +237,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/security-setup"
+              element={
+                <ProtectedRoute>
+                  <SecuritySetup />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/signup" element={<Signup />} />
             <Route path="/study/:code" element={<StudyInviteRedirect />} />
             <Route
@@ -192,6 +290,7 @@ export default function App() {
               <Route path="academics" element={<AdminAcademics />} />
               <Route path="cbt-builder" element={<AdminCbtBuilder />} />
               <Route path="payments" element={<AdminPayments />} />
+              <Route path="billing" element={<AdminBilling />} />
               <Route path="requests" element={<AdminRequests />} />
               <Route path="activity-log" element={<AdminActivityLog />} />
               <Route path="settings" element={<AdminSettings />} />
@@ -199,9 +298,18 @@ export default function App() {
               <Route path="announcements" element={<AdminAnnouncements />} />
               <Route path="feeds" element={<StaffFeedPage />} />
               <Route path="staff-chat" element={<StaffChat />} />
+              <Route path="mail" element={<AgentMail />} />
+              <Route path="organization" element={<AdminOrganization />} />
+              <Route path="tasks" element={<AdminTasks />} />
               <Route path="aspirants" element={<AdminAspirants />} />
               <Route path="houses" element={<AdminHouses />} />
               <Route path="board" element={<AdminBoard />} />
+              <Route path="utme" element={<AdminUtmeBank />} />
+              <Route path="features" element={<AdminFeatures />} />
+              <Route path="moderation" element={<AdminModeration />} />
+              <Route path="tests" element={<AdminTests />} />
+              <Route path="security" element={<AdminSecurity />} />
+              <Route path="data" element={<AdminData />} />
             </Route>
 
             <Route
@@ -232,7 +340,7 @@ export default function App() {
               <Route
                 path="academics"
                 element={
-                  <ProtectedRoute requiredRole="cap:academics.manage">
+                  <ProtectedRoute requiredRole="cap:academics.manage|courses.manage">
                     <AdminAcademics />
                   </ProtectedRoute>
                 }
@@ -309,8 +417,35 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="utme"
+                element={
+                  <ProtectedRoute requiredRole="cap:utme.manage">
+                    <AdminUtmeBank />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="moderation"
+                element={
+                  <ProtectedRoute requiredRole="cap:moderation.manage">
+                    <AdminModeration />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tests"
+                element={
+                  <ProtectedRoute requiredRole="cap:tests.manage">
+                    <AdminTests />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="feeds" element={<StaffFeedPage />} />
               <Route path="staff-chat" element={<StaffChat />} />
+              <Route path="mail" element={<AgentMail />} />
+              <Route path="my-work" element={<StaffMyWork />} />
+              <Route path="my-team" element={<StaffMyTeam />} />
               <Route path="settings" element={<AgentSettings />} />
               <Route path="profile" element={<StaffProfile />} />
               <Route
@@ -340,6 +475,24 @@ export default function App() {
             </Route>
 
             <Route
+              path="/test/:id"
+              element={
+                <ProtectedRoute requiredRole={["user", "courseRep", "newsAgent", "aspirant"]}>
+                  <TestExam />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/utme/exam"
+              element={
+                <ProtectedRoute requiredRole={["user", "courseRep", "newsAgent", "aspirant"]}>
+                  <UtmeExam />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/dashboard"
               element={
                 <ProtectedRoute requiredRole={["user", "courseRep", "newsAgent", "aspirant"]}>
@@ -357,6 +510,7 @@ export default function App() {
               <Route path="reading-hub/doc/:docId" element={<StudentOnly><DocumentReader /></StudentOnly>} />
               <Route path="reading-hub/:courseCode" element={<StudentOnly><StudentCourseReading /></StudentOnly>} />
               <Route path="practice" element={<StudentPractice />} />
+              <Route path="utme" element={<UtmeCbt />} />
               <Route path="upgrade" element={<StudentUpgrade />} />
               <Route path="timetable" element={<StudentOnly><StudentTimetable /></StudentOnly>} />
               <Route path="notifications" element={<StudentNotifications />} />
@@ -373,6 +527,10 @@ export default function App() {
               <Route path="vault" element={<StudentVault />} />
               <Route path="vault/:folderId" element={<StudentVault />} />
               <Route path="settings" element={<StudentSettings />} />
+              <Route path="results" element={<StudentOnly><StudentResults /></StudentOnly>} />
+              <Route path="downloads" element={<StudentDownloads />} />
+              <Route path="tests" element={<StudentTests />} />
+              <Route path="search" element={<SearchPage />} />
               <Route
                 path="course-rep"
                 element={
@@ -388,7 +546,9 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
+          </Suspense>
         </BrowserRouter>
+        </FeaturesProvider>
       </AuthProvider>
     </ThemeProvider>
   );

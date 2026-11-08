@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Building2, Loader2, MessageCircle, Plus, Shield, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, MessageCircle, Plus, Shield, Users } from "lucide-react";
 import { housesApi, institutionTitle } from "../lib/aspirantApi";
 import { timeAgo } from "../lib/newsApi";
 import { useAuth } from "../context/AuthContext";

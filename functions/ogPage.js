@@ -9,7 +9,7 @@
  *      tags into the built index.html, and returns it. People get the normal app.
  *   3. proxies the card images (/og/**) from the API with long CDN caching, so the
  *      image URL lives on academicall.site and survives the API's cold start.
- * If the API is slow (> 3.5 s) or down, the page still loads with the default tags.
+ * If the API is slow (> 9 s) or down, the page still loads with the default tags.
  *
  * Config (optional): OG_API_URL in functions/.env (e.g. OG_API_URL=https://…/api/v1);
  * OG_SHELL_ORIGIN only for local testing (defaults to the requesting host over https).
@@ -101,7 +101,7 @@ exports.ogPage = onRequest({ region: "us-central1", memory: "256MiB", timeoutSec
     const htmlP = indexHtml(req);
     let meta = defaults(path);
     try {
-      const r = await withTimeout(`${apiBase()}/og/meta?path=${encodeURIComponent(path)}`, 3500);
+      const r = await withTimeout(`${apiBase()}/og/meta?path=${encodeURIComponent(path)}`, 9000);
       if (r.ok) meta = { ...meta, ...(await r.json()) };
     } catch (_) { /* API asleep or down: defaults */ }
     const html = inject(await htmlP, meta);

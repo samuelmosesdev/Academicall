@@ -3,9 +3,13 @@ import AuthShell, { Field, AuthError, PrimaryButton, Divider } from "../componen
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { friendlyAuthError } from "../lib/authErrors";
+import { describeAuthError } from "../lib/authErrors";
 import { renderGoogleSignInButton } from "../lib/googleAuth";
-import { twoFactorApi } from "../lib/api";
+import { twoFactorApi } from "../lib/gapsApi";
+
+const isTwoFactorChallenge = (result) =>
+  result?.twoFactorRequired === true ||
+  (typeof result?.challengeId === "string" && ["email", "totp"].includes(result.method));
 
 export default function Login() {
   const { loginWithApi, signInWithGoogle, completeTwoFactor } = useAuth();
@@ -36,10 +40,10 @@ export default function Login() {
       setBusy(true);
       try {
         const r = await signInWithGoogle(credential);
-        if (r?.twoFactorRequired) { setChallenge(r); return; }
+        if (isTwoFactorChallenge(r)) { setChallenge(r); return; }
         navigate(from && from !== "/login" ? from : "/login-redirect", { replace: true });
       } catch (err) {
-        setError(err.message || friendlyAuthError(err.code) || "Google sign-in didn't go through.");
+        setError(describeAuthError(err, { fallback: "Google sign-in didn't go through." }));
       } finally {
         googleBusyRef.current = false;
         if (active) setBusy(false);
@@ -50,7 +54,7 @@ export default function Login() {
         else dispose();
       })
       .catch((err) => {
-        if (active) setError(err?.message || "Google sign-in is unavailable.");
+        if (active) setError(describeAuthError(err?.message ? err : "Google sign-in is unavailable."));
       });
 
     return () => {
@@ -65,10 +69,10 @@ export default function Login() {
     setBusy(true);
     try {
       const r = await loginWithApi(identifier.trim(), password);
-      if (r?.twoFactorRequired) { setChallenge(r); return; }
+      if (isTwoFactorChallenge(r)) { setChallenge(r); return; }
       navigate(from && from !== "/login" ? from : "/login-redirect", { replace: true });
     } catch (err) {
-      setError(err.message || friendlyAuthError(err.code) || "Sign-in didn't go through.");
+      setError(describeAuthError(err, { fallback: "Sign-in didn't go through." }));
     } finally {
       setBusy(false);
     }
@@ -95,7 +99,7 @@ export default function Login() {
       subtitle="Sign in to see today's classes and pick up your reading."
       footer={<>New to Academicall? <Link to="/signup" className="font-medium text-midnight underline decoration-lemon decoration-[3px] underline-offset-4 hover:decoration-violet">Create an account</Link></>}
     >
-      <AuthError>{error}</AuthError>
+      <AuthError error={error} onDismiss={() => setError("")} />
       <div
         ref={googleButtonRef}
         aria-label="Continue with Google"
@@ -137,9 +141,9 @@ function TwoFactorStep({ challenge, onSubmit, onBack, onRenew }) {
       await onSubmit(code.trim());
     } catch (err) {
       if (err.data?.code === "challenge_expired" || err.data?.code === "challenge_locked") {
-        setError(err.message || "This sign-in code expired. Sign in again.");
+        setError(describeAuthError(err));
         setTimeout(onBack, 2500);
-      } else setError(err.message || "That code isn't right.");
+      } else setError(describeAuthError(err?.message ? err : "That code isn't right."));
     } finally {
       setBusy(false);
     }
@@ -152,7 +156,7 @@ function TwoFactorStep({ challenge, onSubmit, onBack, onRenew }) {
       onRenew(r);
       setResent(true);
     } catch (err) {
-      setError(err.message || "Could not send a new code.");
+      setError(describeAuthError(err));
     }
   }
 
@@ -167,7 +171,7 @@ function TwoFactorStep({ challenge, onSubmit, onBack, onRenew }) {
           : "Open your authenticator app and enter the 6-digit code for Academicall."}
       footer={<button type="button" onClick={onBack} className="font-medium text-midnight underline decoration-lemon decoration-[3px] underline-offset-4 hover:decoration-violet">Use a different account</button>}
     >
-      <AuthError>{error}</AuthError>
+      <AuthError error={error} onDismiss={() => setError("")} />
       <form onSubmit={submit} className="space-y-5">
         <Field label={useBackup ? "Backup code" : "Code"}>
           <input
@@ -181,7 +185,7 @@ function TwoFactorStep({ challenge, onSubmit, onBack, onRenew }) {
             required
           />
         </Field>
-        <PrimaryButton type="submit" disabled={busy || (useBackup ? code.replace(/-/g, "").length < 8 : code.length < 6)}>{busy ? "Checking?" : "Sign in"}</PrimaryButton>
+        <PrimaryButton type="submit" disabled={busy || (useBackup ? code.replace(/-/g, "").length < 8 : code.length < 6)}>{busy ? "Checking…" : "Sign in"}</PrimaryButton>
       </form>
       <div className="mt-4 flex flex-wrap justify-between gap-2 text-[0.85rem]">
         {isEmail && !useBackup ? (

@@ -19,6 +19,7 @@ import { useTheme } from "../context/ThemeContext";
 import { isPro, planLabel, FREE_LIMITS } from "../lib/subscription";
 import { usersApi, authApi } from "../lib/api";
 import { getAcademicScope } from "../lib/academicScope";
+import { TwoFactorSection, DevicesSection, PushSection, PrivacySection, DataSection } from "../components/settings/AccountSafety";
 
 const fieldClass =
   "w-full rounded-lg border border-border-light bg-surface-light px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-teal focus:outline-none";
@@ -321,6 +322,13 @@ export default function StudentSettings() {
           Click <strong>Save account & preferences</strong> above to store these choices.
         </p>
       </section>
+
+      {/* Phone alerts, sign-in security, privacy and data */}
+      <PushSection />
+      <TwoFactorSection />
+      <DevicesSection />
+      <PrivacySection />
+      <DataSection />
 
       {/* 4. Learning preferences */}
       <section className={section}>

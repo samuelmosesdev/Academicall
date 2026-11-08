@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MessageCircle, Newspaper } from "lucide-react";
 import { REACTIONS, timeAgo } from "../../lib/newsApi";
+import { parseBlocks, safeUrl } from "./newsMarkdown";
 
 export function Cover({ post, className = "", eager }) {
   return (
@@ -61,17 +63,47 @@ export function StoryCard({ post }) {
   );
 }
 
-/** Body text: blank-line paragraphs, "## " subheads, "> " pull quotes, **bold**. */
+/** Story content is parsed into React nodes; no story HTML is injected into the page. */
 export function Prose({ body }) {
-  const blocks = String(body || "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
-  const inline = (t) => t.split(/(\*\*[^*]+\*\*)/g).map((part, i) => (/^\*\*[^*]+\*\*$/.test(part) ? <strong key={i}>{part.slice(2, -2)}</strong> : part));
+  const blocks = useMemo(() => parseBlocks(body), [body]);
   return (
     <div className="news-prose">
-      {blocks.map((b, i) => {
-        if (b.startsWith("## ")) return <h2 key={i}>{inline(b.slice(3))}</h2>;
-        if (b.startsWith("> ")) return <blockquote key={i}>{inline(b.replace(/^>\s?/gm, ""))}</blockquote>;
-        return <p key={i}>{b.split("\n").map((line, j, arr) => <span key={j}>{inline(line)}{j < arr.length - 1 && <br />}</span>)}</p>;
-      })}
+      {blocks.map((block, i) => <StoryBlock key={i} block={block} />)}
     </div>
   );
+}
+
+function Inline({ nodes }) {
+  return nodes.map((node, i) => {
+    if (node.t === "text") return node.v;
+    if (node.t === "br") return <br key={i} />;
+    if (node.t === "strong") return <strong key={i}><Inline nodes={node.c} /></strong>;
+    if (node.t === "em") return <em key={i}><Inline nodes={node.c} /></em>;
+    if (node.t === "code") return <code key={i}>{node.v}</code>;
+    const href = safeUrl(node.href);
+    if (!href) return <Inline key={i} nodes={node.c} />;
+    const external = !href.startsWith("/");
+    return <a key={i} href={href} {...(external ? { target: "_blank", rel: "noopener noreferrer nofollow" } : {})}><Inline nodes={node.c} /></a>;
+  });
+}
+
+function StoryBlock({ block }) {
+  if (block.type === "h2") return <><h2><Inline nodes={block.c} /></h2>{block.rest && <Prose body={block.rest} />}</>;
+  if (block.type === "h3") return <><h3><Inline nodes={block.c} /></h3>{block.rest && <Prose body={block.rest} />}</>;
+  if (block.type === "quote") return <blockquote><Inline nodes={block.c} /></blockquote>;
+  if (block.type === "hr") return <hr />;
+  if (block.type === "ul") return <ul>{block.items.map((item, i) => <li key={i}><Inline nodes={item} /></li>)}</ul>;
+  if (block.type === "ol") return <ol>{block.items.map((item, i) => <li key={i}><Inline nodes={item} /></li>)}</ol>;
+  if (block.type === "image") {
+    const src = safeUrl(block.src, { image: true });
+    if (!src) return null;
+    return <figure><img src={src} alt={block.alt || block.caption || ""} loading="lazy" decoding="async" />{block.caption && <figcaption>{block.caption}</figcaption>}</figure>;
+  }
+  if (block.type === "button") {
+    const href = safeUrl(block.href);
+    if (!href) return null;
+    const external = !href.startsWith("/");
+    return <p className="news-cta-row"><a className="news-cta" href={href} {...(external ? { target: "_blank", rel: "noopener noreferrer nofollow" } : {})}>{block.label}</a></p>;
+  }
+  return <p><Inline nodes={block.c} /></p>;
 }

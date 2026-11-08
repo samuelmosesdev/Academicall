@@ -20,7 +20,7 @@ const IMG = {
 
 const FAQ = [
   ["Is Academicall free for students?", "Yes. Reading materials, your department feed, class schedules and practice tests are free. Pro adds the full timetable and unlimited AI quizzes."],
-  ["Who becomes a course rep?", "Any student can apply from their profile. An agent reviews the application and the admin approves it, so only real reps can post to a department."],
+  ["Who becomes a course rep?", "Any student can apply from their profile. Every application is checked before it is approved, so only real reps can post to a department."],
   ["Does it work on my phone?", "Yes. Academicall works in any mobile browser. The native Android package is not available for download from this site yet."],
   ["Which schools can use it?", "We started with the University of Abuja. Other Nigerian universities can be added department by department."],
 ];
@@ -169,30 +169,6 @@ export default function Landing() {
             No more scrolling through six group chats to find out the CA moved.{" "}
             <span className="text-midnight/40">One quiet place for your department — what to read, where to be, and how ready you are.</span>
           </p>
-        </section>
-
-        {/* ───────── Roles ───────── */}
-        <section className="mx-auto max-w-[1200px] px-6 pb-28 sm:px-10">
-          <div className="flex flex-wrap items-end justify-between gap-6 border-b border-midnight/10 pb-8">
-            <h2 className="font-display text-[2.3rem] font-[380] leading-tight tracking-[-0.03em] sm:text-[3rem]">Made for everyone<br />on campus.</h2>
-            <p className="max-w-sm text-midnight/60">Four roles, one home. Everyone sees exactly what they need — nothing more.</p>
-          </div>
-          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["01", "Students", "Read, track your progress and test yourself before exams.", "bg-white"],
-              ["02", "Course reps", "Schedule classes, share materials and reach the whole level.", "bg-lemon-soft"],
-              ["03", "Agents", "Review reports and recommend new course reps.", "bg-aqua-soft"],
-              ["04", "Admins", "Approve, moderate and keep the platform healthy.", "bg-violet-soft"],
-            ].map(([n, t, d, bg]) => (
-              <div key={t} className={`${bg} flex min-h-[15rem] flex-col justify-between rounded-[1.25rem] border border-midnight/[0.06] p-7`}>
-                <span className="eyebrow text-midnight/50">Role {n}</span>
-                <div>
-                  <h3 className="font-display text-[1.7rem] font-[420] tracking-[-0.02em]">{t}</h3>
-                  <p className="mt-2 text-[0.94rem] leading-relaxed text-midnight/65">{d}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </section>
 
         {/* ───────── Feature: students ───────── */}

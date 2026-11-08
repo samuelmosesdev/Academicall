@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import AuthErrorCard from "./AuthErrorCard";
 
 /**
  * Auth layout — calm paper form on the left; on desktop, a campus photograph
@@ -98,13 +99,11 @@ export function Field({ label, children, hint, action }) {
   );
 }
 
-export function AuthError({ children }) {
-  if (!children) return null;
-  return (
-    <p role="alert" className="mb-6 rounded-2xl border border-[#e0453a]/20 bg-[#e0453a]/[0.06] px-4 py-3 text-sm text-[#b8352c]">
-      {children}
-    </p>
-  );
+/** Error card for auth forms. Accepts an Error, a described error, or a string (children or `error`). */
+export function AuthError({ children, error, onDismiss }) {
+  const value = error ?? children;
+  if (!value) return null;
+  return <AuthErrorCard error={value} onDismiss={onDismiss} />;
 }
 
 export function AuthNote({ children }) {

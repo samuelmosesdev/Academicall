@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Plus,
   Trash2,
@@ -305,6 +306,8 @@ function DepartmentGroup({ department, courses, defaultOpen, onEdit, onDelete })
 
 export default function AdminCourses() {
   const { authMode } = useAuth();
+  const location = useLocation();
+  const academicsPath = location.pathname.startsWith("/agent") ? "/agent/academics" : "/admin/academics";
   const { courses, loading } = useCbtData();
   const { departmentsFor } = useAcademicCatalog();
   const [search, setSearch] = useState("");
@@ -535,6 +538,9 @@ export default function AdminCourses() {
           <p className="text-sm text-text-secondary">
             The fixed course list per faculty & department. CBT Builder and Excel import use only what's here.
           </p>
+          <Link to={`${academicsPath}?tab=institutions`} className="mt-1 inline-flex text-xs font-semibold text-accent hover:underline">
+            Add or assign courses across institutions
+          </Link>
         </div>
         <div className="flex flex-wrap gap-2">
           <button

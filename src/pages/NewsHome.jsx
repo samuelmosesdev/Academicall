@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   ArrowRight,
@@ -28,13 +28,34 @@ export default function NewsHome() {
   const [next, setNext] = useState(null);
   const [more, setMore] = useState(false);
   const [err, setErr] = useState("");
+  const [accessMode, setAccessMode] = useState("preview");
 
-  const load = useCallback(async () => {
-    setErr(""); setPosts(null);
+  const wanted = useRef("");
+  const load = useCallback(async ({ quiet = false } = {}) => {
+    const mine = `${category}|${term}`;
+    wanted.current = mine;
+    const apply = (r) => {
+      if (wanted.current !== mine) return;
+      setAccessMode(r.access?.mode || "preview");
+      setPosts(r.posts);
+      setNext(term ? r.nextOffset : r.nextBefore);
+      setCorrected(r.corrected || null);
+      setTotal(r.total ?? null);
+    };
+    setErr("");
+    if (!quiet) setPosts(null);
     try {
-      const r = await newsApi.list({ category, q: term, limit: term ? 12 : 13 });
-      setPosts(r.posts); setNext(term ? r.nextOffset : r.nextBefore); setCorrected(r.corrected || null); setTotal(r.total ?? null);
-    } catch (e) { setErr(e.message); setPosts([]); }
+      const result = await newsApi.list(
+        { category, q: term, limit: term ? 12 : 13 },
+        { fresh: quiet, onUpdate: apply },
+      );
+      apply(result);
+    } catch (e) {
+      if (wanted.current === mine) {
+        setErr(e.message);
+        setPosts([]);
+      }
+    }
   }, [category, term]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -42,7 +63,7 @@ export default function NewsHome() {
     newsApi.forYou().then((r) => setForYou(r)).catch(() => setForYou(null));
   }, [user, fresh]);
   // A story you follow just dropped: refresh the lists.
-  useRealtime(["news.new"], () => { setFresh((n) => n + 1); if (!term) load(); });
+  useRealtime(["news.new"], () => { setFresh((n) => n + 1); if (!term) load({ quiet: true }); });
 
   async function loadMore() {
     setMore(true);
@@ -119,10 +140,14 @@ export default function NewsHome() {
         </div>
       )}
 
-      {!user && (
+      {!user && accessMode !== "open" && (
         <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl bg-midnight px-5 py-4 text-white">
           <BookOpenText size={18} className="text-lemon" />
-          <p className="flex-1 text-sm text-white/80"><span className="font-semibold text-white">Read every story in full.</span> Sign in to keep reading, react and join the conversation.</p>
+          <p className="flex-1 text-sm text-white/80">
+            {accessMode === "soft"
+              ? <><span className="font-semibold text-white">Join the conversation.</span> Sign in to react, comment and follow the stories you care about.</>
+              : <><span className="font-semibold text-white">Read every story in full.</span> Sign in to keep reading, react and join the conversation.</>}
+          </p>
           <Link to="/login" state={{ from: location }} className="rounded-full bg-lemon px-4 py-2 text-sm font-semibold text-midnight">Sign in</Link>
         </div>
       )}

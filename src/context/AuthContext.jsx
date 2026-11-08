@@ -1,10 +1,45 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { authApi, twoFactorApi, usersApi } from "../lib/api";
-import { registerFcmToken } from "../lib/fcm";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { authApi, usersApi } from "../lib/api";
+import { browserPushAvailability, listenForForegroundMessages, registerFcmToken, unregisterFcmToken } from "../lib/fcm";
+import { registerNativePush, unregisterNativePush, nativePushAvailable } from "../lib/pushNative";
+import { twoFactorApi } from "../lib/gapsApi";
 import { startRealtime, stopRealtime } from "../lib/realtime";
 import { setGroupsAccount } from "../hooks/useGroups";
 
 const AuthContext = createContext(null);
+
+/**
+ * True when two profile payloads are identical. Background refreshes use this so
+ * an unchanged profile keeps the SAME object identity: every effect, memo and
+ * list that depends on `profile`/`user` then stays still instead of re-running
+ * (which is what made the student dashboard flash a loading state every 30s).
+ */
+function sameProfile(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
+}
+
+function isTwoFactorChallenge(data) {
+  return data?.twoFactorRequired === true ||
+    (typeof data?.challengeId === "string" && ["email", "totp"].includes(data.method));
+}
+
+function assertSessionResponse(data) {
+  if (
+    typeof data?.token !== "string" ||
+    !data.token ||
+    !data.user ||
+    typeof data.user.id !== "string" ||
+    !data.user.id
+  ) {
+    throw new Error("Sign-in returned an incomplete session. Please try again, or contact support if it continues.");
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -18,9 +53,7 @@ export function AuthProvider({ children }) {
   const fcmRegisteredRef = useRef(false);
 
   const applySession = useCallback((data) => {
-    if (typeof data?.token !== "string" || typeof data.user?.id !== "string") {
-      throw new Error("Sign-in returned an incomplete account session. Please try again.");
-    }
+    assertSessionResponse(data);
     const nextUser = { ...data.user, uid: data.user.id };
     localStorage.setItem("academicall_token", data.token);
     setUser(nextUser);
@@ -28,16 +61,19 @@ export function AuthProvider({ children }) {
     setAuthMode("api");
     setProfileReady(true);
     setLoading(false);
+    window.dispatchEvent(new Event("ac:signed-in"));
     return data;
   }, []);
 
   // ---------- API Auth (email/password) ----------
+  /** Resolves to the session, or to { twoFactorRequired, challengeId, method, emailHint } when a code is needed. */
   const loginWithApi = async (identifier, password) => {
     const data = await authApi.login({ identifier, password });
-    if (data.twoFactorRequired) return data;
+    if (isTwoFactorChallenge(data)) return data;
     return applySession(data);
   };
 
+  /** Second step of sign-in (email code, authenticator code or backup code). */
   const completeTwoFactor = useCallback(async (challengeId, code) => {
     const data = await twoFactorApi.verify(challengeId, code);
     return applySession(data);
@@ -58,7 +94,7 @@ export function AuthProvider({ children }) {
   const signInWithGoogle = useCallback(async (credential) => {
     if (!credential) throw new Error("Google did not return a sign-in credential. Please try again.");
     const data = await authApi.google(credential);
-    if (data.twoFactorRequired) return data;
+    if (isTwoFactorChallenge(data)) return data;
     return applySession(data);
   }, [applySession]);
 
@@ -77,8 +113,9 @@ export function AuthProvider({ children }) {
 
   const refreshEmailVerified = async () => {
     const data = await authApi.me();
-    setUser({ ...data.user, uid: data.user.id });
-    setProfile({ ...data.user, uid: data.user.id });
+    const nextUser = { ...data.user, uid: data.user.id };
+    setUser((current) => (sameProfile(current, nextUser) ? current : nextUser));
+    setProfile((current) => (sameProfile(current, nextUser) ? current : nextUser));
     return Boolean(data.user.emailVerified);
   };
 
@@ -86,13 +123,16 @@ export function AuthProvider({ children }) {
   // changes a flag on the current user (e.g. mustChangePassword flips to
   // false after ForceChangePassword) — without this, ProtectedRoute keeps
   // reading the stale value from context and bounces the user right back.
-  const refreshProfile = async () => {
+  //
+  // It is stable (useCallback) and only touches state when something actually
+  // changed, so polling it is free: no re-render, no effect re-runs.
+  const refreshProfile = useCallback(async () => {
     const data = await authApi.me();
     const nextUser = { ...data.user, uid: data.user.id };
-    setUser(nextUser);
-    setProfile(nextUser);
+    setUser((current) => (sameProfile(current, nextUser) ? current : nextUser));
+    setProfile((current) => (sameProfile(current, nextUser) ? current : nextUser));
     return nextUser;
-  };
+  }, []);
 
   const resendVerificationEmail = async () => {
     try {
@@ -113,6 +153,9 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    // Stop this phone getting the next person's alerts.
+    await unregisterNativePush().catch((err) => console.warn("[push] could not remove phone token", err));
+    await unregisterFcmToken().catch((err) => console.warn("[push] could not remove browser token", err));
     fcmRegisteredRef.current = false;
     stopRealtime();
     setGroupsAccount(null);
@@ -135,10 +178,46 @@ export function AuthProvider({ children }) {
     if (!profileReady || !user?.uid || !authMode || fcmRegisteredRef.current) return;
 
     fcmRegisteredRef.current = true;
-    registerFcmToken(user.uid).catch((err) => {
+    const shouldRegisterBrowserPush =
+      browserPushAvailability() === "available" &&
+      typeof Notification !== "undefined" &&
+      Notification.permission === "granted";
+    const register = nativePushAvailable()
+      ? registerNativePush()
+      : shouldRegisterBrowserPush
+        ? registerFcmToken(user.uid)
+        : Promise.resolve();
+    Promise.resolve(register).catch((err) => {
       console.warn("FCM registration skipped:", err);
       fcmRegisteredRef.current = false;
     });
+  }, [profileReady, user?.uid, authMode]);
+
+  useEffect(() => {
+    if (!profileReady || !user?.uid || !authMode || nativePushAvailable()) return;
+
+    let active = true;
+    let unsubscribe = () => {};
+    listenForForegroundMessages((payload) => {
+      if (!active || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+      const title = payload.notification?.title || "Academicall";
+      const options = {
+        body: payload.notification?.body || "",
+        icon: "/logo-mint.png",
+        badge: "/favicon.svg",
+        data: payload.data || {},
+      };
+      navigator.serviceWorker.ready.then((registration) => registration.showNotification(title, options))
+        .catch((err) => console.warn("[push] foreground notification could not be shown", err));
+    }).then((stop) => {
+      if (active) unsubscribe = stop;
+      else stop();
+    }).catch((err) => console.warn("[push] foreground listener unavailable", err));
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [profileReady, user?.uid, authMode]);
 
   // ---------- Initial load: restore session from stored JWT ----------
@@ -189,7 +268,11 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const value = {
+  // Memoised so consumers only re-render when auth state really changes. The
+  // action functions close over `authMode` only (everything else is a stable
+  // setter or API call), and `authMode` is a dependency, so they never go stale.
+  /* eslint-disable react-hooks/exhaustive-deps */
+  const value = useMemo(() => ({
     user,
     profile,
     loading,
@@ -210,7 +293,8 @@ export function AuthProvider({ children }) {
     currentUser: user,
     signInWithEmail: loginWithApi,
     signUp: registerWithApi,
-  };
+  }), [user, profile, loading, profileReady, authMode, verificationEmailStatus, completeTwoFactor, signInWithGoogle, refreshProfile]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

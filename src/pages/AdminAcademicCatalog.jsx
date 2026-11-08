@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Plus, Save, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { defaultAcademicCatalog } from "../data/academicCatalog";
 import { settingsApi } from "../lib/api";
 
@@ -69,7 +70,11 @@ export default function AdminAcademicCatalog() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h1 className="text-lg font-semibold text-text-primary">Academic catalog</h1><p className="text-sm text-text-muted">Manage the faculty, department, and program choices used for student profiles and Course Rep assignments.</p></div>
+        <div>
+          <h1 className="text-lg font-semibold text-text-primary">Academic catalog</h1>
+          <p className="text-sm text-text-muted">Manage the legacy UniAbuja faculty, department, and program choices used for student profiles and Course Rep assignments.</p>
+          <Link to="/admin/academics?tab=institutions" className="mt-1 inline-flex text-xs font-semibold text-accent hover:underline">Manage courses for all institutions</Link>
+        </div>
         <button type="button" onClick={save} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-app disabled:opacity-60"><Save size={15} /> {busy ? "Saving…" : "Save catalog"}</button>
       </div>
       {message && <p className="rounded-lg bg-status-success/10 px-3 py-2 text-sm text-status-success">{message}</p>}

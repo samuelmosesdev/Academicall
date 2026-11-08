@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,12 +11,16 @@ import {
   Loader2,
   X,
   ListChecks,
+  CloudDownload,
+  CloudOff,
 } from "lucide-react";
 import { documentsApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { recordMaterialOpen, recordDailyActivity } from "../lib/activity";
 import { isPro } from "../lib/subscription";
 import PdfReader from "../components/reader/PdfReader";
+import ImageReader from "../components/reader/ImageReader";
+import { getFileKind, officeViewerUrl } from "../lib/pdfUtils";
 import { downloadFile } from "../lib/download";
 import { generateQuestionsFromDocument } from "../lib/geminiGenerate";
 import { isNativeApp } from "../lib/platform";
@@ -60,13 +64,15 @@ export default function DocumentReader() {
   const item = useDocumentRecord(docId);
   const native = isNativeApp();
 
-  // Count material opens + daily streak when reader opens
+  // Count the open + daily streak once per document, not again when profile activity refreshes.
+  const profileRef = useRef(profile);
+  useEffect(() => { profileRef.current = profile; }, [profile]);
+  const uid = user?.uid || null;
   useEffect(() => {
-    if (user && docId) {
-      recordMaterialOpen(user, docId, profile);
-      if (profile) recordDailyActivity(user, profile);
-    }
-  }, [user, docId, profile]);
+    if (!uid || !docId) return;
+    recordMaterialOpen({ uid }, docId, profileRef.current);
+    if (profileRef.current) recordDailyActivity({ uid }, profileRef.current);
+  }, [uid, docId]);
 
   // App only: detect offline copy & prefer local blob when online file blocked
   useEffect(() => {
@@ -109,20 +115,36 @@ export default function DocumentReader() {
   const [offlineReady, setOfflineReady] = useState(false);
   const [offlineBusy, setOfflineBusy] = useState(false);
   const [offlineUrl, setOfflineUrl] = useState(null);
+  const [readingAt, setReadingAt] = useState({ page: 1, total: 0 });
+  const [rangeTouched, setRangeTouched] = useState(false);
+  const handlePageChange = useCallback((page, total) => setReadingAt({ page, total }), []);
+
+  // Opening the AI panel suggests the pages being read, until the student edits the range.
+  function suggestCurrentRange() {
+    if (!readingAt.total) return;
+    setPageFrom(String(readingAt.page));
+    setPageTo(String(Math.min(readingAt.total, readingAt.page + 4)));
+  }
+
+  function togglePanel() {
+    if (!panelOpen && !rangeTouched) suggestCurrentRange();
+    setPanelOpen(!panelOpen);
+  }
 
   // Optional direct URL when opened from Materials (not in documents collection)
   const fallbackUrl = search.get("url") || "";
   const fallbackTitle = search.get("title") || "Material";
+  const fallbackCode = search.get("code") || null;
+  const fallbackRecord = useMemo(
+    () => (fallbackUrl ? { id: docId || "external", title: fallbackTitle, fileUrl: fallbackUrl, fileName: fallbackTitle, courseCode: fallbackCode } : null),
+    [docId, fallbackUrl, fallbackTitle, fallbackCode]
+  );
+  const record = item?.fileUrl ? item : fallbackRecord || item;
 
-  const record = item === null && fallbackUrl
-    ? {
-        id: docId || "external",
-        title: fallbackTitle,
-        fileUrl: fallbackUrl,
-        fileName: fallbackTitle,
-        courseCode: search.get("code") || null,
-      }
-    : item;
+  const pinned = useRef({ id: null, url: "" });
+  if (pinned.current.id !== docId) pinned.current = { id: docId, url: "" };
+  if (!pinned.current.url && record?.fileUrl) pinned.current.url = record.fileUrl;
+  const fileUrl = pinned.current.url || record?.fileUrl || "";
 
   async function startGenerate(e) {
     e?.preventDefault();
@@ -131,7 +153,7 @@ export default function DocumentReader() {
       setError("Practice with AI is a Pro feature.");
       return;
     }
-    if (!record?.fileUrl) {
+    if (!fileUrl) {
       setError("No file available for this material.");
       return;
     }
@@ -152,7 +174,7 @@ export default function DocumentReader() {
     setQuiz(null);
     try {
       const questions = await generateQuestionsFromDocument({
-        pdfUrl: record.fileUrl,
+        pdfUrl: fileUrl,
         fileName: record.fileName || `${record.title || "material"}.pdf`,
         count: n,
         difficulty,
@@ -199,7 +221,7 @@ export default function DocumentReader() {
     return { correct, total: quiz.questions.length };
   }, [quiz]);
 
-  if (item === undefined && !fallbackUrl) {
+  if (record === undefined) {
     return (
       <div className="flex h-[60vh] items-center justify-center text-sm text-ink-muted">
         <Loader2 className="mr-2 animate-spin" size={16} /> Loading document…
@@ -207,7 +229,7 @@ export default function DocumentReader() {
     );
   }
 
-  if (record === null || (!record?.fileUrl && item === null)) {
+  if (record === null || !fileUrl) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center gap-3 text-center">
         <FileText size={28} className="text-ink-muted" />
@@ -223,12 +245,20 @@ export default function DocumentReader() {
     );
   }
 
-  const ext = getExtension(record.fileName, record.fileUrl);
-  const isPdf = ext === "pdf" || (record.fileUrl || "").toLowerCase().includes(".pdf");
+  const ext = getExtension(record.fileName, fileUrl);
+  const kind =
+    ext === "pdf" || fileUrl.toLowerCase().includes(".pdf") ? "pdf" : getFileKind({ ...record, fileUrl });
+  const isPdf = kind === "pdf";
+  // Respect "read only" materials when the record carries such a flag.
+  const protectedDoc =
+    record.allowDownload === false ||
+    record.downloadable === false ||
+    record.isProtected === true ||
+    record.protected === true;
 
   // In-app PDF viewer — prefer native embed; Google viewer as fallback for office docs
   async function toggleOffline() {
-    if (!native || !record?.fileUrl || !docId || docId === "external") return;
+    if (!native || !fileUrl || !docId || docId === "external") return;
     setOfflineBusy(true);
     try {
       if (offlineReady) {
@@ -240,7 +270,7 @@ export default function DocumentReader() {
         await saveMaterialOffline({
           id: docId,
           title: record.title,
-          fileUrl: record.fileUrl,
+          fileUrl,
           courseCode: record.courseCode,
           fileName: record.fileName,
         });
@@ -255,18 +285,50 @@ export default function DocumentReader() {
     }
   }
 
-  const effectiveUrl = offlineUrl || record.fileUrl;
-  const viewerSrc = isPdf
-    ? `${effectiveUrl}#toolbar=1&navpanes=0`
-    : offlineUrl
-      ? effectiveUrl
-      : `https://docs.google.com/viewer?url=${encodeURIComponent(record.fileUrl)}&embedded=true`;
+  const effectiveUrl = offlineUrl || fileUrl;
+  const viewerSrc =
+    kind === "image" || offlineUrl ? effectiveUrl : officeViewerUrl(fileUrl);
+  const canOffline = native && docId && docId !== "external" && fileUrl;
+  const subtitle =
+    [record.courseCode, record.faculty, record.level].filter(Boolean).join(" · ") || "In-app reader";
+  const handleDownload = () => downloadFile(offlineUrl || fileUrl, record.fileName || record.title);
+
+  const practiceButton = (
+    <button
+      type="button"
+      onClick={togglePanel}
+      aria-pressed={panelOpen}
+      className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-white transition ${
+        panelOpen ? "bg-teal-dark" : "bg-teal shadow-sm hover:bg-teal-dark"
+      }`}
+    >
+      <ListChecks size={14} />
+      <span className="hidden sm:inline">Practice with AI</span>
+      <span className="sm:hidden">AI</span>
+      {!pro && <Crown size={12} className="opacity-90" />}
+    </button>
+  );
+
+  const offlineItem = canOffline
+    ? [
+        {
+          key: "offline",
+          label: offlineBusy ? "Saving…" : offlineReady ? "Saved offline · remove" : "Make available offline",
+          icon: offlineBusy ? Loader2 : offlineReady ? CloudOff : CloudDownload,
+          spinning: offlineBusy,
+          active: offlineReady,
+          disabled: offlineBusy,
+          onClick: toggleOffline,
+        },
+      ]
+    : [];
 
   const currentQ = quiz?.questions?.[quiz.index];
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-bg-app md:static md:z-auto md:h-[calc(100vh-2rem)] md:overflow-hidden md:rounded-2xl md:border md:border-border-light">
-      {/* Top bar */}
+      {/* Top bar (PDFs get the reader's own toolbar instead, so the page keeps every pixel) */}
+      {!isPdf && (
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border-light bg-card-light/95 px-3 py-2.5 backdrop-blur sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
           <button
@@ -282,78 +344,67 @@ export default function DocumentReader() {
               {record.title || "Document"}
             </h1>
             <p className="truncate text-xs text-ink-muted">
-              {[record.courseCode, record.faculty, record.level]
-                .filter(Boolean)
-                .join(" · ") || "In-app reader"}
+              {subtitle}
             </p>
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <button
-            type="button"
-            onClick={() => downloadFile(offlineUrl || record.fileUrl, record.fileName || record.title)}
-            className="hidden h-9 items-center gap-1.5 rounded-xl border border-border-light px-2.5 text-xs font-medium text-ink hover:border-teal sm:inline-flex"
-          >
-            <Download size={14} /> Download
-          </button>
-          <button
-            type="button"
-            onClick={() => setPanelOpen((v) => !v)}
-            className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition ${
-              panelOpen
-                ? "bg-teal text-white"
-                : "bg-teal text-white shadow-sm"
-            }`}
-          >
-            <ListChecks size={14} />
-            <span className="hidden sm:inline">Practice with AI</span>
-            <span className="sm:hidden">AI</span>
-            {!pro && <Crown size={12} className="opacity-90" />}
-          </button>
+          {canOffline && (
+            <button
+              type="button"
+              disabled={offlineBusy}
+              onClick={toggleOffline}
+              title={offlineReady ? "Saved offline — tap to remove" : "Make available offline"}
+              aria-label={offlineReady ? "Remove offline copy" : "Make available offline"}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${
+                offlineReady ? "border-teal/30 bg-teal-soft text-teal" : "border-border-light text-ink hover:border-teal/40"
+              }`}
+            >
+              {offlineBusy ? <Loader2 size={14} className="animate-spin" /> : offlineReady ? <CloudOff size={15} /> : <CloudDownload size={15} />}
+            </button>
+          )}
+          {!protectedDoc && (
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="hidden h-9 items-center gap-1.5 rounded-xl border border-border-light px-2.5 text-xs font-medium text-ink hover:border-teal sm:inline-flex"
+            >
+              <Download size={14} /> Download
+            </button>
+          )}
+          {practiceButton}
         </div>
       </header>
+      )}
 
       <div className="relative flex min-h-0 flex-1">
         {/* Reader */}
-        <div className="relative flex min-w-0 flex-1 flex-col bg-[#ece8df] dark:bg-[#0b0220]">
-          {native && docId && docId !== "external" && record?.fileUrl && (
-            <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border-light bg-card-light px-3 py-2">
-              <button
-                type="button"
-                disabled={offlineBusy}
-                onClick={toggleOffline}
-                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                  offlineReady
-                    ? "bg-teal-soft text-teal border border-teal/30"
-                    : "bg-card-light border border-border-light text-ink hover:border-teal/40"
-                }`}
-              >
-                {offlineBusy ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Download size={14} />
-                )}
-                {offlineReady ? "Saved offline — tap to remove" : "Make available offline"}
-              </button>
-              {offlineReady && (
-                <span className="text-xs text-ink-muted">
-                  Opens without mobile data in the app
-                </span>
-              )}
-            </div>
-          )}
-
+        <div className="relative flex min-w-0 flex-1 flex-col bg-[#e6e1d6] dark:bg-[#0b0220]">
           {isPdf ? (
-            <div className="min-h-0 flex-1">
-              <PdfReader key={docId} src={effectiveUrl} title={record.title} />
-            </div>
+            <PdfReader
+              key={docId}
+              src={effectiveUrl}
+              docKey={docId && docId !== "external" ? `doc:${docId}` : undefined}
+              title={record.title || "Document"}
+              subtitle={subtitle}
+              fileName={record.fileName || record.title}
+              onBack={() => navigate(-1)}
+              actions={practiceButton}
+              menuItems={offlineItem}
+              allowDownload={!protectedDoc}
+              onDownload={handleDownload}
+              protect={protectedDoc}
+              onPageChange={handlePageChange}
+            />
+          ) : kind === "image" ? (
+            <ImageReader src={viewerSrc} alt={record.title || ""} protect={protectedDoc} />
           ) : (
             <iframe
               ref={viewerRef}
               title={record.title || "Document viewer"}
               src={viewerSrc}
-              className="min-h-0 w-full flex-1 border-0 bg-white"
+              className="block h-full min-h-0 w-full flex-1 border-0 bg-white"
               allow="fullscreen"
             />
           )}
@@ -407,7 +458,10 @@ export default function DocumentReader() {
                         type="number"
                         min={1}
                         value={pageFrom}
-                        onChange={(e) => setPageFrom(e.target.value)}
+                        onChange={(e) => {
+                          setRangeTouched(true);
+                          setPageFrom(e.target.value);
+                        }}
                         className={field}
                         required
                       />
@@ -420,13 +474,32 @@ export default function DocumentReader() {
                         type="number"
                         min={1}
                         value={pageTo}
-                        onChange={(e) => setPageTo(e.target.value)}
+                        onChange={(e) => {
+                          setRangeTouched(true);
+                          setPageTo(e.target.value);
+                        }}
                         placeholder="e.g. 12"
                         className={field}
                         required
                       />
                     </div>
                   </div>
+
+                  {readingAt.total > 0 && (
+                    <p className="-mt-2 text-[0.7rem] text-ink-muted">
+                      You&apos;re on page {readingAt.page} of {readingAt.total}.{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRangeTouched(true);
+                          suggestCurrentRange();
+                        }}
+                        className="font-medium text-teal hover:underline"
+                      >
+                        Use these pages
+                      </button>
+                    </p>
+                  )}
 
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-ink-muted">

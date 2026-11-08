@@ -1,9 +1,12 @@
+import { Link } from "react-router-dom";
 import { TrendingUp } from "lucide-react";
 
-export default function KpiCard({ label, value, trend, highlight = false, icon: Icon }) {
+export default function KpiCard({ label, value, trend, highlight = false, icon: Icon, to }) {
+  const Wrapper = to ? Link : "div";
   return (
-    <div
-      className={`group relative flex flex-col justify-between overflow-hidden rounded-[1.25rem] p-6 transition-colors duration-300 animate-fade-in-up ${
+    <Wrapper
+      {...(to ? { to } : {})}
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-[1.25rem] p-6 transition duration-300 animate-fade-in-up ${to ? "hover:-translate-y-0.5 hover:shadow-md " : ""}${
         highlight
           ? "bg-midnight text-white dark:bg-midnight-2 dark:ring-1 dark:ring-white/10"
           : "card-elevated text-text-primary"
@@ -47,6 +50,6 @@ export default function KpiCard({ label, value, trend, highlight = false, icon: 
           </span>
         )}
       </div>
-    </div>
+    </Wrapper>
   );
 }

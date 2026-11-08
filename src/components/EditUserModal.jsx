@@ -96,12 +96,12 @@ export default function EditUserModal({ user, onSave, onCancel, busy }) {
           ))}
         </select>
       </div>
-      {catalogLoading && <p className="text-xs text-text-muted">Loading institution choices…</p>}
-      {catalogError && <p className="text-xs text-status-danger">{catalogError}</p>}
       <div>
         <label className="mb-1 block text-xs font-medium text-text-secondary">Phone</label>
         <input value={phone} onChange={(e) => setPhone(e.target.value)} className={fieldClass} />
       </div>
+      {catalogLoading && <p className="text-xs text-text-muted">Loading institution choices…</p>}
+      {catalogError && <p className="text-xs text-status-danger">{catalogError}</p>}
       <div className="flex justify-end gap-2 pt-2">
         <button
           type="button"

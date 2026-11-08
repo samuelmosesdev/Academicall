@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 /**
  * Student stat tile — quiet and editorial: mono label, large tabular number,
  * one palette colour as a small marker. API unchanged.
@@ -11,8 +13,34 @@ const ACCENTS = {
   pink: { dot: "bg-aqua-deep", soft: "bg-aqua-soft text-aqua-deep dark:bg-aqua/15 dark:text-aqua" },
 };
 
+const isPlaceholder = (v) => v === "--" || v === "—" || v == null;
+
+/**
+ * True for ~1.6s after the value CHANGES while on screen. The very first value
+ * (or the jump from the "--" placeholder to the real number) is not an update,
+ * so a normal page load never highlights anything.
+ */
+function useJustChanged(value) {
+  const previous = useRef(value);
+  const [changed, setChanged] = useState(false);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = value;
+    if (before === value) return undefined;
+    if (isPlaceholder(before) || isPlaceholder(value)) {
+      setChanged(false);
+      return undefined;
+    }
+    setChanged(true);
+    const timer = setTimeout(() => setChanged(false), 1700);
+    return () => clearTimeout(timer);
+  }, [value]);
+  return changed;
+}
+
 export default function StudentKpiCard({ icon: Icon, value, label, accent = "teal", subtitle, circular = false }) {
   const a = ACCENTS[accent] || ACCENTS.teal;
+  const changed = useJustChanged(value);
 
   if (circular) {
     return (
@@ -37,7 +65,9 @@ export default function StudentKpiCard({ icon: Icon, value, label, accent = "tea
           </span>
         )}
       </div>
-      <p className="num mt-6 text-[2.5rem] font-light leading-none text-text-primary">{value}</p>
+      <p className="num mt-6 text-[2.5rem] font-light leading-none text-text-primary">
+        <span className={changed ? "value-settle" : undefined}>{value}</span>
+      </p>
       {subtitle && <p className="mt-2 text-xs text-text-muted">{subtitle}</p>}
     </div>
   );

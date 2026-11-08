@@ -3,7 +3,7 @@ import AuthShell, { Field, AuthError, PrimaryButton } from "../components/AuthSh
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, GraduationCap, Compass } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { friendlyAuthError } from "../lib/authErrors";
+import { describeAuthError } from "../lib/authErrors";
 
 export default function Signup() {
   const { registerWithApi } = useAuth();
@@ -23,11 +23,11 @@ export default function Signup() {
     setError("");
 
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(describeAuthError("Passwords do not match."));
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError(describeAuthError("Password must be at least 6 characters."));
       return;
     }
 
@@ -37,7 +37,7 @@ export default function Signup() {
       navigate("/verify-email", { replace: true });
     } catch (err) {
       console.error("Signup error:", err);
-      setError(err.message || friendlyAuthError(err.code) || "Registration failed");
+      setError(describeAuthError(err, { fallback: "We couldn't create your account." }));
     } finally {
       setBusy(false);
     }
@@ -54,7 +54,7 @@ export default function Signup() {
         : "Free for students. It takes about a minute."}
       footer={<>Already have an account? <Link to="/login" className="font-medium text-midnight underline decoration-lemon decoration-[3px] underline-offset-4 hover:decoration-violet">Sign in</Link></>}
     >
-      <AuthError>{error}</AuthError>
+      <AuthError error={error} onDismiss={() => setError("")} />
       <div role="radiogroup" aria-label="Account type" className="mb-6 grid grid-cols-2 gap-2.5">
         {[
           { id: "student", icon: GraduationCap, title: "I'm a student", text: "Already admitted" },
@@ -68,10 +68,10 @@ export default function Signup() {
             onClick={() => setAccountType(id)}
             className={`flex items-start gap-2.5 rounded-2xl border px-3.5 py-3 text-left transition ${accountType === id ? "border-midnight bg-midnight text-white" : "border-midnight/15 bg-white text-midnight hover:border-violet"}`}
           >
-            <Icon size={18} className={accountType === id ? "mt-0.5 text-lemon" : "mt-0.5 text-violet"} />
+            <Icon size={18} className={accountType === id ? "mt-0.5" : "mt-0.5 text-violet"} />
             <span>
               <span className="block text-[0.9rem] font-semibold leading-tight">{title}</span>
-              <span className={`block text-xs ${accountType === id ? "text-white/65" : "text-midnight/55"}`}>{text}</span>
+              <span className={`block text-xs ${accountType === id ? "opacity-70" : "text-midnight/55"}`}>{text}</span>
             </span>
           </button>
         ))}

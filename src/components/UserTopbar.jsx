@@ -5,8 +5,10 @@ import { Search, Bell, Moon, Sun, LogOut, Menu } from "lucide-react";
 import UniqueIdBadge from "./UniqueIdBadge";
 import ConfirmModal from "./ConfirmModal";
 import UserAvatar from "./UserAvatar";
+import GlobalSearch from "./search/GlobalSearch";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
+import { useStudentNotifications } from "../hooks/useStudentNotifications";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -15,9 +17,14 @@ function getGreeting() {
   return "Good evening";
 }
 
-export default function UserTopbar({ profile, unreadCount, search, onSearchChange, onMenu }) {
+export default function UserTopbar({ profile, unreadCount: unreadProp, onMenu }) {
   const { theme, toggleTheme, isDark } = useTheme();
-  const { logout } = useAuth();
+  const { logout, authMode } = useAuth();
+  // Same shared store the notifications page reads, so the badge counts exactly
+  // what the page shows as unread (system notifications + announcements) and
+  // drops the moment something is opened or marked read.
+  const { unreadCount: liveUnread, loading: notifLoading } = useStudentNotifications();
+  const unreadCount = authMode === "api" && !notifLoading ? liveUnread : unreadProp || 0;
   const navigate = useNavigate();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -61,16 +68,10 @@ export default function UserTopbar({ profile, unreadCount, search, onSearchChang
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
-        <div className="hidden items-center gap-2.5 rounded-full border border-border-light bg-card-light px-4 py-2.5 md:flex">
-          <Search size={15} className="text-ink-muted" />
-          <input
-            value={search}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            placeholder="Search courses, materials…"
-            aria-label="Search"
-            className="w-44 bg-transparent text-sm text-ink placeholder:text-ink-muted focus:!shadow-none focus:outline-none lg:w-56"
-          />
-        </div>
+        <GlobalSearch />
+        <button type="button" onClick={() => navigate("/dashboard/search")} className={`${iconBtn} md:hidden`} aria-label="Search">
+          <Search size={17} />
+        </button>
 
         <button
           type="button"
@@ -85,7 +86,7 @@ export default function UserTopbar({ profile, unreadCount, search, onSearchChang
           {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
         </button>
 
-        <button type="button" onClick={() => navigate("/dashboard/notifications")} className={iconBtn} aria-label="Notifications">
+        <button type="button" onClick={() => navigate("/dashboard/notifications")} className={iconBtn} aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}>
           <Bell size={17} />
           {unreadCount > 0 && (
             <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-lemon px-1 text-[0.7rem] font-semibold text-midnight">

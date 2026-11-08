@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ImagePlus, Loader2, Lock, LockOpen, MessageCircle, MoreHorizontal, Pencil, Pin, PinOff, Plus, Send, Shield, Trash2, Users, VolumeX, X,
 } from "lucide-react";
+import { ReportButton, useBlockedIds } from "../safety/SafetyActions";
 import { housesApi, institutionTitle, plainText } from "../../lib/aspirantApi";
 import { timeAgo } from "../../lib/newsApi";
 import { useRealtime } from "../../lib/realtime";
@@ -204,6 +205,7 @@ export function ThreadList({ houseId, basePath, viewer, refreshKey }) {
 /** One thread with its replies and the reply box. */
 export function ThreadView({ houseId, threadId, basePath, viewer }) {
   const { profile } = useAuth();
+  const blockedIds = useBlockedIds();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
@@ -268,6 +270,9 @@ export function ThreadView({ houseId, threadId, basePath, viewer }) {
             </div>
             <h1 className="mt-2 font-display text-[1.7rem] leading-tight text-text-primary sm:text-[2rem]">{t.title}</h1>
           </div>
+          {!viewer?.canModerate && t.author?.id && t.author.id !== profile?.id && (
+            <ReportButton targetType="house_thread" targetId={t.id} what="this thread" className="mt-1" />
+          )}
           {viewer?.canModerate && (
             <div className="relative">
               <button type="button" onClick={() => setMenu((m) => !m)} className="acx-icon-btn" aria-label="Thread options"><MoreHorizontal size={16} /></button>
@@ -290,7 +295,7 @@ export function ThreadView({ houseId, threadId, basePath, viewer }) {
         <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">{t.replyCount ? `${t.replyCount} ${t.replyCount === 1 ? "reply" : "replies"}` : "Replies"}</p>
         <div className="space-y-2.5">
           {data.replies.length === 0 && <p className="rounded-2xl bg-bg-panel-alt px-4 py-5 text-center text-sm text-text-muted">No replies yet. Ask a question or say thanks.</p>}
-          {data.replies.map((r) => (
+          {data.replies.filter((r) => r.mine || !blockedIds.has(r.author?.id)).map((r) => (
             <div key={r.id} className={`house-reply ${r.author?.leader ? "is-leader" : ""}`}>
               <Avatar person={r.author} size={30} />
               <div className="min-w-0 flex-1">
@@ -301,6 +306,7 @@ export function ThreadView({ houseId, threadId, basePath, viewer }) {
                 </div>
                 <MentionText text={r.body} meId={profile?.id} className="mt-1 text-[0.93rem] leading-relaxed text-text-primary" />
               </div>
+              {!r.mine && <ReportButton targetType="house_reply" targetId={r.id} what="this reply" className="self-start" />}
               {r.canDelete && <button type="button" onClick={() => removeReply(r)} className="self-start rounded-lg p-1.5 text-text-muted opacity-60 hover:text-status-danger hover:opacity-100" aria-label="Delete reply"><Trash2 size={13} /></button>}
             </div>
           ))}

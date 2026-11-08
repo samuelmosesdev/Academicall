@@ -29,8 +29,7 @@ export async function recordDailyActivity(user, profile) {
   const today = todayKey();
   const storageKey = `uofa_active_${user.uid}`;
   if (localStorage.getItem(storageKey) === today) {
-    window.dispatchEvent(new Event("student-activity-updated"));
-    return; // already counted today
+    return; // already counted today: nothing changed, so nothing to refresh
   }
 
   const last = profile?.lastActiveDate || null;
@@ -69,8 +68,7 @@ export async function recordMaterialOpen(user, docId, profile = null) {
   if (!user?.uid || !docId) return;
   const sessionKey = `uofa_open_${user.uid}_${docId}`;
   if (sessionStorage.getItem(sessionKey)) {
-    window.dispatchEvent(new Event("student-activity-updated"));
-    return; // once per session per doc
+    return; // once per session per doc; no change, so no refresh
   }
   sessionStorage.setItem(sessionKey, "1");
 

@@ -1,24 +1,14 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Building2,
   Calendar,
-  CalendarPlus,
-  BookOpen,
-  Pin,
-  MessageCircle,
-  Send,
   Loader2,
-  ExternalLink,
-  BookmarkPlus,
-  BookmarkCheck,
-  Megaphone,
   Clock,
-  MapPin,
   Lock,
+  Settings2,
   Users,
   XCircle,
-  Upload,
 } from "lucide-react";
 import { classEventsApi, departmentApi, documentsApi, feedApi, materialSavesApi, usersApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -26,16 +16,20 @@ import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
 import { getAcademicDepartment, getAcademicProgram, getAcademicScope, getCourseRepProgram, matchesAcademicScope } from "../lib/academicScope";
 import { useRealtime } from "../lib/realtime";
-
-const field =
-  "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
-
-/** Reaction types: acknowledge (👍), haha (😂), love (❤️) */
-const REACTIONS = [
-  { type: "like", emoji: "👍", label: "Acknowledge" },
-  { type: "haha", emoji: "😂", label: "Haha" },
-  { type: "love", emoji: "❤️", label: "Love" },
-];
+import {
+  ClassDateBlock,
+  CommentThread,
+  EmptyFeed,
+  FeedCard,
+  FileRow,
+  FilterTabs,
+  PostBody,
+  ReactionBar,
+  RepComposer,
+  relTime,
+  safeName,
+  toMillis,
+} from "../components/programme/ProgrammeFeed";
 
 function norm(value) {
   return String(value || "")
@@ -60,26 +54,11 @@ function matchesStudentLevel(itemLevel, studentLevel) {
   return levelsMatch(itemLevel, studentLevel);
 }
 
-/** Count reactions by type from an array of { uid, type } */
-function countReactions(list) {
-  const counts = { like: 0, haha: 0, love: 0 };
-  (list || []).forEach((r) => {
-    if (counts[r.type] !== undefined) counts[r.type] += 1;
-  });
-  return counts;
-}
-
 function feedAuthorName(post) {
   const name = post.authorName || post.createdByName;
   return name && !name.includes("@") ? name : "Course Rep";
 }
 
-/** My current reaction type on an item, or null */
-function myReaction(list, uid) {
-  if (!uid || !list) return null;
-  const found = list.find((r) => r.uid === uid);
-  return found?.type || null;
-}
 export default function StudentDepartment() {
   const navigate = useNavigate();
   const { user, profile, authMode } = useAuth();
@@ -115,6 +94,7 @@ export default function StudentDepartment() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [showAnnounce, setShowAnnounce] = useState(false);
   const [toast, setToast] = useState("");
+  const [feedFilter, setFeedFilter] = useState("all"); // all | updates | classes | materials
   const [membership, setMembership] = useState(null);
   const [membershipLoading, setMembershipLoading] = useState(true);
   const [membershipBusy, setMembershipBusy] = useState(false);
@@ -314,7 +294,7 @@ export default function StudentDepartment() {
     try {
       const post = posts.find((p) => p.id === postId);
       if (!post) return;
-      const { post: updated } = await feedApi.addComment("course", postId, { text });
+      const { post: updated } = await feedApi.comment("course", postId, text);
       setPosts((current) => current.map((item) => item.id === postId ? updated : item));
       setCommentText((p) => ({ ...p, [postId]: "" }));
       setExpandedComments((p) => ({ ...p, [postId]: true }));
@@ -332,7 +312,7 @@ export default function StudentDepartment() {
     try {
       const ev = classes.find((c) => c.id === classId);
       if (!ev) return;
-      const { event: updated } = await classEventsApi.addComment(classId, { text });
+      const { event: updated } = await classEventsApi.comment(classId, text);
       setClasses((current) => current.map((item) => item.id === classId ? updated : item));
       setClassCommentText((p) => ({ ...p, [classId]: "" }));
       setExpandedClassComments((p) => ({ ...p, [classId]: true }));
@@ -384,7 +364,8 @@ export default function StudentDepartment() {
         const { post: updated } = await feedApi.react("course", docId, reactionType);
         setPosts((current) => current.map((entry) => entry.id === docId ? updated : entry));
       } else {
-        await feedApi.update("course", docId, { reactions });
+        const { document: updated } = await documentsApi.react(docId, reactionType);
+        setMaterials((current) => current.map((entry) => entry.id === docId ? updated : entry));
       }
     } catch (e) {
       alert(e.message || "Could not react.");
@@ -421,153 +402,6 @@ export default function StudentDepartment() {
     } catch (e) {
       alert(e.message || "Could not react to comment.");
     }
-  }
-
-  /**
-   * Reaction summary + long-press picker.
-   * Shows common emojis + total count. Long-press (or right-click) opens a
-   * floating picker; slide/tap preferred reaction, then it closes.
-   */
-  function ReactionBar({ reactions, onReact, size = "md" }) {
-    const [open, setOpen] = useState(false);
-    const [hoverType, setHoverType] = useState(null);
-    const timerRef = useRef(null);
-    const rootRef = useRef(null);
-    const counts = countReactions(reactions);
-    const mine = myReaction(reactions, user?.uid);
-    const total = (reactions || []).length;
-
-    // Emojis that have at least 1 reaction, ordered by popularity
-    const present = REACTIONS.filter((r) => counts[r.type] > 0).sort(
-      (a, b) => counts[b.type] - counts[a.type]
-    );
-
-    const clearTimer = () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-
-    const startHold = (e) => {
-      e.preventDefault();
-      clearTimer();
-      timerRef.current = setTimeout(() => {
-        setOpen(true);
-        setHoverType(mine || "like");
-      }, 320); // short long-press
-    };
-
-    const endHold = () => {
-      clearTimer();
-    };
-
-    const pick = (type) => {
-      onReact(type);
-      setOpen(false);
-      setHoverType(null);
-    };
-
-    // Close when clicking outside
-    useEffect(() => {
-      if (!open) return;
-      const onDoc = (e) => {
-        if (rootRef.current && !rootRef.current.contains(e.target)) {
-          setOpen(false);
-          setHoverType(null);
-        }
-      };
-      document.addEventListener("pointerdown", onDoc);
-      return () => document.removeEventListener("pointerdown", onDoc);
-    }, [open]);
-
-    useEffect(() => () => clearTimer(), []);
-
-    const isSm = size === "sm";
-
-    return (
-      <div ref={rootRef} className="relative inline-flex items-center gap-2">
-        {/* Summary chip — shows common reactions + total */}
-        <button
-          type="button"
-          title={mine ? "Long-press to change reaction" : "Long-press to react"}
-          onPointerDown={startHold}
-          onPointerUp={endHold}
-          onPointerLeave={endHold}
-          onPointerCancel={endHold}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            setOpen(true);
-            setHoverType(mine || "like");
-          }}
-          onClick={() => {
-            // Quick tap: toggle own reaction or open picker if none
-            if (mine) {
-              onReact(mine); // remove
-            } else {
-              setOpen(true);
-              setHoverType("like");
-            }
-          }}
-          className={`inline-flex items-center gap-1.5 rounded-full border transition select-none active:scale-95 ${
-            isSm ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-sm"
-          } ${
-            mine
-              ? "border-teal/40 bg-teal-soft text-teal"
-              : "border-border-light bg-card-light text-ink-muted hover:border-teal/30 hover:text-ink"
-          }`}
-        >
-          {present.length > 0 ? (
-            <>
-              <span className="flex items-center -space-x-0.5">
-                {present.slice(0, 3).map((r) => (
-                  <span key={r.type} className="leading-none">
-                    {r.emoji}
-                  </span>
-                ))}
-              </span>
-              <span className="tabular-nums font-semibold text-xs">
-                {total}
-              </span>
-            </>
-          ) : (
-            <span className="flex items-center gap-1 opacity-70">
-              <span>👍</span>
-              <span className="text-xs font-medium">React</span>
-            </span>
-          )}
-        </button>
-
-        {/* Long-press / popup picker */}
-        {open && (
-          <div
-            className="absolute bottom-full left-0 z-30 mb-2 flex items-center gap-1 rounded-full border border-border-light bg-card-light px-2 py-1.5 shadow-lg animate-stitch-in"
-            style={{ minWidth: "max-content" }}
-            onPointerLeave={() => setHoverType(null)}
-          >
-            {REACTIONS.map(({ type, emoji, label }) => {
-              const active = hoverType === type || mine === type;
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  title={label}
-                  onPointerEnter={() => setHoverType(type)}
-                  onClick={() => pick(type)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-xl transition-transform duration-150 ${
-                    active
-                      ? "scale-125 bg-teal-soft"
-                      : "scale-100 hover:bg-bg-panel-alt"
-                  }`}
-                >
-                  {emoji}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
   }
 
   if (!department) {
@@ -673,488 +507,229 @@ export default function StudentDepartment() {
     );
   }
 
-  const upcoming = classes.filter((c) => {
-    const start = c.startsAt?.toDate?.() || c.startsAt;
-    return Boolean(start && new Date(start) > new Date());
-  });
+  const now = Date.now();
+  const upcoming = classes
+    .filter((c) => toMillis(c.startsAt) > now)
+    .sort((x, y) => toMillis(x.startsAt) - toMillis(y.startsAt));
 
   function flash(msg) {
     setToast(msg);
     setTimeout(() => setToast(""), 4000);
   }
 
+  async function deletePost(post) {
+    if (authMode !== "api" || !post?.id) return;
+    if (!window.confirm(`Delete “${post.title || "this post"}”? This cannot be undone.`)) return;
+    try {
+      await feedApi.remove("course", post.id);
+      setPosts((current) => current.filter((item) => item.id !== post.id));
+      flash("Post deleted");
+    } catch (error) {
+      flash(error.message || "Could not delete post");
+    }
+  }
+
+  // One feed: rep updates, upcoming classes and materials. Pinned updates stay
+  // on top; everything else is newest first.
+  const feedItems = [
+    ...posts.map((p) => ({ kind: "update", id: p.id, at: toMillis(p.createdAt), pinned: Boolean(p.pinned), item: p })),
+    ...upcoming.map((c) => ({ kind: "class", id: c.id, at: toMillis(c.createdAt) || toMillis(c.startsAt), pinned: false, item: c })),
+    ...materials.map((m) => ({ kind: "material", id: m.id, at: toMillis(m.createdAt), pinned: false, item: m })),
+  ].sort((x, y) => (Number(y.pinned) - Number(x.pinned)) || y.at - x.at);
+  const visibleItems = feedFilter === "all"
+    ? feedItems
+    : feedItems.filter((f) => ({ updates: "update", classes: "class", materials: "material" }[feedFilter] === f.kind));
+  const nextClass = upcoming[0];
+  const audience = [program, level].filter(Boolean).join(" · ");
+
+  function renderItem(f) {
+    if (f.kind === "update") {
+      const post = f.item;
+      const comments = Array.isArray(post.comments) ? post.comments : [];
+      const ownPost = post.authorId === user?.uid || post.authorId === user?.id;
+      const sameProgrammeRepPost = (post.authorRole || "courseRep") === "courseRep"
+        && deptsMatch(post.department, program);
+      const canDelete = authMode === "api" && profile?.role === "courseRep" && (ownPost || sameProgrammeRepPost);
+      return (
+        <FeedCard
+          key={`u-${post.id}`}
+          onDelete={canDelete ? () => deletePost(post) : undefined}
+          type="announcement"
+          author={feedAuthorName(post)}
+          authorPhoto={post.authorPhoto}
+          authorRole={post.authorRole || "courseRep"}
+          time={relTime(post.createdAt)}
+          pinned={post.pinned}
+          courseCode={post.courseCode}
+          title={post.title}
+          footer={
+            <div className="w-full">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <ReactionBar uid={user?.uid} reactions={post.reactions} onReact={(type) => togglePostReaction("coursePosts", post.id, type)} />
+              </div>
+              <div className="mt-1.5">
+                <CommentThread
+                  comments={comments}
+                  uid={user?.uid}
+                  open={Boolean(expandedComments[post.id])}
+                  onToggle={() => setExpandedComments((p) => ({ ...p, [post.id]: !p[post.id] }))}
+                  value={commentText[post.id] || ""}
+                  onChange={(v) => setCommentText((p) => ({ ...p, [post.id]: v }))}
+                  onSubmit={() => addComment(post.id)}
+                  busy={commentBusy[post.id]}
+                  onReactComment={(commentId, type) => toggleCommentReaction("coursePosts", post.id, commentId, type)}
+                />
+              </div>
+            </div>
+          }
+        >
+          <PostBody text={post.body} />
+        </FeedCard>
+      );
+    }
+    if (f.kind === "class") {
+      const ev = f.item;
+      const comments = Array.isArray(ev.comments) ? ev.comments : [];
+      return (
+        <FeedCard
+          key={`c-${ev.id}`}
+          type="class"
+          author={safeName(ev.createdByName)}
+          authorRole="courseRep"
+          time={relTime(ev.createdAt)}
+          courseCode={ev.courseCode}
+          title={ev.title}
+          footer={
+            <div className="w-full">
+              <ReactionBar uid={user?.uid} reactions={ev.reactions} onReact={(type) => togglePostReaction("classEvents", ev.id, type)} />
+              <div className="mt-1.5">
+                <CommentThread
+                  comments={comments}
+                  uid={user?.uid}
+                  open={Boolean(expandedClassComments[ev.id])}
+                  onToggle={() => setExpandedClassComments((p) => ({ ...p, [ev.id]: !p[ev.id] }))}
+                  value={classCommentText[ev.id] || ""}
+                  onChange={(v) => setClassCommentText((p) => ({ ...p, [ev.id]: v }))}
+                  onSubmit={() => addClassComment(ev.id)}
+                  busy={classCommentBusy[ev.id]}
+                  onReactComment={(commentId, type) => toggleCommentReaction("classEvents", ev.id, commentId, type)}
+                />
+              </div>
+            </div>
+          }
+        >
+          <ClassDateBlock start={ev.startsAt} end={ev.endsAt} venue={ev.venue} notes={ev.notes} />
+        </FeedCard>
+      );
+    }
+    const mat = f.item;
+    return (
+      <FeedCard
+        key={`m-${mat.id}`}
+        type="material"
+        author={safeName(mat.uploadedBy?.name || mat.uploadedByName)}
+        authorRole="courseRep"
+        time={relTime(mat.createdAt)}
+        courseCode={mat.course?.code || mat.courseCode}
+        title={mat.title}
+        footer={<ReactionBar uid={user?.uid} reactions={mat.reactions} onReact={(type) => togglePostReaction("documents", mat.id, type)} />}
+      >
+        {(mat.course?.title || mat.courseTitle) && (
+          <p className="mt-0.5 text-sm text-ink-muted">{mat.course?.title || mat.courseTitle}</p>
+        )}
+        <PostBody text={mat.description} />
+        <FileRow
+          name={mat.fileName || mat.title}
+          url={mat.fileUrl || mat.url}
+          size={mat.fileSize}
+          saved={savedIds.has(mat.id)}
+          saving={saveBusy[mat.id]}
+          onSave={() => saveMaterial(mat)}
+        />
+      </FeedCard>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-stitch-in max-w-4xl mx-auto">
-      {/* Header — Programme Hub (scoped by program, not broad department) */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="mb-1 text-xs font-bold uppercase tracking-wider text-ink-muted">
-            Programme Hub
-          </p>
-          <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-soft text-teal">
-              <Building2 size={18} />
-            </span>
+    <div className="mx-auto max-w-2xl space-y-5 animate-stitch-in">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="eyebrow text-ink-muted">Programme</p>
+          <h1 className="mt-1 break-words font-display text-[1.6rem] leading-tight tracking-[-0.02em] text-ink sm:text-[1.9rem]">
             {hubTitle}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            {hubSubtitleParts.length ? `${hubSubtitleParts.join(" · ")} · ` : ""}
-            Only your programme &amp; level
+            {hubSubtitleParts.length ? hubSubtitleParts.join(" · ") : "Your programme and level"}
           </p>
         </div>
         {isRepHere && (
-          <div className="rounded-full bg-teal-soft px-3 py-1 text-xs font-semibold text-teal">
-            Course Representative
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/course-rep")}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border-light px-3 text-xs font-medium text-ink-muted transition hover:border-border-strong hover:text-ink"
+          >
+            <Settings2 size={14} /> Rep panel
+          </button>
         )}
-      </div>
+      </header>
 
       {toast && (
-        <p className="rounded-2xl border border-teal/20 bg-teal-soft px-4 py-2.5 text-sm font-medium text-teal shadow-sm">
+        <p role="status" className="rounded-xl border border-teal/20 bg-teal-soft px-4 py-2.5 text-sm font-medium text-teal">
           {toast}
         </p>
       )}
 
-      {/* Course Rep Quick Actions — Bento / glass (Stitch) */}
       {isRepHere && (
-        <section>
-          <h3 className="mb-3 px-1 text-xs font-bold uppercase tracking-wider text-ink-muted">
-            Rep Quick Actions
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <button
-              type="button"
-              onClick={() => setShowAnnounce(true)}
-              className="card-stitch flex flex-col items-center justify-center gap-2 rounded-2xl p-4 transition hover:bg-white/80 active:scale-[0.98] dark:hover:bg-bg-elevated"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-pink-500/10 text-pink-500">
-                <Megaphone size={20} />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wide text-ink">
-                Announce
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowSchedule(true)}
-              className="card-stitch flex flex-col items-center justify-center gap-2 rounded-2xl p-4 transition hover:bg-white/80 active:scale-[0.98] dark:hover:bg-bg-elevated"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
-                <CalendarPlus size={20} />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wide text-ink">
-                Schedule
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/course-rep")}
-              className="card-stitch flex flex-col items-center justify-center gap-2 rounded-2xl p-4 transition hover:bg-white/80 active:scale-[0.98] dark:hover:bg-bg-elevated"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-500/10 text-violet-500">
-                <Upload size={20} />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wide text-ink">
-                Upload
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAnnounce(true)}
-              className="col-span-2 flex items-center justify-center gap-3 rounded-2xl bg-teal p-4 text-white shadow-md shadow-teal/20 transition hover:brightness-105 active:scale-[0.98] sm:col-span-2"
-            >
-              <Megaphone size={20} />
-              <span className="text-sm font-bold">New Post</span>
-            </button>
-          </div>
-        </section>
+        <RepComposer
+          profile={profile}
+          audience={level || "your class"}
+          onPost={() => setShowAnnounce(true)}
+          onSchedule={() => setShowSchedule(true)}
+          onUpload={() => navigate("/dashboard/course-rep#upload")}
+        />
       )}
 
-      <section className="space-y-3">
-        <h2 className="flex items-center gap-2 px-1 font-display text-base font-semibold text-ink">
-          <Calendar size={16} className="text-teal" />
-          Scheduled classes
-        </h2>
-        {loading && (
-          <p className="text-sm text-ink-muted flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin" /> Loading…
-          </p>
+      {nextClass && feedFilter === "all" && (
+        <button
+          type="button"
+          onClick={() => setFeedFilter("classes")}
+          className="flex w-full items-center gap-3 rounded-2xl border border-border-light bg-card-light px-4 py-3 text-left transition hover:border-border-strong"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-aqua-soft text-aqua-deep dark:bg-aqua/15 dark:text-aqua">
+            <Calendar size={16} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs text-ink-muted">Next class</span>
+            <span className="block truncate text-sm font-medium text-ink">
+              {nextClass.courseCode ? `${nextClass.courseCode} · ` : ""}{nextClass.title}
+            </span>
+          </span>
+          <span className="shrink-0 text-right text-xs text-ink-muted">
+            {new Date(toMillis(nextClass.startsAt)).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}
+            <span className="block font-medium text-ink">
+              {new Date(toMillis(nextClass.startsAt)).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+            </span>
+          </span>
+        </button>
+      )}
+
+      <FilterTabs
+        value={feedFilter}
+        onChange={setFeedFilter}
+        options={[
+          ["all", "All", 0],
+          ["updates", "Updates", posts.length],
+          ["classes", "Classes", upcoming.length],
+          ["materials", "Materials", materials.length],
+        ]}
+      />
+
+      <section className="space-y-3" aria-label={`Posts for ${audience}`}>
+        {visibleItems.length === 0 ? (
+          <EmptyFeed filter={feedFilter} isRep={isRepHere} />
+        ) : (
+          visibleItems.map(renderItem)
         )}
-        {!loading && upcoming.length === 0 && (
-          <div className="rounded-xl border border-border-light bg-card-light px-4 py-8 text-center text-sm text-ink-muted">
-            No upcoming classes scheduled for your programme.
-          </div>
-        )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          {upcoming.map((ev) => {
-            const start = ev.startsAt?.toDate?.() || ev.startsAt;
-            const end = ev.endsAt?.toDate?.() || ev.endsAt;
-            const comments = Array.isArray(ev.comments) ? ev.comments : [];
-            const open = expandedClassComments[ev.id];
-            return (
-              <div
-                key={ev.id}
-                className="card-stitch relative overflow-hidden rounded-2xl p-5 pl-6"
-              >
-                <p className="text-sm font-semibold text-ink">{ev.title}</p>
-                {ev.courseCode && (
-                  <p className="text-xs font-medium text-teal mt-0.5">{ev.courseCode}</p>
-                )}
-                <div className="mt-2 space-y-1 text-xs text-ink-muted">
-                  {start && (
-                    <p className="flex items-center gap-1.5">
-                      <Clock size={12} />{" "}
-                      {new Date(start).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })} ·{" "}
-                      {new Date(start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                      {end ? ` – ${new Date(end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}
-                    </p>
-                  )}
-                  {ev.venue && (
-                    <p className="flex items-center gap-1.5">
-                      <MapPin size={12} /> {ev.venue}
-                    </p>
-                  )}
-                  {ev.notes && <p className="mt-1 text-ink-muted">{ev.notes}</p>}
-                  {ev.createdByName && (
-                    <p className="mt-2 text-xs text-ink-muted">
-                      Scheduled by <span className="font-medium text-ink">{ev.createdByName}</span>
-                      {ev.createdByEmail && <span className="block">{ev.createdByEmail}</span>}
-                    </p>
-                  )}
-                </div>
-
-                {/* Class reactions */}
-                <div className="mt-3">
-                  <ReactionBar
-                    reactions={ev.reactions}
-                    onReact={(type) =>
-                      togglePostReaction("classEvents", ev.id, type)
-                    }
-                  />
-                </div>
-
-                {/* Class comments */}
-                <div className="mt-3 border-t border-border-light pt-2.5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedClassComments((p) => ({
-                        ...p,
-                        [ev.id]: !p[ev.id],
-                      }))
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-teal hover:underline"
-                  >
-                    <MessageCircle size={13} />
-                    {comments.length} comment{comments.length !== 1 ? "s" : ""}
-                  </button>
-
-                  {open && (
-                    <div className="mt-2.5 space-y-2">
-                      {comments.length === 0 && (
-                        <p className="text-xs text-ink-muted">No comments yet. Be first!</p>
-                      )}
-                      {comments.map((c) => (
-                        <div
-                          key={c.id}
-                          className="rounded-xl bg-bg-panel-alt/50 px-3 py-2.5"
-                        >
-                          <p className="text-xs font-semibold text-ink">
-                            {c.authorName || "Student"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-ink-muted whitespace-pre-wrap">
-                            {c.text}
-                          </p>
-                          {c.createdAt && (
-                            <p className="mt-1 text-[0.7rem] text-ink-muted">
-                              {new Date(c.createdAt).toLocaleString()}
-                            </p>
-                          )}
-                          <div className="mt-1.5">
-                            <ReactionBar
-                              size="sm"
-                              reactions={c.reactions}
-                              onReact={(type) =>
-                                toggleCommentReaction(
-                                  "classEvents",
-                                  ev.id,
-                                  c.id,
-                                  type
-                                )
-                              }
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex gap-2 pt-1">
-                        <input
-                          className={field}
-                          placeholder="Write a comment…"
-                          value={classCommentText[ev.id] || ""}
-                          onChange={(e) =>
-                            setClassCommentText((p) => ({
-                              ...p,
-                              [ev.id]: e.target.value,
-                            }))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              addClassComment(ev.id);
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => addClassComment(ev.id)}
-                          disabled={classCommentBusy[ev.id]}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
-                        >
-                          {classCommentBusy[ev.id] ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Send size={14} />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <div className="mb-1 flex items-center justify-between px-1">
-          <h2 className="font-display text-base font-semibold text-ink flex items-center gap-2">
-            <Megaphone size={16} className="text-teal" />
-            Programme Feed
-          </h2>
-        </div>
-        {posts.length === 0 && (
-          <div className="rounded-xl border border-border-light bg-card-light px-4 py-8 text-center text-sm text-ink-muted">
-            No announcements yet from your Course Rep.
-          </div>
-        )}
-        <div className="flex flex-col gap-5">
-          {posts.map((post) => {
-            const comments = Array.isArray(post.comments) ? post.comments : [];
-            const open = expandedComments[post.id];
-            return (
-              <article
-                key={post.id}
-                className="card-stitch relative overflow-hidden rounded-3xl p-6 pl-7 group"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    {post.pinned && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-pink-500/10 px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-pink-600 border border-pink-500/20">
-                        <Pin size={10} /> Pinned
-                      </span>
-                    )}
-                    {post.courseCode && (
-                      <span className="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-orange-600 border border-orange-500/20">
-                        {post.courseCode}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <h3 className="mt-2 text-base font-semibold text-ink">{post.title}</h3>
-                <p className="mt-1.5 text-sm text-ink-muted whitespace-pre-wrap leading-relaxed">
-                  {post.body}
-                </p>
-                <p className="mt-2 text-xs font-medium text-ink">
-                  {feedAuthorName(post)}
-                </p>
-                {post.authorEmail && <p className="text-[0.7rem] text-ink-muted">{post.authorEmail}</p>}
-                <p className="mt-1 text-[0.7rem] text-ink-muted">
-                  {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleString() : ""}
-                </p>
-
-                {/* Post reactions */}
-                <div className="mt-3">
-                  <ReactionBar
-                    reactions={post.reactions}
-                    onReact={(type) =>
-                      togglePostReaction("coursePosts", post.id, type)
-                    }
-                  />
-                </div>
-
-                <div className="mt-4 border-t border-border-light pt-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedComments((p) => ({
-                        ...p,
-                        [post.id]: !p[post.id],
-                      }))
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-teal hover:underline"
-                  >
-                    <MessageCircle size={13} />
-                    {comments.length} comment{comments.length !== 1 ? "s" : ""}
-                  </button>
-
-                  {open && (
-                    <div className="mt-3 space-y-2">
-                      {comments.length === 0 && (
-                        <p className="text-xs text-ink-muted">No comments yet. Be first!</p>
-                      )}
-                      {comments.map((c) => (
-                        <div
-                          key={c.id}
-                          className="rounded-xl bg-bg-panel-alt/50 px-3 py-2.5"
-                        >
-                          <p className="text-xs font-semibold text-ink">
-                            {c.authorName || "Student"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-ink-muted whitespace-pre-wrap">
-                            {c.text}
-                          </p>
-                          {c.createdAt && (
-                            <p className="mt-1 text-[0.7rem] text-ink-muted">
-                              {new Date(c.createdAt).toLocaleString()}
-                            </p>
-                          )}
-                          {/* React to another student's comment */}
-                          <div className="mt-1.5">
-                            <ReactionBar
-                              size="sm"
-                              reactions={c.reactions}
-                              onReact={(type) =>
-                                toggleCommentReaction(
-                                  "coursePosts",
-                                  post.id,
-                                  c.id,
-                                  type
-                                )
-                              }
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex gap-2 pt-1">
-                        <input
-                          className={field}
-                          placeholder="Write a comment…"
-                          value={commentText[post.id] || ""}
-                          onChange={(e) =>
-                            setCommentText((p) => ({
-                              ...p,
-                              [post.id]: e.target.value,
-                            }))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              addComment(post.id);
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => addComment(post.id)}
-                          disabled={commentBusy[post.id]}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
-                        >
-                          {commentBusy[post.id] ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Send size={14} />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="font-display text-base font-semibold text-ink flex items-center gap-2 px-1">
-          <BookOpen size={16} className="text-teal" />
-          Course materials
-        </h2>
-        {materials.length === 0 && (
-          <div className="card-stitch rounded-2xl px-4 py-8 text-center text-sm text-ink-muted">
-            No materials uploaded by your Course Rep yet.
-          </div>
-        )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          {materials.map((mat) => {
-            const saved = savedIds.has(mat.id);
-            return (
-              <div
-                key={mat.id}
-                className="card-stitch relative overflow-hidden rounded-2xl p-5 pl-6 flex flex-col"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-bold text-orange-600">
-                      {mat.course?.code || mat.courseCode || "Programme material"}
-                    </p>
-                    <p className="mt-0.5 text-sm font-semibold text-ink">
-                      {mat.title}
-                    </p>
-                    {(mat.course?.title || mat.courseTitle) && (
-                      <p className="mt-0.5 text-xs text-ink-muted">{mat.course?.title || mat.courseTitle}</p>
-                    )}
-                  </div>
-                </div>
-                {mat.description && (
-                  <p className="mt-2 text-xs text-ink-muted line-clamp-3">
-                    {mat.description}
-                  </p>
-                )}
-                <div className="mt-3">
-                  <ReactionBar
-                    reactions={mat.reactions}
-                    onReact={(type) =>
-                      togglePostReaction("documents", mat.id, type)
-                    }
-                  />
-                </div>
-                <div className="mt-auto pt-3 flex flex-wrap gap-2">
-                  {(mat.fileUrl || mat.url) && (
-                    <a
-                      href={mat.fileUrl || mat.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg border border-border-light px-2.5 py-1.5 text-xs font-medium text-ink hover:border-teal hover:text-teal"
-                    >
-                      <ExternalLink size={12} /> Read
-                    </a>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => saveMaterial(mat)}
-                    disabled={saved || saveBusy[mat.id]}
-                    className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium ${
-                      saved
-                        ? "bg-teal-soft text-teal"
-                        : "border border-border-light text-ink hover:border-teal hover:text-teal"
-                    } disabled:opacity-70`}
-                  >
-                    {saveBusy[mat.id] ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : saved ? (
-                      <BookmarkCheck size={12} />
-                    ) : (
-                      <BookmarkPlus size={12} />
-                    )}
-                    {saved ? "Saved" : "Save to Materials"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </section>
 
       {/* Quick composers (Course Rep only) */}
@@ -1162,14 +737,19 @@ export default function StudentDepartment() {
         open={showSchedule}
         onClose={(created) => {
           setShowSchedule(false);
-          if (created) flash("Class scheduled — students can see it now.");
+          if (created) {
+            flash("Class scheduled. Your class can see it now.");
+            classEventsApi.list()
+              .then(({ events = [] }) => setClasses(events.filter((event) => matchesAcademicScope(event.program || event.department, profile) && matchesStudentLevel(event.level, level))))
+              .catch(() => {});
+          }
         }}
         department={departmentName || program}
         program={program}
         level={level}
         faculty={faculty}
         user={user}
-        authorName={profile?.name || user?.email}
+        authorName={profile?.name || profile?.nickname || "Course Rep"}
         authMode={authMode}
       />
       <CreateAnnouncementModal
@@ -1193,7 +773,7 @@ export default function StudentDepartment() {
         level={level}
         faculty={faculty}
         user={user}
-        authorName={profile?.name || user?.email}
+        authorName={profile?.name || profile?.nickname || "Course Rep"}
         authMode={authMode}
       />
     </div>

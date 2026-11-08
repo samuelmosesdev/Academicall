@@ -23,10 +23,17 @@ export default function AdminGovernance() {
         className="flex items-center justify-between gap-4 rounded-xl border border-accent/30 bg-accent-soft/40 px-4 py-4 transition hover:border-accent/60 hover:bg-accent-soft/70"
       >
         <div>
-          <p className="text-sm font-semibold text-text-primary">Academic catalog</p>
-          <p className="mt-1 text-xs text-text-muted">Add or update faculties, departments, and programs used for student profiles and Course Rep assignments.</p>
+          <p className="text-sm font-semibold text-text-primary">Legacy UniAbuja academic catalog</p>
+          <p className="mt-1 text-xs text-text-muted">Edit the legacy UniAbuja-only faculty, department and program choices.</p>
         </div>
         <span className="shrink-0 rounded-full bg-accent px-3 py-2 text-xs font-semibold text-bg-app">Manage catalog</span>
+      </Link>
+      <Link to="/admin/academics?tab=institutions" className="flex items-center justify-between gap-4 rounded-xl border border-border-subtle bg-bg-panel px-4 py-4 transition hover:bg-bg-panel-alt">
+        <div>
+          <p className="text-sm font-semibold text-text-primary">All-institution course catalogue</p>
+          <p className="mt-1 text-xs text-text-muted">Browse institutions and add or assign courses to any institution's departments.</p>
+        </div>
+        <span className="shrink-0 rounded-full border border-border-subtle px-3 py-2 text-xs font-semibold text-text-primary">Open Academics</span>
       </Link>
       <div className="grid gap-3 sm:grid-cols-3">{[[courseReps.length, "Course Reps", "text-accent"], [agents.length, "Agents", "text-text-primary"], [suspended.length, "Suspended", "text-red-400"]].map(([value, label, color]) => <div key={label} className="rounded-xl border border-border-subtle bg-bg-panel p-4"><div className={`text-2xl font-bold ${color}`}>{value}</div><div className="text-xs text-text-muted">{label}</div></div>)}</div>
       <section><h2 className="mb-2 text-sm font-semibold text-text-primary">Course Reps by program</h2>{loading && <p className="text-sm text-text-muted">Loading…</p>}<div className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-subtle bg-bg-panel">{courseReps.map((user) => { const meta = user.courseRepMeta || {}; const displayName = user.name || user.nickname || user.nickName || user.email || "User"; return <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"><div className="min-w-0"><div className="text-sm font-semibold text-text-primary">{displayName}</div>{user.email && <div className="text-xs text-text-muted">{user.email}</div>}</div><div className="text-xs text-text-muted">{[meta.faculty || user.faculty, meta.program, meta.department, meta.level].filter(Boolean).join(" · ") || "No program assignment set"}</div><Link to={`/admin/users/${user.id}`} className="text-xs font-medium text-accent hover:underline">Manage</Link></div>; })}{!loading && courseReps.length === 0 && <p className="px-4 py-8 text-center text-sm text-text-muted">No Course Reps assigned yet.</p>}</div></section>

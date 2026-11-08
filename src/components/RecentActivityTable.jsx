@@ -17,12 +17,14 @@ export default function RecentActivityTable({ activity, onAddUser, onAddAgent, o
     <div className="rounded-2xl border border-border-subtle bg-bg-panel p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-text-primary">Recent Activity</h3>
-        <div className="flex flex-wrap gap-2">
-          <ActionButton icon={UserPlus} label="Add User" onClick={onAddUser} />
-          <ActionButton icon={UserCog2} label="Add Agent" onClick={onAddAgent} />
-          <ActionButton icon={ClipboardPlus} label="Create CBT" onClick={onCreateCbt} />
-          <ActionButton icon={Megaphone} label="Upload Announcement" onClick={onUploadAnnouncement} />
-        </div>
+        {(onAddUser || onAddAgent || onCreateCbt || onUploadAnnouncement) && (
+          <div className="flex flex-wrap gap-2">
+            {onAddUser && <ActionButton icon={UserPlus} label="Add User" onClick={onAddUser} />}
+            {onAddAgent && <ActionButton icon={UserCog2} label="Add Agent" onClick={onAddAgent} />}
+            {onCreateCbt && <ActionButton icon={ClipboardPlus} label="Create CBT" onClick={onCreateCbt} />}
+            {onUploadAnnouncement && <ActionButton icon={Megaphone} label="Upload Announcement" onClick={onUploadAnnouncement} />}
+          </div>
+        )}
       </div>
 
       <div className="overflow-x-auto">

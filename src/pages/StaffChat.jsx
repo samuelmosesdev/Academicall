@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
+import LinkifiedText from "../components/LinkifiedText";
 import UserAvatar, { displayLabel, NameWithBadge } from "../components/UserAvatar";
 import Modal from "../components/Modal";
 import {
@@ -622,7 +623,7 @@ export default function StaffChat() {
 
                 {m.replyTo && !isDeleted && (
                   <div
-                    className={`mb-1 rounded-xl border-l-2 border-accent/60 bg-bg-panel-alt/80 px-2.5 py-1.5 text-left text-xs ${
+                    className={`mb-1 rounded-md border border-border-subtle bg-bg-panel-alt/80 px-2.5 py-1.5 text-left text-xs ${
                       mine ? "ml-auto" : ""
                     }`}
                   >
@@ -669,7 +670,7 @@ export default function StaffChat() {
                         </div>
                         {m.text && (
                           <p className="mt-2 whitespace-pre-wrap text-xs text-text-muted">
-                            {m.text}
+                            <LinkifiedText text={m.text} />
                           </p>
                         )}
                       </div>
@@ -714,7 +715,7 @@ export default function StaffChat() {
                             : "rounded-bl-md bg-bg-panel-alt text-text-primary"
                         }`}
                       >
-                        {m.text}
+                        <LinkifiedText text={m.text} />
                       </div>
                     )}
 
@@ -729,7 +730,7 @@ export default function StaffChat() {
                         </a>
                         {m.text && (
                           <p className="whitespace-pre-wrap px-3 py-2 text-sm text-text-secondary">
-                            {m.text}
+                            <LinkifiedText text={m.text} />
                           </p>
                         )}
                       </div>

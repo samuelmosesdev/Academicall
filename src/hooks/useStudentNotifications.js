@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   collection,
   doc,
@@ -15,116 +15,223 @@ import {
 import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import {
+  api,
   announcementsApi,
   notificationsApi,
   STUDENT_NOTIFICATIONS_UPDATED_EVENT,
 } from "../lib/api";
+import { subscribe as subscribeRealtime } from "../lib/realtime";
 import { matchesAcademicScope } from "../lib/academicScope";
 
 /**
  * Student notifications = system notifications + published announcements
- * (filtered by audience). Read state for announcements is tracked in
- * announcementReads/{uid_announcementId}.
+ * (filtered by audience). Read state for announcements is tracked per person in
+ * announcement_reads; system notifications carry readByUser.
+ *
+ * In API mode every caller (the bell in the top bar, the notifications page…)
+ * shares ONE store, so marking something read on the page updates the badge at
+ * once and both always agree. The store re-fetches from the server after every
+ * change, on window focus, and on the live "notification" stream event, so what
+ * you see after a refresh is what the server has persisted.
  */
+
+export function toMillis(ts) {
+  if (!ts) return 0;
+  if (typeof ts === "number") return ts;
+  if (ts.seconds) return ts.seconds * 1000;
+  const ms = new Date(ts).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+/* ---------------------------- shared API store ---------------------------- */
+
+const EMPTY_STATE = {
+  userId: null,
+  systemNotifs: [],
+  announcements: [],
+  readMap: {},
+  serverUnread: null, // true unread total for system notifications (not capped at 50)
+  loading: true,
+};
+
+let state = EMPTY_STATE;
+const subscribers = new Set();
+let inFlight = null;
+let rerun = false;
+let teardown = null;
+
+function setState(patch) {
+  state = { ...state, ...(typeof patch === "function" ? patch(state) : patch) };
+  subscribers.forEach((fn) => fn());
+}
+
+function load() {
+  const userId = state.userId;
+  if (!userId) return Promise.resolve();
+  if (inFlight) {
+    // A change landed while we were fetching: fetch once more afterwards so we
+    // never keep a response that predates it.
+    rerun = true;
+    return inFlight;
+  }
+  inFlight = Promise.all([
+    notificationsApi.list(),
+    announcementsApi.list(),
+    announcementsApi.listReads().catch(() => ({ reads: [] })),
+  ])
+    .then(([notificationData, announcementData, readData]) => {
+      if (state.userId !== userId) return;
+      const readMap = {};
+      (readData.reads || []).forEach((item) => {
+        if (item.announcementId) readMap[item.announcementId] = true;
+      });
+      (notificationData.readAnnouncementIds || []).forEach((id) => {
+        readMap[id] = true;
+      });
+      setState({
+        systemNotifs: (notificationData.notifications || []).map((item) => ({ ...item, _type: "system" })),
+        announcements: (announcementData.announcements || []).map((item) => ({ ...item, _type: "announcement" })),
+        readMap,
+        serverUnread: typeof notificationData.unreadCount === "number" ? notificationData.unreadCount : null,
+        loading: false,
+      });
+    })
+    .catch(() => {
+      if (state.userId === userId) setState({ loading: false });
+    })
+    .finally(() => {
+      inFlight = null;
+      if (rerun) {
+        rerun = false;
+        load();
+      }
+    });
+  return inFlight;
+}
+
+function startListening() {
+  if (teardown) return;
+  const refresh = () => load();
+  window.addEventListener(STUDENT_NOTIFICATIONS_UPDATED_EVENT, refresh);
+  window.addEventListener("focus", refresh);
+  const offNotif = subscribeRealtime("notification", refresh);
+  const offReconnect = subscribeRealtime("reconnected", refresh);
+  teardown = () => {
+    window.removeEventListener(STUDENT_NOTIFICATIONS_UPDATED_EVENT, refresh);
+    window.removeEventListener("focus", refresh);
+    offNotif?.();
+    offReconnect?.();
+    teardown = null;
+  };
+}
+
+function subscribeStore(fn) {
+  subscribers.add(fn);
+  startListening();
+  return () => {
+    subscribers.delete(fn);
+    if (!subscribers.size) teardown?.();
+  };
+}
+
+function ensureUser(userId) {
+  if (state.userId === userId) return;
+  state = { ...EMPTY_STATE, userId, loading: Boolean(userId) };
+  subscribers.forEach((fn) => fn());
+  if (userId) load();
+}
+
+const getSnapshot = () => state;
+
+function announceChange() {
+  window.dispatchEvent(new Event(STUDENT_NOTIFICATIONS_UPDATED_EVENT));
+}
+
+/* --------------------------------- hook --------------------------------- */
+
 export function useStudentNotifications() {
   const { user, profile, authMode } = useAuth();
-  const [systemNotifs, setSystemNotifs] = useState([]);
-  const [announcements, setAnnouncements] = useState([]);
-  const [readMap, setReadMap] = useState({}); // { [announcementId]: true }
-  const [loading, setLoading] = useState(true);
+  const isApi = authMode === "api";
+  const apiState = useSyncExternalStore(subscribeStore, getSnapshot, getSnapshot);
 
-  // System notifications for this user
+  // Firestore (legacy) mode keeps its own live listeners.
+  const [fsSystem, setFsSystem] = useState([]);
+  const [fsAnnouncements, setFsAnnouncements] = useState([]);
+  const [fsReadMap, setFsReadMap] = useState({});
+  const [fsLoading, setFsLoading] = useState(true);
+
   useEffect(() => {
-    if (authMode === "api") {
-      let alive = true;
-      Promise.all([notificationsApi.list(), announcementsApi.list(), announcementsApi.listReads()]).then(([notificationData, announcementData, readData]) => {
-        if (!alive) return;
-        setSystemNotifs((notificationData.notifications || []).map((item) => ({ ...item, _type: "system" })));
-        setAnnouncements((announcementData.announcements || []).map((item) => ({ ...item, _type: "announcement" })));
-        setReadMap(Object.fromEntries((readData.reads || []).filter((item) => item.announcementId).map((item) => [item.announcementId, true])));
-        setLoading(false);
-      }).catch(() => alive && setLoading(false));
-      return () => { alive = false; };
-    }
-    if (!user) return;
+    if (isApi) ensureUser(user?.uid || user?.id || null);
+  }, [isApi, user?.uid, user?.id]);
+
+  // System notifications for this user (Firestore mode)
+  useEffect(() => {
+    if (isApi || !user) return undefined;
     const q = query(
       collection(db, "notifications"),
       where("userId", "==", user.uid),
       orderBy("createdAt", "desc"),
       limit(100)
     );
-    const unsub = onSnapshot(q, (snap) => {
-      setSystemNotifs(
+    return onSnapshot(q, (snap) => {
+      setFsSystem(
         snap.docs
           .map((d) => ({ id: d.id, ...d.data(), _type: "system" }))
           .filter((n) => !n.archived && !n.deleted)
       );
     });
-    return unsub;
-  }, [user, authMode]);
+  }, [user, isApi]);
 
-  // Published announcements
+  // Published announcements (Firestore mode)
   useEffect(() => {
-    if (authMode === "api") return;
+    if (isApi) return undefined;
     const q = query(
       collection(db, "announcements"),
       where("published", "==", true),
       orderBy("createdAt", "desc"),
       limit(50)
     );
-    const unsub = onSnapshot(
+    return onSnapshot(
       q,
       (snap) => {
-        setAnnouncements(snap.docs.map((d) => ({ id: d.id, ...d.data(), _type: "announcement" })));
-        setLoading(false);
+        setFsAnnouncements(snap.docs.map((d) => ({ id: d.id, ...d.data(), _type: "announcement" })));
+        setFsLoading(false);
       },
-      () => setLoading(false)
+      () => setFsLoading(false)
     );
-    return unsub;
-  }, [authMode]);
+  }, [isApi]);
 
-  // Which announcements this student has already read
+  // Which announcements this student has already read (Firestore mode)
   useEffect(() => {
-    if (authMode === "api") return;
-    if (!user) return;
-    // Grows by one doc per announcement per user forever, so it must be capped.
+    if (isApi || !user) return undefined;
     const q = query(
       collection(db, "announcementReads"),
       where("userId", "==", user.uid),
       limit(200)
     );
-    const unsub = onSnapshot(q, (snap) => {
+    return onSnapshot(q, (snap) => {
       const map = {};
       snap.docs.forEach((d) => {
         const data = d.data();
         if (data.announcementId) map[data.announcementId] = true;
       });
-      setReadMap(map);
+      setFsReadMap(map);
     });
-    return unsub;
-  }, [user, authMode]);
+  }, [user, isApi]);
+
+  const systemNotifs = isApi ? apiState.systemNotifs : fsSystem;
+  const announcements = isApi ? apiState.announcements : fsAnnouncements;
+  const readMap = isApi ? apiState.readMap : fsReadMap;
+  const loading = isApi ? apiState.loading : fsLoading;
 
   // Filter announcements by audience + expiry
   const relevantAnnouncements = useMemo(() => {
     const now = Date.now();
     return announcements.filter((a) => {
-      // Expired?
-      if (a.expiresAt) {
-        const exp = a.expiresAt.seconds
-          ? a.expiresAt.seconds * 1000
-          : new Date(a.expiresAt).getTime();
-        if (exp < now) return false;
-      }
-      // Audience
-      if (a.audience === "faculty") {
-        return a.faculty && profile?.faculty === a.faculty;
-      }
-      if (a.audience === "level") {
-        return a.level && profile?.level === a.level;
-      }
-      if (a.audience === "department") {
-        return matchesAcademicScope(a.program || a.department, profile);
-      }
+      if (a.expiresAt && toMillis(a.expiresAt) < now) return false;
+      if (a.audience === "faculty") return a.faculty && profile?.faculty === a.faculty;
+      if (a.audience === "level") return a.level && profile?.level === a.level;
+      if (a.audience === "department") return matchesAcademicScope(a.program || a.department, profile);
       return true; // all
     });
   }, [announcements, profile]);
@@ -135,29 +242,35 @@ export function useStudentNotifications() {
       ...a,
       _type: "announcement",
       _read: !!readMap[a.id],
-      _sort: a.createdAt?.seconds || 0,
+      _sort: toMillis(a.createdAt),
     }));
     const sysItems = systemNotifs.map((n) => ({
       ...n,
       _type: "system",
       _read: n.readByUser === true,
-      _sort: n.createdAt?.seconds || 0,
+      _sort: toMillis(n.createdAt),
     }));
     return [...annItems, ...sysItems].sort((a, b) => b._sort - a._sort);
   }, [relevantAnnouncements, systemNotifs, readMap]);
 
   const unreadCount = useMemo(() => {
     const unreadAnn = relevantAnnouncements.filter((a) => !readMap[a.id]).length;
-    const unreadSys = systemNotifs.filter((n) => !n.readByUser).length;
+    const localSys = systemNotifs.filter((n) => n.readByUser !== true).length;
+    // The server count also covers unread items older than the 50 we list.
+    const unreadSys = isApi && apiState.serverUnread != null ? Math.max(apiState.serverUnread, localSys) : localSys;
     return unreadAnn + unreadSys;
-  }, [relevantAnnouncements, readMap, systemNotifs]);
+  }, [relevantAnnouncements, readMap, systemNotifs, isApi, apiState.serverUnread]);
 
   async function markAnnouncementRead(announcementId) {
     if (!user || readMap[announcementId]) return;
-    if (authMode === "api") {
-      await announcementsApi.markRead(announcementId);
-      setReadMap((current) => ({ ...current, [announcementId]: true }));
-      window.dispatchEvent(new Event(STUDENT_NOTIFICATIONS_UPDATED_EVENT));
+    if (isApi) {
+      // Optimistic: drop the unread styling right away, then persist.
+      setState((s) => ({ readMap: { ...s.readMap, [announcementId]: true } }));
+      try {
+        await announcementsApi.markRead(announcementId);
+      } finally {
+        announceChange();
+      }
       return;
     }
     const id = `${user.uid}_${announcementId}`;
@@ -169,10 +282,18 @@ export function useStudentNotifications() {
   }
 
   async function markSystemRead(notifId) {
-    if (authMode === "api") {
-      await notificationsApi.markRead(notifId);
-      setSystemNotifs((items) => items.map((item) => item.id === notifId ? { ...item, readByUser: true } : item));
-      window.dispatchEvent(new Event(STUDENT_NOTIFICATIONS_UPDATED_EVENT));
+    if (isApi) {
+      const target = state.systemNotifs.find((item) => item.id === notifId);
+      if (target && target.readByUser === true) return;
+      setState((s) => ({
+        systemNotifs: s.systemNotifs.map((item) => (item.id === notifId ? { ...item, readByUser: true } : item)),
+        serverUnread: s.serverUnread != null && target ? Math.max(0, s.serverUnread - 1) : s.serverUnread,
+      }));
+      try {
+        await notificationsApi.markRead(notifId);
+      } finally {
+        announceChange();
+      }
       return;
     }
     await updateDoc(doc(db, "notifications", notifId), {
@@ -183,41 +304,60 @@ export function useStudentNotifications() {
 
   async function markAllRead() {
     if (!user) return;
-    if (authMode === "api") {
-      await Promise.all(systemNotifs.filter((item) => !item.readByUser).map((item) => notificationsApi.markRead(item.id)));
-      setSystemNotifs((items) => items.map((item) => ({ ...item, readByUser: true })));
-      setReadMap((current) => ({
-        ...current,
-        ...Object.fromEntries(relevantAnnouncements.map((item) => [item.id, true])),
+    if (isApi) {
+      const announcementIds = relevantAnnouncements.filter((a) => !readMap[a.id]).map((a) => a.id);
+      setState((s) => ({
+        systemNotifs: s.systemNotifs.map((item) => ({ ...item, readByUser: true })),
+        readMap: { ...s.readMap, ...Object.fromEntries(announcementIds.map((id) => [id, true])) },
+        serverUnread: 0,
       }));
-      window.dispatchEvent(new Event(STUDENT_NOTIFICATIONS_UPDATED_EVENT));
+      try {
+        // One call persists both: every system notification (not just the 50
+        // listed) and the announcement reads, which used to be local-only and
+        // came back as unread after a refresh.
+        await api("/notifications/all/read", { method: "PATCH", body: { announcementIds } });
+      } catch {
+        await Promise.all([
+          ...state.systemNotifs.map((item) => notificationsApi.markRead(item.id).catch(() => {})),
+          ...announcementIds.map((id) => announcementsApi.markRead(id).catch(() => {})),
+        ]);
+      } finally {
+        announceChange();
+      }
       return;
     }
     const batch = writeBatch(db);
-
-    // Unread announcements
     relevantAnnouncements.forEach((a) => {
       if (!readMap[a.id]) {
-        const id = `${user.uid}_${a.id}`;
-        batch.set(doc(db, "announcementReads", id), {
+        batch.set(doc(db, "announcementReads", `${user.uid}_${a.id}`), {
           userId: user.uid,
           announcementId: a.id,
           readAt: serverTimestamp(),
         });
       }
     });
-
-    // Unread system notifications
     systemNotifs.forEach((n) => {
       if (!n.readByUser) {
-        batch.update(doc(db, "notifications", n.id), {
-          readByUser: true,
-          readAt: serverTimestamp(),
-        });
+        batch.update(doc(db, "notifications", n.id), { readByUser: true, readAt: serverTimestamp() });
       }
     });
-
     await batch.commit();
+  }
+
+  /** Drop an item locally after archive / delete so it leaves the list at once. */
+  function removeLocal(notifId) {
+    if (isApi) {
+      setState((s) => {
+        const target = s.systemNotifs.find((item) => item.id === notifId);
+        return {
+          systemNotifs: s.systemNotifs.filter((item) => item.id !== notifId),
+          serverUnread:
+            s.serverUnread != null && target && target.readByUser !== true ? Math.max(0, s.serverUnread - 1) : s.serverUnread,
+        };
+      });
+    } else {
+      setFsSystem((items) => items.filter((item) => item.id !== notifId));
+    }
   }
 
   return {
@@ -229,6 +369,8 @@ export function useStudentNotifications() {
     markAnnouncementRead,
     markSystemRead,
     markAllRead,
+    removeLocal,
+    refresh: load,
     readMap,
   };
 }

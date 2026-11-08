@@ -3,6 +3,8 @@ import { CalendarPlus, Loader2 } from "lucide-react";
 import Modal from "./Modal";
 import { logActivity } from "../lib/activityLog";
 import { classEventsApi } from "../lib/api";
+import LectureWhenFields, { EMPTY_WHEN } from "./schedule/LectureWhenFields";
+import { lectureRange } from "./schedule/dateUtils";
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -25,8 +27,8 @@ export default function ScheduleClassModal({
   const [title, setTitle] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [venue, setVenue] = useState("");
-  const [startsAt, setStartsAt] = useState("");
-  const [endsAt, setEndsAt] = useState("");
+  const [when, setWhen] = useState(EMPTY_WHEN);
+  const [tried, setTried] = useState(false);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -35,8 +37,8 @@ export default function ScheduleClassModal({
     setTitle("");
     setCourseCode("");
     setVenue("");
-    setStartsAt("");
-    setEndsAt("");
+    setWhen(EMPTY_WHEN);
+    setTried(false);
     setNotes("");
     setErr("");
   }
@@ -49,14 +51,15 @@ export default function ScheduleClassModal({
   async function handleSubmit(e) {
     e.preventDefault();
     setErr("");
-    if (!title.trim() || !startsAt) {
-      setErr("Title and start time are required.");
+    setTried(true);
+    const range = lectureRange(when);
+    if (!title.trim() || !range) {
+      setErr(!title.trim() ? "Give the class a title." : "Choose the date and class time.");
       return;
     }
     setBusy(true);
     try {
-      const start = new Date(startsAt);
-      const end = endsAt ? new Date(endsAt) : null;
+      const { start, end } = range;
       const { event } = await classEventsApi.create({
         title: title.trim(),
         courseCode: courseCode.trim().toUpperCase() || null,
@@ -115,26 +118,8 @@ export default function ScheduleClassModal({
             placeholder="Venue / Zoom link"
             className={field}
           />
-          <div>
-            <label className="mb-1 block text-xs text-ink-muted">Start *</label>
-            <input
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-              className={field}
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-ink-muted">End</label>
-            <input
-              type="datetime-local"
-              value={endsAt}
-              onChange={(e) => setEndsAt(e.target.value)}
-              className={field}
-            />
-          </div>
         </div>
+        <LectureWhenFields value={when} onChange={setWhen} invalid={tried} />
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}

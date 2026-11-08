@@ -1,7 +1,7 @@
 import { useState } from "react";
 import AuthShell, { Field, AuthError, AuthNote, PrimaryButton } from "../components/AuthShell";
 import { Link } from "react-router-dom";
-import { friendlyAuthError } from "../lib/authErrors";
+import { describeAuthError } from "../lib/authErrors";
 import { authApi } from "../lib/api";
 
 export default function ForgotPassword() {
@@ -18,7 +18,7 @@ export default function ForgotPassword() {
       await authApi.requestPasswordReset({ email: email.trim() });
       setSent(true);
     } catch (err) {
-      setError(err.message || friendlyAuthError(err.code) || "Could not send reset email.");
+      setError(describeAuthError(err, { fallback: "We couldn't send the reset email." }));
     } finally {
       setBusy(false);
     }
@@ -31,7 +31,7 @@ export default function ForgotPassword() {
       subtitle="Enter the email on your account and we'll send you a reset link."
       footer={<>Remembered it? <Link to="/login" className="font-medium text-midnight underline decoration-lemon decoration-[3px] underline-offset-4 hover:decoration-violet">Sign in</Link></>}
     >
-      <AuthError>{error}</AuthError>
+      <AuthError error={error} onDismiss={() => setError("")} />
       {sent ? (
         <div className="space-y-5">
           <AuthNote>If an account exists for <strong>{email}</strong>, a reset link is on its way. Check your inbox and spam folder.</AuthNote>

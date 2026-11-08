@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { usersApi } from "../lib/api";
 import { uploadImageToCloudinary } from "../lib/cloudinaryUpload";
 import { ROLE_LABELS } from "../lib/roles";
+import { TwoFactorSection, DevicesSection, PushSection } from "../components/settings/AccountSafety";
 
 const field =
   "w-full rounded-xl border border-border-subtle bg-bg-panel px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none";
@@ -137,6 +138,11 @@ export default function StaffProfile() {
             Save profile
           </button>
         </form>
+      </div>
+      <div className="mt-6 space-y-6">
+        <TwoFactorSection />
+        <DevicesSection />
+        <PushSection />
       </div>
     </div>
   );

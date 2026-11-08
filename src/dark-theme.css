@@ -150,3 +150,32 @@ html.dark .sidebar-footer { background: #07020f; }
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 .sidebar-logout:hover { background: rgba(255, 122, 112, 0.12); color: #ff9d95; }
+
+/* ── Academicall News in dark mode (2026-10-18) ──
+   The masthead, story text and accents were tuned for paper; in dark mode they
+   showed a bright header box and dim, low-contrast body copy. */
+html.dark .news-masthead {
+  background: color-mix(in srgb, #0c0620 90%, transparent);
+  border-bottom-color: #2a2050;
+}
+html.dark .news-masthead .text-ink-muted { color: #b9b1d3; }
+html.dark .news-prose { color: #e4def3; }
+html.dark .news-prose h2,
+html.dark .news-prose blockquote { color: #f5f2fc; border-color: rgba(255,255,255,.35); }
+html.dark .news-prose a { color: #b9bbff; }
+html.dark .news-prose > p:first-child::first-letter { color: #f8f32b; }
+html.dark .news-gate::before { background: linear-gradient(to bottom, rgba(12, 6, 32, 0), #0c0620 85%); }
+html.dark .news-cat { color: #d6d0e8; background: #150c2e; border-color: #2e2357; }
+html.dark .news-cat:hover { color: #f8f32b; border-color: #f8f32b; }
+html.dark .news-cat.on { background: #f8f32b; color: #0f0326; border-color: #f8f32b; }
+html.dark .news-card-img { background: linear-gradient(150deg, #1d1240, #0f2a33); }
+html.dark .news-react { color: #e4def3; }
+html.dark .news-react:hover { border-color: #9295ff; }
+html.dark .news-react.on { background: rgba(146, 149, 255, 0.18); border-color: #9295ff; color: #d6d7ff; }
+html.dark .news-follow { color: #b9bbff; border-color: #9295ff; }
+html.dark .news-follow:hover { background: rgba(146, 149, 255, 0.14); }
+html.dark .news-follow.is-on { background: #f8f32b; border-color: #f8f32b; color: #0f0326; }
+html.dark .news-suggest { background: #170d33; border-color: #2e2357; }
+/* Story pages use text-ink-muted for meta and summaries; lift it a step for reading */
+html.dark:not(:has(.theme-light-only)) .news-page .text-ink-muted { color: #b9b1d3; }
+html.dark:not(:has(.theme-light-only)) .news-page .text-text-secondary { color: #d6d0e8; }

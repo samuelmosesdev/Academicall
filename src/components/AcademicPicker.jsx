@@ -98,6 +98,8 @@ export default function AcademicPicker({ value, onChange, required = true }) {
   const department = departments.find((d) => d.id === value?.departmentId) || null;
   const programs = department?.programs || [];
   const derived = Boolean(tree?.derivedDepartments || department?.derived);
+  // A real catalogue with one placeholder (e.g. Law, MBBS): the degree is taught across several departments.
+  const placeholderOnly = Boolean(!tree?.derivedDepartments && department?.derived);
   const [requested, setRequested] = useState(false);
 
   const set = (patch) => onChange({ ...value, ...patch });
@@ -196,7 +198,9 @@ export default function AcademicPicker({ value, onChange, required = true }) {
             {derived && faculty && (
               <p className="mt-1 flex items-start gap-1 text-xs leading-snug text-text-muted">
                 <Info size={11} className="mt-0.5 shrink-0" />
-                Your institution's official list doesn't name departments, so each department is listed under its programme.
+                {placeholderOnly
+                  ? "This degree is taught across several departments, so it is listed on its own."
+                  : "Your institution's official list doesn't name departments, so each department is listed under its programme."}
               </p>
             )}
           </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { AtSign, Loader2, Mail, MessageCircle, Phone, RotateCcw, UserMinus, Users, VolumeX } from "lucide-react";
+import { AtSign, Mail, MessageCircle, Phone, RotateCcw, UserMinus, Users, VolumeX } from "lucide-react";
 import { housesApi, institutionTitle } from "../../lib/aspirantApi";
 import { timeAgo } from "../../lib/newsApi";
 import { appPrompt, appConfirm, notify } from "../../lib/dialogs";

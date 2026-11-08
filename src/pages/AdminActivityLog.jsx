@@ -16,7 +16,7 @@ import { db } from "../firebase/config";
 import { useAuth } from "../context/AuthContext";
 import { isAdmin, isAlpha } from "../lib/roles";
 import { logActivity } from "../lib/activityLog";
-import { activityApi, usersApi } from "../lib/api";
+import { activityApi, classEventsApi, usersApi } from "../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { appAlert } from "../lib/dialogs";
 
@@ -140,16 +140,46 @@ export default function AdminActivityLog() {
 
   async function doCancelClass(l) {
     if (!l.reference) return appAlert("No class reference recorded");
-    if (authMode === "api") return appAlert("Class cancellation is not available in the API yet.");
     try {
-      await deleteDoc(doc(db, "classEvents", l.reference));
-      await logActivity({
-        actorUid: profile?.uid || null,
-        actorName: profile?.name || "Admin",
-        action: "class.cancel",
-        reference: l.reference,
-        meta: { viaAdmin: true },
-      });
+      if (authMode === "api") {
+        await classEventsApi.remove(l.reference);
+        try {
+          await activityApi.create({
+            action: "class.cancel",
+            reference: l.reference,
+            meta: { viaAdmin: true },
+          });
+        } catch (error) {
+          console.error("Class was cancelled, but the activity entry could not be recorded", error);
+          appAlert("Class cancelled, but the activity entry could not be recorded.");
+          return;
+        }
+        try {
+          const response = await activityApi.list();
+          const activity = response.activities || response.activity || [];
+          setLogs(activity.map((item) => ({
+            ...item,
+            actorName: item.meta?.actorName || item.actorName || item.userName || item.user?.name,
+            targetUid: item.meta?.targetUid || item.targetUid,
+            targetName: item.meta?.targetName || item.targetName,
+          })));
+        } catch (error) {
+          console.error("Class was cancelled, but the activity log could not be refreshed", error);
+          appAlert("Class cancelled, but the activity log could not be refreshed.");
+          return;
+        }
+        appAlert("Class cancelled");
+        return;
+      } else {
+        await deleteDoc(doc(db, "classEvents", l.reference));
+        await logActivity({
+          actorUid: profile?.uid || null,
+          actorName: profile?.name || "Admin",
+          action: "class.cancel",
+          reference: l.reference,
+          meta: { viaAdmin: true },
+        });
+      }
       appAlert("Class cancelled");
     } catch (e) {
       appAlert(e.message || "Could not cancel class");

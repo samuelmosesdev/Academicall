@@ -4,6 +4,7 @@ import {
   BookOpen,
   ClipboardCheck,
   Library,
+  BookOpenText,
   Calendar,
   Bell,
   Crown,
@@ -13,7 +14,6 @@ import {
   BookMarked,
   CalendarPlus,
   Building2,
-  FolderOpen,
   MessagesSquare,
   ShieldCheck,
   Newspaper,
@@ -21,6 +21,10 @@ import {
   Compass,
   Shield,
   Target,
+  MonitorCheck,
+  Calculator,
+  Download,
+  Timer,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { isHouseLeader, isNewsAgent, isSecretary } from "../lib/roles";
@@ -29,25 +33,29 @@ import { isPro } from "../lib/subscription";
 import { useUserDashboardData } from "../hooks/useUserDashboardData";
 import { useGroups } from "../hooks/useGroups";
 import SidebarFooter from "./SidebarFooter";
+import { useFeatures } from "../lib/features";
 
 const NAV_ITEMS = [
   { section: "Study" },
   { label: "Dashboard", icon: LayoutDashboard, to: "/dashboard" },
-  { label: "Courses", icon: BookOpen, to: "/dashboard/courses" },
-  { label: "Programme", icon: Building2, to: "/dashboard/department", badgeKey: "dept" },
-  { label: "Groups", icon: MessagesSquare, to: "/dashboard/groups", badgeKey: "groups" },
-  { label: "Materials", icon: FolderOpen, to: "/dashboard/materials" },
-  { label: "Vault", icon: ShieldCheck, to: "/dashboard/vault" },
-  { label: "News", icon: Newspaper, to: "/news" },
-  { label: "News desk", icon: PenSquare, to: "/news/desk", newsAgentOnly: true },
-  { label: "Secretariat", icon: Feather, to: "/secretariat", secretaryOnly: true },
-  { label: "House desk", icon: Shield, to: "/house-desk", houseLeaderOnly: true },
-  { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice" },
-  { label: "Reading Hub", icon: Library, to: "/dashboard/reading-hub" },
-  { label: "Reference", icon: BookMarked, to: "/dashboard/reference" },
-  { label: "Timetable", icon: Calendar, to: "/dashboard/timetable", proOnly: true },
-  { section: "Course rep", courseRepOnly: true },
-  { label: "Course Rep", icon: CalendarPlus, to: "/dashboard/course-rep", courseRepOnly: true },
+  { label: "Courses", icon: BookOpen, to: "/dashboard/courses", feature: "courses" },
+  { label: "Programme", icon: Building2, to: "/dashboard/department", badgeKey: "dept", feature: "programme" },
+  { label: "Groups", icon: MessagesSquare, to: "/dashboard/groups", badgeKey: "groups", feature: "groups" },
+  { label: "Library", icon: Library, to: "/dashboard/materials", feature: "materials" },
+  { label: "Vault", icon: ShieldCheck, to: "/dashboard/vault", feature: "vault" },
+  { label: "News", icon: Newspaper, to: "/news", feature: "news" },
+  { label: "News desk", icon: PenSquare, to: "/news/desk", newsAgentOnly: true, feature: "news" },
+  { label: "Secretariat", icon: Feather, to: "/secretariat", secretaryOnly: true, feature: "secretariat" },
+  { label: "House desk", icon: Shield, to: "/house-desk", houseLeaderOnly: true, feature: "aspirantHouse" },
+  { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice", feature: "practice" },
+  { label: "Tests", icon: Timer, to: "/dashboard/tests", feature: "tests" },
+  { label: "CGPA & results", icon: Calculator, to: "/dashboard/results", feature: "results" },
+  { label: "Downloads", icon: Download, to: "/dashboard/downloads", feature: "downloads" },
+  { label: "Reading Hub", icon: BookOpenText, to: "/dashboard/reading-hub", feature: "readingHub" },
+  { label: "Reference", icon: BookMarked, to: "/dashboard/reference", feature: "reference" },
+  { label: "Timetable", icon: Calendar, to: "/dashboard/timetable", proOnly: true, feature: "timetable" },
+  { section: "Course rep", courseRepOnly: true, feature: "courseRep" },
+  { label: "Course Rep", icon: CalendarPlus, to: "/dashboard/course-rep", courseRepOnly: true, feature: "courseRep" },
   { section: "Account" },
   { label: "Notifications", icon: Bell, to: "/dashboard/notifications", badgeKey: "notif" },
   { label: "Archived", icon: BookOpen, to: "/dashboard/notifications/archived" },
@@ -55,15 +63,18 @@ const NAV_ITEMS = [
   { label: "Settings", icon: Settings, to: "/dashboard/settings" },
 ];
 
-/** Aspirants: no department, courses or materials yet. Their home is the Aspirant House. */
+/** Aspirants: no department, courses or library yet. Their home is the Aspirant House. */
 const ASPIRANT_NAV = [
   { section: "Admission" },
   { label: "Dashboard", icon: LayoutDashboard, to: "/dashboard" },
-  { label: "Aspirant House", icon: Compass, to: "/dashboard/house", badgeKey: "house" },
-  { label: "My choices", icon: Target, to: "/dashboard/choices" },
-  { label: "News", icon: Newspaper, to: "/news" },
-  { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice" },
-  { label: "Vault", icon: ShieldCheck, to: "/dashboard/vault" },
+  { label: "Aspirant House", icon: Compass, to: "/dashboard/house", badgeKey: "house", feature: "aspirantHouse" },
+  { label: "My choices", icon: Target, to: "/dashboard/choices", feature: "choices" },
+  { label: "UTME CBT", icon: MonitorCheck, to: "/dashboard/utme", feature: "utme" },
+  { label: "Tests", icon: Timer, to: "/dashboard/tests", feature: "tests" },
+  { label: "News", icon: Newspaper, to: "/news", feature: "news" },
+  { label: "Practice/CBT", icon: ClipboardCheck, to: "/dashboard/practice", feature: "practice" },
+  { label: "Vault", icon: ShieldCheck, to: "/dashboard/vault", feature: "vault" },
+  { label: "Downloads", icon: Download, to: "/dashboard/downloads", feature: "downloads" },
   { section: "Account" },
   { label: "Notifications", icon: Bell, to: "/dashboard/notifications", badgeKey: "notif" },
   { label: "Archived", icon: BookOpen, to: "/dashboard/notifications/archived" },
@@ -80,6 +91,7 @@ export default function UserSidebar({ onNavigate }) {
   const aspirant = profile?.role === "aspirant";
   const { totalUnread: groupUnread = 0 } = useGroups(user?.uid);
   const { unreadCount: unread = 0 } = useUserDashboardData();
+  const { isOn } = useFeatures();
 
   function go(to) {
     navigate(to);
@@ -94,6 +106,7 @@ export default function UserSidebar({ onNavigate }) {
 
       <nav className="flex-1">
         {(aspirant ? ASPIRANT_NAV : NAV_ITEMS).filter((item) => {
+          if (item.feature && !isOn(item.feature)) return false;
           if (item.courseRepOnly) return isRep;
           if (item.newsAgentOnly) return isNewsAgent(profile);
           if (item.secretaryOnly) return isSecretary(profile);
@@ -136,7 +149,7 @@ export default function UserSidebar({ onNavigate }) {
         })}
       </nav>
 
-      {!pro && !aspirant && (
+      {!pro && !aspirant && isOn("upgrade") && (
         <button
           type="button"
           onClick={() => go("/dashboard/upgrade")}

@@ -30,6 +30,8 @@ import AiCourseImportModal from "../components/AiCourseImportModal";
 import ScheduleClassModal from "../components/ScheduleClassModal";
 import CreateAnnouncementModal from "../components/CreateAnnouncementModal";
 import { displayLabel } from "../components/UserAvatar";
+import { RepComposer } from "../components/programme/ProgrammeFeed";
+import { getCourseRepProgram } from "../lib/academicScope";
 import { classEventsApi, departmentApi, requestsApi, coursesApi, documentsApi } from "../lib/api";
 import { appAlert, appConfirm, appPrompt } from "../lib/dialogs";
 
@@ -66,6 +68,16 @@ export default function CourseRepPanel() {
     "";
   const faculty =
     profile?.courseRepMeta?.faculty || profile?.faculty || "";
+  // Posts are scoped to the rep's assigned programme (the API rejects
+  // programme announcements without one).
+  const repProgram = getCourseRepProgram(profile) || profile?.program || "";
+
+  // /dashboard/course-rep#upload (from the Programme page composer) jumps to the upload form.
+  useEffect(() => {
+    if (typeof window === "undefined" || window.location.hash !== "#upload") return undefined;
+    const t = setTimeout(() => document.getElementById("upload")?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+    return () => clearTimeout(t);
+  }, []);
 
   // Schedule class
   const [title, setTitle] = useState("");
@@ -511,25 +523,14 @@ export default function CourseRepPanel() {
         </p>
       </div>
 
-      {/* Mobile-friendly: open composers centered on screen */}
-      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-        <button
-          type="button"
-          onClick={() => setShowSchedule(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-teal px-4 py-3 text-sm font-semibold text-white shadow-md shadow-teal/20 active:scale-[0.98]"
-        >
-          <CalendarPlus size={16} />
-          Schedule class
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowAnnounce(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-teal/40 bg-teal-soft px-4 py-3 text-sm font-semibold text-teal active:scale-[0.98]"
-        >
-          <Send size={16} />
-          Announce / post
-        </button>
-      </div>
+      {/* Composer: the one place a rep writes to their class */}
+      <RepComposer
+        profile={profile}
+        audience={level || "your class"}
+        onPost={() => setShowAnnounce(true)}
+        onSchedule={() => setShowSchedule(true)}
+        onUpload={() => document.getElementById("upload")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+      />
 
       <div className="flex flex-wrap gap-3 items-center">
         <div className="inline-flex items-center gap-2 rounded-xl border border-border-light bg-card-light px-4 py-2 text-sm text-ink">
@@ -661,7 +662,7 @@ export default function CourseRepPanel() {
       </form>
 
       {/* Upload material for a course or the department group */}
-      <form onSubmit={uploadMaterial} className="space-y-3 rounded-2xl border border-border-light bg-card-light p-5">
+      <form id="upload" onSubmit={uploadMaterial} className="scroll-mt-24 space-y-3 rounded-2xl border border-border-light bg-card-light p-5">
         <h2 className="text-sm font-semibold text-ink">Upload material to a course or department group</h2>
         <p className="text-xs text-ink-muted">Publish a file directly to a course, or post it to your department group so all students in {department || "this department"} can access it.</p>
 
@@ -883,23 +884,26 @@ export default function CourseRepPanel() {
           if (ok) setMsg("Class scheduled. Students in your level will see it.");
         }}
         department={department}
+        program={repProgram || null}
         level={level}
         faculty={faculty}
         user={user}
-        authorName={displayLabel(profile, user?.email || "Course Rep")}
+        authorName={displayLabel(profile, "Course Rep")}
         authMode={authMode}
       />
       <CreateAnnouncementModal
         open={showAnnounce}
         onClose={(ok) => {
           setShowAnnounce(false);
-          if (ok) setMsg("Announcement posted to your department feed.");
+          if (ok) setMsg("Posted. Your class can see it on the Programme page.");
         }}
         department={department}
+        program={repProgram || null}
         level={level}
         faculty={faculty}
         user={user}
-        authorName={displayLabel(profile, user?.email || "Course Rep")}
+        authorName={displayLabel(profile, "Course Rep")}
+        authMode={authMode}
       />
       <AiCourseImportModal
         open={showAiImport}

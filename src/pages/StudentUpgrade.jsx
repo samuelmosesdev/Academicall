@@ -1,239 +1,245 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
-  Check,
-  Crown,
-  ExternalLink,
-  Shield,
-  Loader2,
+  Check, Loader2, ShieldCheck, Zap, RefreshCcw, ChevronDown, Crown, AlertCircle, CheckCircle2,
+  BookOpen, CalendarClock, Brain, FolderLock, Newspaper, GraduationCap, Download, Search, Users, Layers, Mail,
 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import { usePaymentSettings } from "../hooks/usePaymentSettings";
-import { PRO_FEATURES, isPro, planLabel } from "../lib/subscription";
-import { paymentsApi, notificationsApi } from "../lib/api";
+import { billingApi, lengthLabel, loadBilling, naira, perMonth, savingsPct, useBilling } from "../lib/billing";
+import "../billing.css";
+
+const FEATURE_ICON = {
+  courses: GraduationCap, programme: Users, groups: Users, materials: Layers, materialUploads: Layers, readingHub: BookOpen,
+  timetable: CalendarClock, practice: Brain, utme: Brain, vault: FolderLock, news: Newspaper, results: GraduationCap,
+  downloads: Download, tests: Brain, search: Search, reference: BookOpen,
+};
 
 export default function StudentUpgrade() {
-  const { user, profile, authMode } = useAuth();
-  const { settings, plans, loading } = usePaymentSettings();
-  const pro = isPro(profile);
-  const [claiming, setClaiming] = useState(null);
-  const [claimMsg, setClaimMsg] = useState("");
-  const [claimOk, setClaimOk] = useState(false);
+  const { data, error, loading, reload } = useBilling();
+  const [params, setParams] = useSearchParams();
+  const [busy, setBusy] = useState("");
+  const [msg, setMsg] = useState(null);
 
-  async function openCheckout(plan) {
-    setClaimMsg("");
-    if (!plan.url) {
-      setClaimMsg(`${plan.name} payment link is not ready yet. Check back soon or contact admin.`);
-      return;
-    }
-    // Record intent so admin can match payment → student quickly
-    if (user) {
-      try {
-        const payload = {
-          userId: user.uid,
-          email: profile?.email || user.email || "",
-          name: profile?.name || profile?.nickname || "",
-          uniqueId: profile?.uniqueId || null,
-          planId: plan.id,
-          planName: plan.name,
-          amountLabel: plan.amountLabel,
-          status: "clicked_checkout",
-        };
-        if (authMode === "api") await paymentsApi.createClaim({ plan: plan.id, meta: payload });
-      } catch {
-        /* non-blocking */
-      }
-    }
-    window.open(plan.url, "_blank", "noopener,noreferrer");
-  }
+  useEffect(() => {
+    const reference = params.get("reference") || params.get("trxref");
+    if (!reference) return undefined;
 
-  async function markPaid(plan) {
-    if (!user) return;
-    setClaiming(plan.id);
-    setClaimMsg("");
-    setClaimOk(false);
+    let active = true;
+    let verified = false;
+    setBusy("verify");
+    billingApi.verify(reference)
+      .then((result) => {
+        verified = true;
+        if (active) {
+          setMsg(result.status === "success"
+            ? { ok: true, text: "Payment confirmed. Premium is on, enjoy." }
+            : { ok: false, text: `Payment ${result.status}. Your plan has not been activated.` });
+        }
+      })
+      .catch((verifyError) => {
+        if (active) setMsg({ ok: false, text: verifyError.message || "We couldn't verify your payment. Reload this page to retry." });
+      })
+      .finally(() => {
+        if (!active) return;
+        setBusy("");
+        if (verified) {
+          const next = new URLSearchParams(params);
+          next.delete("reference");
+          next.delete("trxref");
+          setParams(next, { replace: true });
+          loadBilling(true).catch((refreshError) => {
+            setMsg((current) => current?.ok
+              ? { ...current, text: `${current.text} Refresh the page if your membership status does not update.` }
+              : { ok: false, text: refreshError.message || "Billing information could not be refreshed." });
+          });
+        }
+      });
+
+    return () => { active = false; };
+  }, [params, setParams]);
+
+  async function pay(plan) {
+    setBusy(plan.id);
+    setMsg(null);
     try {
-      const payload = {
-        userId: user.uid,
-        email: profile?.email || user.email || "",
-        name: profile?.name || profile?.nickname || "",
-        uniqueId: profile?.uniqueId || null,
-        department: profile?.department || null,
-        faculty: profile?.faculty || null,
-        level: profile?.level || null,
-        phone: profile?.phone || null,
-        planId: plan.id,
-        planName: plan.name,
-        amountLabel: plan.amountLabel,
-        // Must stay in the allowed set in firestore.rules
-        status: "awaiting_review",
-      };
-      if (authMode !== "api") {
-        setClaimMsg("Payment reporting will be available after this account is migrated to the Academicall API.");
-        return;
-      }
-      await paymentsApi.createClaim({ plan: plan.id, meta: payload });
-      // Surface in admin notification bell (best-effort)
-      try {
-        await notificationsApi.create({
-          type: "payment_claim",
-          title: "Student reported a payment",
-          body: `${profile?.name || profile?.nickname || user.email || "A student"} says they paid for ${plan.name} (${plan.amountLabel || plan.id}). Review under Payments.`,
-          data: { fromUserId: user.uid, fromUserName: profile?.name || profile?.nickname || "", fromUserEmail: profile?.email || user.email || "", planId: plan.id, planName: plan.name },
-        });
-      } catch {
-        /* claim already saved — notification is best-effort */
-      }
-      setClaimOk(true);
-      setClaimMsg(
-        "Submitted — we received your report. Admin will activate Pro after verifying your Paystack payment."
-      );
-    } catch (err) {
-      console.error("markPaid failed", err);
-      setClaimOk(false);
-      const code = err?.code || "";
-      const msg =
-        code === "permission-denied"
-          ? "Could not submit (permission denied). Ask admin to update Firestore rules for paymentClaims, then try again."
-          : err?.message || "Could not submit. Try again or message admin.";
-      setClaimMsg(msg);
-    } finally {
-      setClaiming(null);
+      const { url } = await billingApi.checkout(plan.id);
+      window.location.assign(url);
+    } catch (e) {
+      setMsg({ ok: false, text: e.message });
+      setBusy("");
     }
   }
+
+  const plans = useMemo(() => [...(data?.plans || [])].sort((a, b) => a.days - b.days), [data]);
+
+  if (loading && !data) {
+    return (
+      <div className="pm mx-auto max-w-5xl space-y-6 p-4 sm:p-6" aria-busy="true">
+        <div className="pm-skel h-56" />
+        <div className="grid gap-4 md:grid-cols-3"><div className="pm-skel h-80" /><div className="pm-skel h-80" /><div className="pm-skel h-80" /></div>
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <div className="pm mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
+        <p className="pm-note pm-note--err" role="alert"><AlertCircle size={16} /> {error.message || "Billing information is unavailable."}</p>
+        <button className="pm-btn pm-btn--ink" type="button" onClick={reload}>Try again</button>
+      </div>
+    );
+  }
+
+  const { page = {}, features = [], me } = data;
+  const active = !!me?.active;
+  const ends = me?.endsAt ? new Date(me.endsAt) : null;
+  const daysLeft = ends ? Math.max(0, Math.ceil((ends - Date.now()) / 86400000)) : null;
+  const currentPlan = plans.find((p) => p.id === me?.planId);
+  const progress = daysLeft != null && currentPlan ? Math.min(100, Math.max(4, (daysLeft / currentPlan.days) * 100)) : null;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-teal/20 bg-midnight p-6 text-white shadow-lg sm:p-10">
-        <div className="relative">
-          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
-            <Crown size={13} />
-            {pro ? "You're on Pro" : "Choose a plan"}
-          </div>
-          <h1 className="max-w-xl text-2xl font-bold tracking-tight sm:text-3xl">
-            {pro ? "Full access unlocked" : settings.headline || "Go Pro"}
+    <div className="pm mx-auto max-w-5xl p-4 sm:p-6">
+      {/* ── Hero ─────────────────────────────────────────── */}
+      <section className="pm-hero">
+        <div className="relative z-[1] max-w-xl">
+          <span className="pm-chip"><Crown size={13} aria-hidden="true" /> {active ? "You're on Premium" : "Academicall Premium"}</span>
+          <h1 className="mt-5 font-display text-[2.2rem] leading-[1.05] tracking-[-0.02em] sm:text-[3rem]">
+            {active ? <>Everything is <span className="serif-i text-lemon">unlocked.</span></> : (page.headline || "Study with every tool switched on.")}
           </h1>
-          <p className="mt-2 max-w-lg text-sm text-white/85 sm:text-base">
-            {pro
-              ? "Every course, document, timed practice, and the class timetable is open for you."
-              : settings.subheadline ||
-                "Weekly ₦500 · Monthly ₦1,500 · Annual ₦4,000 (best value)."}
+          <p className="mt-3 max-w-lg text-[0.98rem] leading-relaxed text-white/75">
+            {active ? "Thanks for supporting Academicall. Paying again adds time to the end of your plan." : (page.subheadline || "One payment, no auto-renewal. Your plan starts the moment Paystack confirms it.")}
           </p>
         </div>
+
+        {active ? (
+          <div className="pm-member">
+            <div className="flex items-center justify-between">
+              <span className="pm-eyebrow !text-midnight/60">Membership</span>
+              <Crown size={18} aria-hidden="true" />
+            </div>
+            <p className="mt-6 font-display text-2xl">{currentPlan?.name || "Premium"}</p>
+            <p className="text-sm text-midnight/70">{ends ? `Active until ${ends.toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}` : "Active, no end date"}</p>
+            {progress != null && (
+              <div className="mt-5">
+                <div className="h-1.5 overflow-hidden rounded-full bg-midnight/15"><div className="h-full rounded-full bg-midnight" style={{ width: `${progress}%` }} /></div>
+                <p className="mt-2 text-xs font-medium text-midnight/70">{daysLeft} day{daysLeft === 1 ? "" : "s"} left</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <ul className="pm-hero-list" aria-label="Why Premium">
+            <li><Zap size={16} aria-hidden="true" /> Starts instantly after payment</li>
+            <li><RefreshCcw size={16} aria-hidden="true" /> No auto-renewal, ever</li>
+            <li><ShieldCheck size={16} aria-hidden="true" /> Secure checkout by Paystack</li>
+          </ul>
+        )}
       </section>
 
-      {pro ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-teal/30 bg-teal-soft p-5">
-          <Crown className="mt-0.5 shrink-0 text-teal" size={22} />
+      {/* ── Messages ─────────────────────────────────────── */}
+      <div className="mt-5 space-y-2" aria-live="polite">
+        {busy === "verify" && <p className="pm-note pm-note--info"><Loader2 size={16} className="animate-spin" aria-hidden="true" /> Confirming your payment with Paystack…</p>}
+        {msg && (
+          <p className={`pm-note ${msg.ok ? "pm-note--ok" : "pm-note--err"}`} role="status">
+            {msg.ok ? <CheckCircle2 size={16} aria-hidden="true" /> : <AlertCircle size={16} aria-hidden="true" />} {msg.text}
+          </p>
+        )}
+        {error && data && <p className="pm-note pm-note--err" role="alert"><AlertCircle size={16} /> {error.message || "Billing information could not be refreshed."} <button className="ml-auto underline" type="button" onClick={reload}>Retry</button></p>}
+        {!data.ready && plans.length > 0 && <p className="pm-note pm-note--info"><AlertCircle size={16} aria-hidden="true" /> Payments open soon. You can look around in the meantime.</p>}
+      </div>
+
+      {/* ── Plans ────────────────────────────────────────── */}
+      <section className="mt-10" aria-labelledby="pm-plans">
+        <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <p className="font-semibold text-ink">Pro active · {planLabel(profile)}</p>
-            <p className="mt-1 text-sm text-ink-muted">
-              Timetable, unlimited CBT, and all materials are available on your account.
-            </p>
+            <p className="pm-eyebrow">{active ? "Extend your plan" : "Choose a plan"}</p>
+            <h2 id="pm-plans" className="mt-1 font-display text-2xl text-ink sm:text-[1.9rem]">Simple pricing for the whole session</h2>
           </div>
+          <p className="text-xs text-ink-muted">Prices in naira. One-off payment.</p>
         </div>
-      ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {plans.map((plan) => {
-              const live = Boolean(plan.url);
-              const isAnnual = plan.id === "annual";
+
+        {plans.length === 0 ? (
+          <div className="pm-empty mt-6">No plans are on sale right now. Check back soon.</div>
+        ) : (
+          <div className={`mt-6 grid gap-5 ${plans.length === 1 ? "max-w-md" : plans.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
+            {plans.map((p) => {
+              const save = savingsPct(p, plans);
+              const monthly = perMonth(p);
+              const isCurrent = active && p.id === me?.planId;
               return (
-                <div
-                  key={plan.id}
-                  className={`relative flex flex-col rounded-2xl border bg-card-light p-5 ${
-                    isAnnual
-                      ? "border-2 border-teal shadow-[0_12px_40px_rgba(15,122,108,0.15)]"
-                      : "border-border-light"
-                  }`}
-                >
-                  {isAnnual && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-teal px-3 py-0.5 text-xs font-bold text-white">
-                      BEST VALUE
-                    </span>
-                  )}
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                    {plan.name}
+                <article key={p.id} className={`pm-plan ${p.highlight ? "is-pick" : ""}`}>
+                  {p.highlight && <span className="pm-plan__ribbon">Best value</span>}
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-display text-xl">{p.name}</h3>
+                    {save > 0 && <span className="pm-save">Save {save}%</span>}
+                  </div>
+                  <p className="mt-5 flex items-baseline gap-1.5">
+                    <span className="font-display text-[2.6rem] leading-none tracking-[-0.02em]">{naira(p.amount)}</span>
+                    <span className="text-sm opacity-70">/ {lengthLabel(p.days)}</span>
                   </p>
-                  <p className="mt-2 text-3xl font-bold text-ink">
-                    {loading ? "…" : plan.amountLabel}
-                  </p>
-                  <p className="text-xs text-ink-muted">{plan.period}</p>
-                  <p className="mt-3 flex-1 text-sm text-ink-muted">{plan.description}</p>
-
-                  <button
-                    type="button"
-                    disabled={!live}
-                    onClick={() => openCheckout(plan)}
-                    className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                      live
-                        ? isAnnual
-                          ? "bg-teal text-white hover:bg-teal-dark"
-                          : "border-2 border-teal text-teal hover:bg-teal-soft"
-                        : "cursor-not-allowed bg-surface-light text-ink-muted"
-                    }`}
-                  >
-                    {live ? (
-                      <>
-                        Pay with Paystack <ExternalLink size={14} />
-                      </>
-                    ) : (
-                      "Link coming soon"
-                    )}
+                  <p className="mt-2 h-5 text-xs opacity-70">{p.days > 31 ? `That's about ${naira(monthly)} a month` : `${p.days} days of Premium`}</p>
+                  <div className="pm-plan__rule" />
+                  <ul className="flex-1 space-y-2.5 text-sm">
+                    {(p.perks || []).filter(Boolean).map((x) => (
+                      <li key={x} className="flex gap-2.5"><span className="pm-tick"><Check size={12} strokeWidth={3} aria-hidden="true" /></span> {x}</li>
+                    ))}
+                  </ul>
+                  <button type="button" className={`pm-btn mt-7 w-full ${p.highlight ? "pm-btn--lemon" : "pm-btn--ink"}`} disabled={!!busy || !data.ready} onClick={() => pay(p)}>
+                    {busy === p.id ? <><Loader2 size={15} className="animate-spin" aria-hidden="true" /> Opening Paystack…</> : isCurrent ? `Add ${lengthLabel(p.days)} · ${naira(p.amount)}` : `Get ${p.name} · ${naira(p.amount)}`}
                   </button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-ink-muted">
+          <ShieldCheck size={14} aria-hidden="true" /> {page.note || "Payments are processed securely by Paystack. Card, bank transfer and USSD accepted."}
+        </p>
+      </section>
 
-                  {live && (
-                    <button
-                      type="button"
-                      disabled={claiming === plan.id}
-                      onClick={() => markPaid(plan)}
-                      className="mt-2 text-xs font-medium text-teal hover:underline disabled:opacity-60"
-                    >
-                      {claiming === plan.id ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Loader2 size={12} className="animate-spin" /> Sending…
-                        </span>
-                      ) : (
-                        "I've already paid — notify admin"
-                      )}
-                    </button>
-                  )}
+      {/* ── What's included ──────────────────────────────── */}
+      {features.length > 0 && (
+        <section className="mt-14" aria-labelledby="pm-incl">
+          <p className="pm-eyebrow">Included</p>
+          <h2 id="pm-incl" className="mt-1 font-display text-2xl text-ink">What Premium unlocks</h2>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f) => {
+              const Icon = FEATURE_ICON[f.key] || Crown;
+              return (
+                <div key={f.key} className="pm-feature">
+                  <span className="pm-feature__icon"><Icon size={18} aria-hidden="true" /></span>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink">{f.label}</p>
+                    <p className="mt-0.5 text-sm leading-snug text-ink-muted">{f.hint}</p>
+                  </div>
                 </div>
               );
             })}
           </div>
-
-          {claimMsg && (
-            <p
-              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
-                claimOk
-                  ? "border-teal/40 bg-teal-soft text-ink"
-                  : "border-red-200 bg-red-50 text-red-800"
-              }`}
-              role="status"
-            >
-              {claimOk ? "✓ " : ""}
-              {claimMsg}
-            </p>
-          )}
-
-          <div className="rounded-2xl border border-border-light bg-card-light p-5">
-            <h3 className="text-sm font-semibold text-ink">What Pro includes</h3>
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {PRO_FEATURES.map((f) => (
-                <li key={f} className="flex gap-2 text-sm text-ink">
-                  <Check size={16} className="mt-0.5 shrink-0 text-teal" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 flex items-start gap-2 text-xs text-ink-muted">
-              <Shield size={14} className="mt-0.5 shrink-0 text-teal" />
-              Checkout is on Paystack. After you pay, Pro is activated once payment is confirmed
-              (usually same day). Keep your receipt.
-            </div>
-          </div>
-        </>
+        </section>
       )}
+
+      {/* ── FAQ ──────────────────────────────────────────── */}
+      {page.faq?.filter((f) => f.q).length > 0 && (
+        <section className="mt-14 grid gap-8 lg:grid-cols-[1fr_1.6fr]" aria-labelledby="pm-faq">
+          <div>
+            <p className="pm-eyebrow">Questions</p>
+            <h2 id="pm-faq" className="mt-1 font-display text-2xl text-ink">Before you pay</h2>
+            {page.supportEmail && (
+              <a href={`mailto:${page.supportEmail}`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-violet hover:underline">
+                <Mail size={15} aria-hidden="true" /> {page.supportEmail}
+              </a>
+            )}
+          </div>
+          <div className="pm-faq">
+            {page.faq.filter((f) => f.q).map((f) => (
+              <details key={f.q}>
+                <summary>{f.q}<ChevronDown size={18} aria-hidden="true" /></summary>
+                <p>{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
+      {!page.faq?.length && page.supportEmail && <p className="mt-10 text-center text-xs text-ink-muted">Payment problem? Email {page.supportEmail}.</p>}
     </div>
   );
 }

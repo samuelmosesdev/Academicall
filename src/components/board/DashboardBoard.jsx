@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Building2, ChevronLeft, ChevronRight, ClipboardCheck, Library } from "lucide-react";
 import { boardApi } from "../../lib/aspirantApi";
+import { BoldText, plainText } from "./boldText";
 
 const THEMES = {
   midnight: { bg: "bg-midnight", text: "text-white", sub: "text-white/70", accent: "text-lemon", btn: "bg-lemon text-midnight", shade: "from-midnight via-midnight/85 to-midnight/25" },
@@ -19,24 +20,27 @@ export function SlideCta({ slide, className }) {
 }
 
 /** One slide, used by the dashboard and by the editor's live preview. */
-export function Slide({ slide, background, greeting }) {
+export function Slide({ slide, background, greeting, compact = false }) {
   if (greeting) return greeting;
   if (slide.kind === "image") {
-    const img = <img src={slide.imageUrl} alt={slide.title || ""} className="absolute inset-0 h-full w-full object-cover" />;
+    const img = <img src={slide.imageUrl} alt={plainText(slide.title)} className="absolute inset-0 h-full w-full object-cover" />;
     if (!slide.ctaUrl) return img;
     return slide.ctaUrl.startsWith("/")
-      ? <Link to={slide.ctaUrl} aria-label={slide.title || "Open"} className="absolute inset-0">{img}</Link>
-      : <a href={slide.ctaUrl} target="_blank" rel="noreferrer" aria-label={slide.title || "Open"} className="absolute inset-0">{img}</a>;
+      ? <Link to={slide.ctaUrl} aria-label={plainText(slide.title) || "Open"} className="absolute inset-0">{img}</Link>
+      : <a href={slide.ctaUrl} target="_blank" rel="noreferrer" aria-label={plainText(slide.title) || "Open"} className="absolute inset-0">{img}</a>;
   }
-  const t = THEMES[slide.theme] || THEMES.midnight;
+  // The API returns { theme, titleBold }; a raw "violet;bold" theme is understood too.
+  const [themeName, ...flags] = String(slide.theme || "midnight").split(";");
+  const t = THEMES[themeName] || THEMES.midnight;
+  const bold = slide.titleBold ?? flags.includes("bold");
   const bg = slide.imageUrl || background;
   return (
     <div className={`absolute inset-0 ${t.bg}`}>
       {bg && <img src={bg} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover object-[80%_center] opacity-45" />}
       <div className={`absolute inset-0 bg-gradient-to-r ${t.shade}`} />
-      <div className={`relative flex h-full flex-col justify-end p-7 sm:p-10 ${t.text}`}>
-        {slide.title && <h2 className="max-w-xl font-display text-[2rem] font-[360] leading-[1.04] tracking-[-0.03em] sm:text-[2.6rem]">{slide.title}</h2>}
-        {slide.body && <p className={`mt-3 max-w-lg text-[0.98rem] leading-relaxed ${t.sub}`}>{slide.body}</p>}
+      <div className={`relative flex h-full flex-col justify-end ${compact ? "overflow-y-auto p-6" : "p-7 sm:p-10"} ${t.text}`}>
+        {slide.title && <h2 className={`max-w-xl font-display ${compact ? "text-[1.55rem] leading-[1.08]" : "text-[2rem] leading-[1.04] sm:text-[2.6rem]"} ${bold ? "font-[680] tracking-[-0.025em]" : "font-[360] tracking-[-0.03em]"}`}><BoldText text={slide.title} /></h2>}
+        {slide.body && <p className={`mt-3 max-w-lg ${compact ? "text-[0.9rem]" : "text-[0.98rem]"} leading-relaxed ${t.sub}`}><BoldText text={slide.body} /></p>}
         <SlideCta slide={slide} className={`mt-6 inline-flex w-fit items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold ${t.btn}`} />
       </div>
     </div>

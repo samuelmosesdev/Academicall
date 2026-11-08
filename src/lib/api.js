@@ -1,3 +1,5 @@
+import { cacheOwner, cacheRevision, invalidateFor, readCache, writeCache } from "./apiCache";
+
 export const API_BASE = (
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV
@@ -23,10 +25,14 @@ function handleAccessSignals(status, data) {
     if (!path.startsWith("/login")) window.location.assign("/login?signedOut=1");
   } else if (status === 403 && data?.code === "password_change_required" && path !== "/change-password") {
     window.location.assign("/change-password");
+  } else if (status === 403 && data?.code === "two_factor_setup_required" && path !== "/security-setup") {
+    window.location.assign("/security-setup");
+  } else if (status === 503 && data?.code === "maintenance") {
+    window.dispatchEvent(new CustomEvent("ac:maintenance", { detail: data }));
   }
 }
 
-export async function api(endpoint, options = {}) {
+async function request(endpoint, options = {}) {
   const token = getToken();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -35,11 +41,12 @@ export async function api(endpoint, options = {}) {
     ...options,
     signal: options.signal || controller.signal,
     headers: {
-      "Content-Type": "application/json",
+      ...(options.body != null ? { "Content-Type": "application/json" } : {}),
       ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     },
   };
+  delete config.swr;
 
   if (options.body && typeof options.body === "object") {
     config.body = JSON.stringify(options.body);
@@ -75,6 +82,53 @@ export async function api(endpoint, options = {}) {
   }
 }
 
+const inflight = new Map();
+const clone = (value) => (typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value)));
+
+function sharedGet(endpoint, options) {
+  if (options.signal) return request(endpoint, options);
+  const headers = Object.entries(options.headers || {}).sort(([a], [b]) => a.localeCompare(b));
+  const key = JSON.stringify([getToken(), endpoint, options.cache || "", headers]);
+  let pending = inflight.get(key);
+  if (!pending) {
+    pending = request(endpoint, options).finally(() => inflight.delete(key));
+    inflight.set(key, pending);
+  }
+  return pending.then(clone);
+}
+
+export async function api(endpoint, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") {
+    const result = await request(endpoint, options);
+    invalidateFor(endpoint);
+    return result;
+  }
+
+  const swr = method === "GET" ? options.swr : null;
+  if (!swr) return sharedGet(endpoint, options);
+
+  const owner = cacheOwner();
+  const revision = cacheRevision(endpoint);
+  const saved = readCache(endpoint, owner);
+  const age = saved ? Date.now() - saved.at : Infinity;
+  const refresh = () =>
+    sharedGet(endpoint, { ...options, swr: undefined })
+      .then((fresh) => ({ fresh, saved: writeCache(endpoint, fresh, { owner, revision }) }));
+
+  if (saved && age < (swr.ttl ?? 0)) return clone(saved.data);
+  if (saved && age < (swr.stale ?? 0)) {
+    refresh()
+      .then(({ fresh, saved: current }) => {
+        if (current && swr.onUpdate && JSON.stringify(fresh) !== JSON.stringify(saved.data)) swr.onUpdate(fresh);
+      })
+      .catch(() => {});
+    return clone(saved.data);
+  }
+  const { fresh } = await refresh();
+  return fresh;
+}
+
 // Auth helpers
 export const authApi = {
   register: (body) => api("/auth/register", { method: "POST", body }),
@@ -88,16 +142,12 @@ export const authApi = {
   verifyEmail: (code) => api("/auth/verification/verify", { method: "POST", body: { code } }),
 };
 
-export const twoFactorApi = {
-  verify: (challengeId, code) => api("/auth/2fa/verify", { method: "POST", body: { challengeId, code } }),
-  resend: (challengeId) => api("/auth/2fa/resend", { method: "POST", body: { challengeId } }),
-};
-
 // Other resources (ready for later)
 export const usersApi = {
   me: () => api("/users/me"),
   updateMe: (body) => api("/users/me", { method: "PATCH", body }),
   list: () => api("/users?limit=500"),
+  stats: () => api("/users/stats"),
   get: (id) => api(`/users/${id}`),
   update: (id, body) => api(`/users/${id}`, { method: "PATCH", body }),
   remove: (id) => api(`/users/${id}`, { method: "DELETE" }),
@@ -115,6 +165,7 @@ export const usersApi = {
 export const documentsApi = {
   list: () => api("/documents"),
   get: (id) => api(`/documents/${id}`),
+  react: (id, type) => api(`/documents/${id}/reactions`, { method: "POST", body: { type } }),
   create: (body) => api("/documents", { method: "POST", body }),
   update: (id, body) => api(`/documents/${id}`, { method: "PATCH", body }),
   approve: (id, body = { status: "approved" }) =>
@@ -239,7 +290,7 @@ export const classEventsApi = {
 };
 
 export const feedApi = {
-  comment: (kind, id, text) => api(`/feed/${kind}/${id}/comments`, { method: "POST", body: { text } }),
+  comment: (kind, id, text, options = {}) => api(`/feed/${kind}/${id}/comments`, { method: "POST", body: { text, ...options } }),
   deleteComment: (kind, id, commentId) => api(`/feed/${kind}/${id}/comments/${commentId}`, { method: "DELETE" }),
   react: (kind, id, type) => api(`/feed/${kind}/${id}/reactions`, { method: "POST", body: { type } }),
   reactComment: (kind, id, commentId, type) => api(`/feed/${kind}/${id}/comments/${commentId}/reactions`, { method: "POST", body: { type } }),
@@ -338,7 +389,7 @@ export const institutionsApi = {
     if (state) params.set("state", state);
     params.set("limit", String(limit));
     params.set("offset", String(offset));
-    return api(`/institutions?${params}`);
+    return api(`/institutions?${params}`, { swr: { ttl: 5 * 60_000, stale: 60 * 60_000 } });
   },
   get: (id) => api(`/institutions/${encodeURIComponent(id)}`),
   tree: (id) => api(`/institutions/${encodeURIComponent(id)}/tree`),
@@ -376,4 +427,25 @@ export const groupsApi = {
   send: (id, body) => api(`/groups/${id}/messages`, { method: "POST", body }),
   deleteMessage: (id, messageId) => api(`/groups/${id}/messages/${messageId}`, { method: "DELETE" }),
   saveMaterial: (id, messageId) => api(`/groups/${id}/messages/${messageId}/save`, { method: "POST" }),
+};
+
+/** Organisation: offices, positions, supervision and assigned staff work. */
+export const orgApi = {
+  meta: () => api("/org/meta"),
+  my: () => api("/org/my"),
+  overview: () => api("/org/overview"),
+  offices: () => api("/org/offices"),
+  createOffice: (body) => api("/org/offices", { method: "POST", body }),
+  updateOffice: (id, body) => api(`/org/offices/${id}`, { method: "PATCH", body }),
+  deleteOffice: (id) => api(`/org/offices/${id}`, { method: "DELETE" }),
+  seedOffices: () => api("/org/offices/seed-defaults", { method: "POST" }),
+  staff: () => api("/org/staff"),
+  createStaff: (body) => api("/org/staff", { method: "POST", body }),
+  updateStaff: (id, body) => api(`/org/staff/${id}`, { method: "PATCH", body }),
+  tempPassword: (id) => api(`/org/staff/${id}/temp-password`, { method: "POST" }),
+  assignSupervision: (body) => api("/org/supervision", { method: "POST", body }),
+  tasks: (scope = "mine") => api(`/org/tasks?scope=${scope}`),
+  createTask: (body) => api("/org/tasks", { method: "POST", body }),
+  updateTask: (id, body) => api(`/org/tasks/${id}`, { method: "PATCH", body }),
+  deleteTask: (id) => api(`/org/tasks/${id}`, { method: "DELETE" }),
 };

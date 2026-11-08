@@ -2,8 +2,9 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { useNavigate } from "react-router-dom";
 import {
   AlertCircle, ArrowDown, ArrowLeft, BookmarkCheck, BookmarkPlus, Check, Clock, Copy, Download, FileText,
-  Film, Image as ImageIcon, Info, Loader2, Lock, MoreVertical, Paperclip, RotateCw, Send, Trash2, X,
+  Ban, Flag, Film, Image as ImageIcon, Info, Loader2, Lock, MoreVertical, Paperclip, RotateCw, Send, Trash2, X,
 } from "lucide-react";
+import { reportContent, blockPerson, useBlockedIds } from "../safety/SafetyActions";
 import { groupsApi } from "../../lib/api";
 import { useRealtime } from "../../lib/realtime";
 import { appConfirm, notify } from "../../lib/dialogs";
@@ -13,6 +14,7 @@ import LiveIndicator from "../ui/LiveIndicator";
 import { GroupAvatar, OfficialBadge, PersonAvatar, bubbleTime, dayLabel, isSameDay } from "./common";
 import { setActiveGroup } from "../../hooks/useGroups";
 import PdfReader from "../reader/PdfReader";
+import LinkifiedText from "../LinkifiedText";
 
 const newClientId = () =>
   (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -106,7 +108,7 @@ function Attachment({ msg, mine, onOpenImage, onOpenPdf, onSave, saved, saving }
   );
 }
 
-function MessageMenu({ msg, canDelete, onDelete, mine }) {
+function MessageMenu({ msg, canDelete, onDelete, mine, onReport, onBlock }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -115,7 +117,7 @@ function MessageMenu({ msg, canDelete, onDelete, mine }) {
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [open]);
-  if (!msg.text && !canDelete) return null;
+  if (!msg.text && !canDelete && !onReport) return null;
   return (
     <div ref={ref} className={`relative self-center ${open ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"} transition`}>
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex h-7 w-7 items-center justify-center rounded-full text-text-muted hover:bg-bg-panel" aria-label="Message options">
@@ -126,6 +128,16 @@ function MessageMenu({ msg, canDelete, onDelete, mine }) {
           {msg.text && (
             <button type="button" onClick={() => { navigator.clipboard?.writeText(msg.text); notify.success("Copied"); setOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-panel-alt">
               <Copy size={14} /> Copy text
+            </button>
+          )}
+          {onReport && (
+            <button type="button" onClick={() => { setOpen(false); onReport(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-panel-alt">
+              <Flag size={14} /> Report
+            </button>
+          )}
+          {onBlock && (
+            <button type="button" onClick={() => { setOpen(false); onBlock(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-panel-alt">
+              <Ban size={14} /> Block sender
             </button>
           )}
           {canDelete && (
@@ -140,6 +152,7 @@ function MessageMenu({ msg, canDelete, onDelete, mine }) {
 }
 
 export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, onGroupLoaded, compact, refreshSignal = 0 }) {
+  const blockedIds = useBlockedIds();
   const navigate = useNavigate();
   const [group, setGroup] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -412,7 +425,7 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
     try {
       await groupsApi.saveMaterial(groupId, msg.id);
       setSaved((s) => ({ ...s, [msg.id]: true }));
-      notify.success("Saved to your Materials", { action: { label: "Open Materials", onClick: () => navigate("/dashboard/materials") } });
+      notify.success("Saved to your Library", { action: { label: "Open Library", onClick: () => navigate("/dashboard/materials") } });
     } catch (err) {
       notify.error(err.message || "Couldn't save this file");
     } finally {
@@ -537,7 +550,7 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
               return [
                 dayRow,
                 <li key={m.id} className="flex justify-center py-1">
-                  <span className="max-w-[85%] rounded-full bg-lemon-soft/90 px-3 py-1 text-center text-xs font-medium text-midnight">{m.text}</span>
+                  <span className="max-w-[85%] rounded-full bg-lemon-soft/90 px-3 py-1 text-center text-xs font-medium text-midnight"><LinkifiedText text={m.text} /></span>
                 </li>,
               ];
             }
@@ -557,6 +570,8 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
                   {!mine && firstOfRun && <p className="mb-0.5 text-xs font-semibold text-violet">{m.sender?.name || "Member"}</p>}
                   {m.deleted ? (
                     <p className="text-sm italic opacity-70">This message was deleted</p>
+                  ) : !mine && blockedIds.has(m.sender?.id) ? (
+                    <p className="text-sm italic opacity-70">Hidden — you blocked this person</p>
                   ) : (
                     <>
                       {m.attachment && (
@@ -572,7 +587,7 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
                           />
                         </div>
                       )}
-                      {m.text && <p className="whitespace-pre-wrap break-words text-[0.92rem] leading-relaxed">{m.text}</p>}
+                      {m.text && <p className="whitespace-pre-wrap break-words text-[0.92rem] leading-relaxed"><LinkifiedText text={m.text} /></p>}
                     </>
                   )}
                   {o?.status === "uploading" && (
@@ -598,7 +613,15 @@ export default function GroupConversation({ groupId, me, onOpenInfo, infoOpen, o
                     {mine && (o ? (o.status === "failed" ? <AlertCircle size={11} /> : <Clock size={11} />) : <Check size={11} />)}
                   </p>
                 </div>
-                {!mine && !m.deleted && <MessageMenu msg={m} canDelete={isMod} onDelete={() => removeMessage(m)} />}
+                {!mine && !m.deleted && (
+                  <MessageMenu
+                    msg={m}
+                    canDelete={isMod}
+                    onDelete={() => removeMessage(m)}
+                    onReport={() => reportContent({ targetType: "group_message", targetId: m.id, what: "this message" })}
+                    onBlock={m.sender?.id && !["admin", "agent", "alphaAgent"].includes(m.sender?.role) ? () => blockPerson(m.sender) : null}
+                  />
+                )}
               </li>,
             ];
           })}

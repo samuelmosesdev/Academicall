@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Archive, ArchiveRestore, ExternalLink, Loader2, MessageCircle, Pencil, Plus, Search, Shield, UserPlus, Users, X } from "lucide-react";
+import { Archive, ArchiveRestore, ExternalLink, MessageCircle, Pencil, Plus, Search, Shield, UserPlus, Users, X } from "lucide-react";
 import { adminHousesApi, institutionTitle } from "../lib/aspirantApi";
 import { timeAgo } from "../lib/newsApi";
 import { useAuth } from "../context/AuthContext";

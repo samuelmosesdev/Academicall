@@ -1,13 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  collection,
-  doc,
-  onSnapshot,
-  query,
-  updateDoc,
-  limit,
-} from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import {
   BookMarked,
   Brain,
@@ -24,10 +17,11 @@ import { db } from "../firebase/config";
 import StudentKpiCard from "../components/StudentKpiCard";
 import DashboardHero from "../components/DashboardHero";
 import UserAvatar, { displayLabel, NameWithBadge } from "../components/UserAvatar";
+import LinkifiedText from "../components/LinkifiedText";
 import { useUserDashboardData } from "../hooks/useUserDashboardData";
 import { useCbtData } from "../hooks/useCbtData";
+import { useQuietPoll } from "../hooks/useQuietPoll";
 import { useAuth } from "../context/AuthContext";
-import { recordDailyActivity } from "../lib/activity";
 import { feedApi } from "../lib/api";
 import { appAlert } from "../lib/dialogs";
 import { SkeletonCards } from "../components/ui/Skeleton";
@@ -41,11 +35,19 @@ const REACTIONS = [
 
 function countReactions(list) {
   const counts = { like: 0, haha: 0, love: 0 };
-  (list || []).forEach((r) => {
+  (Array.isArray(list) ? list : []).forEach((r) => {
     if (counts[r.type] !== undefined) counts[r.type] += 1;
   });
   return counts;
 }
+
+const signatureOf = (value) => {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(Math.random());
+  }
+};
 
 const field =
   "w-full rounded-xl border border-border-light bg-card-light px-3 py-2 text-sm text-ink focus:border-teal focus:outline-none";
@@ -53,7 +55,7 @@ const field =
 export default function UserDashboard() {
   const navigate = useNavigate();
   const { user, profile, authMode } = useAuth();
-  const { kpis, loading } = useUserDashboardData();
+  const { kpis, loading, refresh: refreshDashboardData } = useUserDashboardData();
   const { practiceSets, loading: cbtLoading } = useCbtData({ withQuestions: true });
 
   const [feedTab, setFeedTab] = useState("department"); // department | general
@@ -64,6 +66,9 @@ export default function UserDashboard() {
   const [commentBusy, setCommentBusy] = useState({});
   const [expanded, setExpanded] = useState({});
   const [anonComment, setAnonComment] = useState({});
+  // Ids of posts that arrived during a background refresh; they fade in softly.
+  const [freshPostIds, setFreshPostIds] = useState(() => new Set());
+  const feedState = useRef({ dept: "", general: "", known: new Set(), ready: false });
 
   const department = profile?.department || profile?.program || "";
   const level = profile?.level || "";
@@ -73,50 +78,98 @@ export default function UserDashboard() {
     profile?.name?.split(" ")[0] ||
     "there";
 
-  useEffect(() => {
-    if (authMode === "api") {
-      if (!department) { setDeptPosts([]); setFeedLoading(false); return; }
-      setFeedLoading(true);
-      feedApi
-        .list("course", `department=${encodeURIComponent(department)}`)
-        .then(({ posts = [] }) =>
-          setDeptPosts(
-            posts
-              .filter((p) => !level || !p.level || String(p.level).trim() === String(level).trim())
-              .slice(0, 8)
-          )
-        )
-        .catch(() => setDeptPosts([]))
-        .finally(() => setFeedLoading(false));
-      return;
-    }
-    if (user && profile) recordDailyActivity(user, profile);
-  }, [user, profile, department, level, authMode]);
+  const uid = user?.uid || null;
 
-  // General feed (admin posts)
-  useEffect(() => {
-    if (authMode === "api") {
-      feedApi.list("general").then(({ posts = [] }) => setGeneralPosts(posts.slice(0, 12))).catch(() => setGeneralPosts([]));
-      return;
+  /**
+   * Feeds refresh silently. `initial` is the only call that may show the skeleton;
+   * background calls compare against what is on screen and change nothing when the
+   * feed is identical. Genuinely new posts fade in instead of popping in.
+   */
+  const loadFeeds = useCallback(async ({ initial = false } = {}) => {
+    if (authMode !== "api" || !uid) return;
+    const state = feedState.current;
+    const announceFresh = (list) => {
+      const incoming = list.filter((post) => post?.id && !state.known.has(post.id)).map((post) => post.id);
+      list.forEach((post) => post?.id && state.known.add(post.id));
+      if (state.ready && incoming.length) {
+        setFreshPostIds((current) => new Set([...current, ...incoming]));
+        window.setTimeout(() => {
+          setFreshPostIds((current) => {
+            const next = new Set(current);
+            incoming.forEach((id) => next.delete(id));
+            return next;
+          });
+        }, 2600);
+      }
+    };
+
+    const tasks = [];
+    if (department) {
+      tasks.push(
+        feedApi
+          .list("course", `department=${encodeURIComponent(department)}`)
+          .then(({ posts = [] }) => {
+            const next = posts
+              .filter((p) => !level || !p.level || String(p.level).trim() === String(level).trim())
+              .slice(0, 8);
+            const sig = signatureOf(next);
+            if (sig === state.dept) return;
+            state.dept = sig;
+            announceFresh(next);
+            setDeptPosts(next);
+          })
+          .catch((error) => {
+            console.error("Failed to refresh department feed", error);
+            if (initial) setDeptPosts([]);
+          })
+      );
+    } else if (initial) {
+      setDeptPosts([]);
     }
-    const q = query(collection(db, "generalPosts"), limit(12));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        list.sort((a, b) => {
-          if (a.pinned && !b.pinned) return -1;
-          if (!a.pinned && b.pinned) return 1;
-          const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
-          const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
-          return tb - ta;
-        });
-        setGeneralPosts(list);
-      },
-      () => setGeneralPosts([])
+    tasks.push(
+      feedApi
+        .list("general")
+        .then(({ posts = [] }) => {
+          const next = posts.slice(0, 12);
+          const sig = signatureOf(next);
+          if (sig === state.general) return;
+          state.general = sig;
+          announceFresh(next);
+          setGeneralPosts(next);
+        })
+        .catch((error) => {
+          console.error("Failed to refresh general feed", error);
+          if (initial) setGeneralPosts([]);
+        })
     );
-    return unsub;
-  }, [authMode]);
+    await Promise.allSettled(tasks);
+  }, [authMode, uid, department, level]);
+
+  // First load, and again only when the student's department/level really changes.
+  useEffect(() => {
+    if (authMode !== "api" || !uid) {
+      setFeedLoading(false);
+      return undefined;
+    }
+    let alive = true;
+    feedState.current = { dept: "", general: "", known: new Set(), ready: false };
+    setFeedLoading(true);
+    loadFeeds({ initial: true }).finally(() => {
+      if (!alive) return;
+      feedState.current.ready = true;
+      setFeedLoading(false);
+    });
+    return () => { alive = false; };
+  }, [authMode, uid, department, level, loadFeeds]);
+
+  // Quiet background refresh of the feeds (counters are refreshed by the data provider).
+  // Nothing visible happens unless the data actually changed.
+  useQuietPoll(() => loadFeeds(), { interval: 45_000, enabled: authMode === "api" && !!uid });
+
+  // Arriving on the dashboard (e.g. back from Courses): bring lists up to date silently.
+  useEffect(() => {
+    refreshDashboardData?.();
+  }, [refreshDashboardData]);
 
   const activePosts = feedTab === "department" ? deptPosts : generalPosts;
   const previewPosts = activePosts.slice(0, 3);
@@ -125,6 +178,14 @@ export default function UserDashboard() {
   async function toggleFeedReaction(collectionName, postId, reactionType) {
     if (!user) return;
     try {
+      if (authMode === "api") {
+        const kind = collectionName === "generalPosts" ? "general" : "course";
+        const { post: updated } = await feedApi.react(kind, postId, reactionType);
+        const setPosts = collectionName === "generalPosts" ? setGeneralPosts : setDeptPosts;
+        setPosts((current) => current.map((post) => post.id === postId ? updated : post));
+        return;
+      }
+
       const list = collectionName === "generalPosts" ? generalPosts : deptPosts;
       const post = list.find((p) => p.id === postId);
       if (!post) return;
@@ -145,8 +206,7 @@ export default function UserDashboard() {
           name: displayLabel(profile, "Student"),
         });
       }
-      if (authMode === "api") await feedApi.update(collectionName === "generalPosts" ? "general" : "course", postId, { reactions });
-      else await updateDoc(doc(db, collectionName, postId), { reactions });
+      await updateDoc(doc(db, collectionName, postId), { reactions });
     } catch (e) {
       appAlert(e.message || "Could not react.");
     }
@@ -157,6 +217,23 @@ export default function UserDashboard() {
     if (!text || !user) return;
     setCommentBusy((p) => ({ ...p, [postId]: true }));
     try {
+      if (authMode === "api") {
+        const isPro =
+          profile?.plan === "annual" ||
+          profile?.plan === "paid" ||
+          profile?.plan === "pro" ||
+          profile?.subscription === "pro";
+        const anonymous = isPro && profile?.allowAnonymousComments === true && !!anonComment[postId];
+        const kind = collectionName === "generalPosts" ? "general" : "course";
+        const { post: updated } = await feedApi.comment(kind, postId, text, { anonymous });
+        const setPosts = collectionName === "generalPosts" ? setGeneralPosts : setDeptPosts;
+        setPosts((current) => current.map((post) => post.id === postId ? updated : post));
+        setCommentText((p) => ({ ...p, [postId]: "" }));
+        setAnonComment((p) => ({ ...p, [postId]: false }));
+        setExpanded((p) => ({ ...p, [postId]: true }));
+        return;
+      }
+
       const list = collectionName === "generalPosts" ? generalPosts : deptPosts;
       const post = list.find((p) => p.id === postId);
       const comments = Array.isArray(post?.comments) ? [...post.comments] : [];
@@ -202,8 +279,7 @@ export default function UserDashboard() {
         createdAt: new Date().toISOString(),
         reactions: [],
       });
-      if (authMode === "api") await feedApi.update(collectionName === "generalPosts" ? "general" : "course", postId, { comments });
-      else await updateDoc(doc(db, collectionName, postId), { comments });
+      await updateDoc(doc(db, collectionName, postId), { comments });
       setCommentText((p) => ({ ...p, [postId]: "" }));
       setAnonComment((p) => ({ ...p, [postId]: false }));
       setExpanded((p) => ({ ...p, [postId]: true }));
@@ -246,7 +322,7 @@ export default function UserDashboard() {
           <StudentKpiCard
             icon={Eye}
             value={loading ? "--" : kpis.materialsOpened}
-            label="Materials opened"
+            label="Library items opened"
             subtitle="Every open counts"
             accent="violet"
           />
@@ -321,7 +397,7 @@ export default function UserDashboard() {
             return (
               <article
                 key={post.id}
-                className="card-stitch relative overflow-hidden rounded-3xl p-5 pl-6"
+                className={`card-stitch relative overflow-hidden rounded-3xl p-5 pl-6 ${freshPostIds.has(post.id) ? "animate-quiet-in" : ""}`}
               >
                 <div className="flex items-start gap-3">
                   <UserAvatar
@@ -362,7 +438,7 @@ export default function UserDashboard() {
                   {post.title}
                 </h3>
                 <p className="mt-1 text-sm text-ink-muted whitespace-pre-wrap leading-relaxed">
-                  {post.body}
+                  <LinkifiedText text={post.body} />
                 </p>
 
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -457,7 +533,7 @@ export default function UserDashboard() {
                                 )}
                               </p>
                               <p className="text-xs text-ink-muted whitespace-pre-wrap">
-                                {c.text}
+                                <LinkifiedText text={c.text} />
                               </p>
                             </div>
                           </div>
